@@ -1,0 +1,9 @@
+﻿clave,valor,descripcion
+empresa,INOX 304,Nombre comercial
+direccion,"Prolongación Av. de la Cultura 1608, San Sebastián, Cusco",Dirección pública del negocio
+referencia_direccion,Frente a Tottus · 4.º paradero,Referencia pública
+facebook,https://www.facebook.com/inox304peru,URL pública de Facebook
+contacto_principal,ventas,ID del contacto predeterminado
+contacto_instalaciones,instalaciones,ID para consultas de instalación
+contacto_medida,ventas,ID para proyectos a medida
+contacto_formulario,ventas,ID del formulario de cotización

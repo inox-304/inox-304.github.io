@@ -1,40 +1,8 @@
 // Product information transcribed from the owner-supplied catalog PDFs.
 // Prices and unspecified warranty terms are intentionally excluded.
 
-export const categories = [
-  {
-    "id": "coccion",
-    "name": "Cocción",
-    "shortName": "Cocción"
-  },
-  {
-    "id": "fritura",
-    "name": "Fritura y comida rápida",
-    "shortName": "Fritura"
-  },
-  {
-    "id": "refrigeracion",
-    "name": "Refrigeración",
-    "shortName": "Refrigeración"
-  },
-  {
-    "id": "lavado",
-    "name": "Lavado",
-    "shortName": "Lavado"
-  },
-  {
-    "id": "mobiliario",
-    "name": "Mobiliario",
-    "shortName": "Mobiliario"
-  },
-  {
-    "id": "preparacion",
-    "name": "Equipos de preparación",
-    "shortName": "Preparación"
-  }
-] as const;
-
-export type ProductCategory = (typeof categories)[number]['id'];
+import type { ProductCategory } from './categories.ts';
+export { categories, type ProductCategory } from './categories.ts';
 
 export type Product = {
   id: string;
@@ -45,6 +13,14 @@ export type Product = {
   features: string[];
   image: string;
   featured: boolean;
+  contactId?: string;
+  price?: number;
+  currency?: 'PEN' | 'USD';
+  showPrice?: boolean;
+  technicalSheet?: string;
+  model3d?: string;
+  modelPoster?: string;
+  gallery?: string[];
 };
 
 export const products: Product[] = [
@@ -52,7 +28,7 @@ export const products: Product[] = [
     "id": "P01",
     "slug": "cocina-semiindustrial-4-hornillas-horno-electrico",
     "name": "Cocina semiindustrial 4 hornillas + horno eléctrico",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Cocina de cuatro hornillas con horno eléctrico y rostizador para el hogar o el negocio.",
     "features": [
       "4 parrillas de fierro fundido",
@@ -68,7 +44,7 @@ export const products: Product[] = [
     "id": "P02",
     "slug": "cocina-industrial-de-3-hornillas",
     "name": "Cocina industrial de 3 hornillas",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Tres hornillas con controles independientes, estructura reforzada y repisa inferior para cocinas profesionales.",
     "features": [
       "3 hornillas de alta potencia con controles independientes",
@@ -85,7 +61,7 @@ export const products: Product[] = [
     "id": "P03",
     "slug": "cocina-industrial-de-3-parrillas",
     "name": "Cocina industrial de 3 parrillas (CÓD-CIF-03)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Cocina de tres quemadores con superficie amplia de cocción y repisa inferior.",
     "features": [
       "Acero inoxidable",
@@ -100,7 +76,7 @@ export const products: Product[] = [
     "id": "P04",
     "slug": "cocina-industrial-4-hornillas-tipo-isla-plancha-ho",
     "name": "Cocina industrial 4 hornillas tipo isla + plancha + horno (CIH-4P)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Cuatro hornillas, plancha y horno integrados en una cocina de diseño tipo isla.",
     "features": [
       "4 hornillas de alta potencia",
@@ -115,7 +91,7 @@ export const products: Product[] = [
     "id": "P05",
     "slug": "cocina-industrial-tipo-isla-4-parrillas-plancha-ho",
     "name": "Cocina industrial tipo isla 4 parrillas + plancha + horno (CÓD-CHI-04)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Equipo tipo isla con cuatro parrillas, plancha y horno para diferentes preparaciones.",
     "features": [
       "4 parrillas clásicas",
@@ -130,7 +106,7 @@ export const products: Product[] = [
     "id": "P06",
     "slug": "horno-multiuso",
     "name": "Horno multiuso (HI-MU)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Horno de uso comercial para panadería, pastelería y otras preparaciones.",
     "features": [
       "Cocción uniforme",
@@ -144,7 +120,7 @@ export const products: Product[] = [
     "id": "P07",
     "slug": "horno-ecologico-para-pollo-a-la-brasa",
     "name": "Horno ecológico para pollo a la brasa",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Horno para pollo a la brasa construido en acero inoxidable AISI 304.",
     "features": [
       "Bajo mantenimiento y fácil limpieza",
@@ -158,7 +134,7 @@ export const products: Product[] = [
     "id": "P08",
     "slug": "horno-pollero-ecologico",
     "name": "Horno pollero ecológico (CÓD-HPE-1)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Horno pollero con interior de ladrillos refractarios y estructura de acero inoxidable.",
     "features": [
       "Ladrillos refractarios interiores",
@@ -172,7 +148,7 @@ export const products: Product[] = [
     "id": "P09",
     "slug": "parrilla-premium-plancha-y-parrilla-a-carbon",
     "name": "Parrilla premium / Plancha y parrilla a carbón",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Parrilla con elevación del carbón y encendido a gas, disponible en medidas personalizadas.",
     "features": [
       "Acero inoxidable 304",
@@ -189,7 +165,7 @@ export const products: Product[] = [
     "id": "P10",
     "slug": "parrilla-grande",
     "name": "Parrilla grande (CÓD-PGI-1)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Parrilla con sistema de elevación, ladrillos refractarios y ruedas para traslado.",
     "features": [
       "Sistema de elevación",
@@ -204,7 +180,7 @@ export const products: Product[] = [
     "id": "P11",
     "slug": "caja-china-grande",
     "name": "Caja china grande (CÓD-CC-1T1V)",
-    "category": "coccion",
+    "category": "linea-caliente",
     "summary": "Caja china de acero inoxidable con tapa ahumadora y puerta con visor de vidrio.",
     "features": [
       "Tapa ahumadora",
@@ -218,7 +194,7 @@ export const products: Product[] = [
     "id": "P12",
     "slug": "freidora-doble-profesional",
     "name": "Freidora doble profesional",
-    "category": "fritura",
+    "category": "linea-caliente",
     "summary": "Freidora de doble poza con controles independientes, gabinete inferior y ruedas industriales.",
     "features": [
       "Acero inoxidable AISI 304",
@@ -235,7 +211,7 @@ export const products: Product[] = [
     "id": "P13",
     "slug": "freidora-de-papa-profesional",
     "name": "Freidora de papa profesional (2 canastillas)",
-    "category": "fritura",
+    "category": "linea-caliente",
     "summary": "Freidora de dos canastillas con control de temperatura y formato compacto con ruedas.",
     "features": [
       "Acero inoxidable AISI 304",
@@ -251,7 +227,7 @@ export const products: Product[] = [
     "id": "P14",
     "slug": "freidora-automatica-de-papas",
     "name": "Freidora automática de papas",
-    "category": "fritura",
+    "category": "linea-caliente",
     "summary": "Freidora automática en acero inoxidable para negocios de alta producción.",
     "features": [
       "Acero inoxidable Inox 304",
@@ -267,7 +243,7 @@ export const products: Product[] = [
     "id": "P15",
     "slug": "modulo-de-comida-4-en-1",
     "name": "Módulo de comida 4 en 1 (carrito salchipapero)",
-    "category": "fritura",
+    "category": "linea-caliente",
     "summary": "Broastera, freidora, conservadora y plancha integradas en un módulo para comida rápida.",
     "features": [
       "Broastera de pollo",
@@ -283,7 +259,7 @@ export const products: Product[] = [
     "id": "P16",
     "slug": "armario-refrigerado-de-2-puertas",
     "name": "Armario refrigerado de 2 puertas",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Armario de dos puertas con control digital de temperatura y niveles regulables.",
     "features": [
       "Acero inoxidable AISI 304",
@@ -299,7 +275,7 @@ export const products: Product[] = [
     "id": "P17",
     "slug": "armarios-frigorificos-camara-frigorifica",
     "name": "Armarios frigoríficos / Cámara frigorífica",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Armarios de acero inoxidable AISI 304 para congelación y conservación, en diferentes capacidades.",
     "features": [
       "Uso profesional",
@@ -313,7 +289,7 @@ export const products: Product[] = [
     "id": "P18",
     "slug": "mesa-fria",
     "name": "Mesa fría",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Mesa refrigerada de acero inoxidable 304 para conservar o congelar alimentos.",
     "features": [
       "Eficiencia energética",
@@ -328,7 +304,7 @@ export const products: Product[] = [
     "id": "P19",
     "slug": "visicooler-580-litros",
     "name": "Visicooler 580 litros",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Visicooler para bebidas con capacidad de 580 litros y sistema fan cooling.",
     "features": [
       "Capacidad 580 L",
@@ -341,7 +317,7 @@ export const products: Product[] = [
     "id": "P20",
     "slug": "vitrina-refrigerada",
     "name": "Vitrina refrigerada (CÓD-VRC-1)",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Vitrina para almacenar y exhibir carnes, embutidos y lácteos con refrigeración.",
     "features": [
       "Exhibición refrigerada",
@@ -354,7 +330,7 @@ export const products: Product[] = [
     "id": "P21",
     "slug": "abatidor-de-temperatura-de-5-bandejas",
     "name": "Abatidor de temperatura de 5 bandejas",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Equipo de cinco bandejas para enfriar o congelar alimentos rápidamente.",
     "features": [
       "5 bandejas",
@@ -367,7 +343,7 @@ export const products: Product[] = [
     "id": "P22",
     "slug": "exhibidor-refrigerado-abierto",
     "name": "Exhibidor refrigerado abierto",
-    "category": "refrigeracion",
+    "category": "linea-fria",
     "summary": "Exhibidor abierto de 116 cm de ancho con cuatro repisas para bebidas.",
     "features": [
       "116 cm de ancho",
@@ -381,7 +357,7 @@ export const products: Product[] = [
     "id": "P23",
     "slug": "lavatorio-con-repisas-superiores",
     "name": "Lavatorio con repisas superiores",
-    "category": "lavado",
+    "category": "linea-neutra",
     "summary": "Lavatorio con almacenamiento superior, fabricado según los requerimientos del espacio.",
     "features": [
       "Diseño funcional",
@@ -397,7 +373,7 @@ export const products: Product[] = [
     "id": "P24",
     "slug": "lavatorio-de-1-poza",
     "name": "Lavatorio de 1 poza",
-    "category": "lavado",
+    "category": "linea-neutra",
     "summary": "Lavatorio de una poza profunda con escurridor derecho, respaldo y repisa inferior.",
     "features": [
       "Acero inoxidable AISI 304",
@@ -413,7 +389,7 @@ export const products: Product[] = [
     "id": "P25",
     "slug": "lavatorio-de-2-pozas-escurridores",
     "name": "Lavatorio de 2 pozas + escurridores (L2P-EVPC)",
-    "category": "lavado",
+    "category": "linea-neutra",
     "summary": "Lavatorio de dos pozas con escurridores para vasos, platos y cubiertos.",
     "features": [
       "2 pozas",
@@ -428,7 +404,7 @@ export const products: Product[] = [
     "id": "P26",
     "slug": "lavadero-de-2-pozas-con-descanso",
     "name": "Lavadero de 2 pozas con descanso (CÓD-LVD-2)",
-    "category": "lavado",
+    "category": "linea-neutra",
     "summary": "Lavadero de dos pozas con un descanso y división, fabricado en acero inoxidable.",
     "features": [
       "2 pozas",
@@ -486,7 +462,7 @@ export const products: Product[] = [
     "id": "P30",
     "slug": "licuadora-industrial",
     "name": "Licuadora industrial",
-    "category": "preparacion",
+    "category": "linea-neutra",
     "summary": "Licuadora industrial de acero inoxidable AISI 304 disponible en cuatro capacidades.",
     "features": [
       "Acero inoxidable AISI 304",
@@ -501,7 +477,7 @@ export const products: Product[] = [
     "id": "P31",
     "slug": "licuadora-industrial-con-base",
     "name": "Licuadora industrial (modelo con base)",
-    "category": "preparacion",
+    "category": "linea-neutra",
     "summary": "Licuadora industrial con base de acero inoxidable 304 disponible en tres capacidades.",
     "features": [
       "Capacidades: 10, 15 y 20 L",
@@ -514,7 +490,7 @@ export const products: Product[] = [
     "id": "P32",
     "slug": "maquina-cremoladera-25-l",
     "name": "Máquina cremoladera 25 L",
-    "category": "preparacion",
+    "category": "linea-fria",
     "summary": "Máquina para cremoladas de 25 litros con dos tolvas.",
     "features": [
       "25 litros",

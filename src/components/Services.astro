@@ -25,24 +25,24 @@ const services = [
   </div>
 </section>
 <style>
-  .installation-section{background:linear-gradient(90deg,rgba(13,20,19,.95),rgba(13,20,19,.84)),url('/images/brand/stone-texture.webp') center/cover;color:var(--paper)}
+  .installation-section{background:linear-gradient(90deg,rgba(13,18,26,.95),rgba(13,18,26,.84)),url('/images/brand/stone-texture.webp') center/cover;color:var(--paper)}
   .installation-layout{display:grid;grid-template-columns:.95fr 1.05fr;gap:90px;align-items:start}
   .installation-intro>.eyebrow{color:var(--accent);font-size:9px;margin-bottom:28px}
   .installation-intro h2{font-size:clamp(36px,4vw,58px);font-weight:500;line-height:1.1;letter-spacing:-2px;margin-bottom:25px}
   .installation-intro h2 em{color:var(--accent);font-style:normal}
-  .installation-intro>p{font-size:13px;line-height:1.9;max-width:340px;color:#b9c2bb;margin-bottom:30px}
+  .installation-intro>p{font-size:13px;line-height:1.9;max-width:340px;color:#bdc1c7;margin-bottom:30px}
   .installation-intro .button{font-size:11px;gap:24px}
-  .service-item{border-top:1px solid #59645f}
-  .service-item:last-child{border-bottom:1px solid #59645f}
+  .service-item{border-top:1px solid #5c626b}
+  .service-item:last-child{border-bottom:1px solid #5c626b}
   .service-item summary{list-style:none;display:flex;align-items:center;gap:21px;cursor:pointer;padding:27px 0}
   .service-item summary::-webkit-details-marker{display:none}
-  .service-number{font-size:10px;color:#adb8ac;font-variant-numeric:tabular-nums}
+  .service-number{font-size:10px;color:#b2b6bc;font-variant-numeric:tabular-nums}
   .service-item h3{font-size:19px;font-weight:500;line-height:1.4;letter-spacing:-.5px;margin:0;flex:1}
-  .service-plus{display:grid;place-items:center;width:32px;height:32px;border:1px solid #68756a;border-radius:50%;transition:transform .4s cubic-bezier(.22,1,.36,1),background .3s,color .3s}
+  .service-plus{display:grid;place-items:center;width:32px;height:32px;border:1px solid #6c727b;border-radius:50%;transition:transform .4s cubic-bezier(.22,1,.36,1),background .3s,color .3s}
   .service-item[open] .service-plus{transform:rotate(45deg);background:var(--accent);color:var(--ink);border-color:var(--accent)}
   .service-item summary:hover .service-plus,.service-item summary:focus-visible .service-plus{background:var(--paper);color:var(--ink)}
   .service-content{padding:0 47px 26px 37px}
-  .service-content p{color:#c2cbc3;font-size:13px;line-height:1.85;margin:0}
+  .service-content p{color:#c6cad0;font-size:13px;line-height:1.85;margin:0}
   @media(prefers-reduced-motion:no-preference){.service-item[open] .service-content{animation:service-enter .38s cubic-bezier(.22,1,.36,1) both}@keyframes service-enter{from{opacity:.65;transform:translateY(-6px)}to{opacity:1;transform:none}}}
   @media(max-width:1150px){.installation-layout{gap:50px}.service-item h3{font-size:17px}}
   @media(max-width:900px){.installation-layout{grid-template-columns:1fr;gap:40px}.installation-intro>p{max-width:450px}.service-item h3{font-size:19px}}

@@ -2,22 +2,24 @@
 import { withBase } from '../../lib/paths';
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
+import CategoryIcon from '../../components/CategoryIcon.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import { visibleProducts } from '../../data/catalog';
 import { categories } from '../../data/products';
 import { whatsappUrl } from '../../data/site';
 ---
-<Layout title="Catálogo de equipos" description="Explora nuestros equipos de cocción, refrigeración, lavado, mobiliario y preparación. Encuentra tu equipo y solicita una cotización personalizada.">
+<Layout title="Catálogo de equipos" description="Explora nuestros equipos de línea fría, línea caliente, línea neutra y mobiliario. Encuentra tu equipo y solicita una cotización personalizada.">
   <section class="page-intro"><div class="shell"><a class="breadcrumb" href={withBase('/')}>Inicio <span>/</span> Catálogo</a><div class="section-heading"><div><span class="eyebrow">PRECISIÓN EN CADA DETALLE</span><h1>Equipa tu<br/><em>siguiente paso.</em></h1></div><p>Equipos para trabajar mejor.<br/>Soluciones para crecer contigo.</p></div></div></section>
   <section class="section-light catalog-section"><div class="shell">
     <form class="catalog-tools" role="search" aria-label="Buscar equipos"><label class="search-field"><Icon name="search"/><span class="sr-only">Buscar un equipo</span><input id="catalog-search" type="search" name="buscar" placeholder="Busca una cocina, un lavadero…" autocomplete="off"/></label><span id="result-count" class="results-count" role="status" aria-live="polite">{visibleProducts.length} equipos</span></form>
-    <div class="filter-pills" role="group" aria-label="Filtrar por categoría"><button class="active" data-filter="todos" aria-pressed="true">Todos</button>{categories.map(category => <button data-filter={category.id} aria-pressed="false">{category.shortName}</button>)}</div>
+    <div class="filter-pills category-strip" role="group" aria-label="Filtrar por categoría"><button class="active filter-all" data-filter="todos" aria-pressed="true"><Icon name="plus" size={18}/><span>Todos</span></button>{categories.map(category => <button data-filter={category.id} aria-pressed="false"><CategoryIcon category={category.id}/><span>{category.shortName}</span></button>)}</div>
     <div class="product-grid catalog-grid" id="catalog-results" data-cms-products="all">{visibleProducts.map((product, index) => <ProductCard product={product} index={index}/>)}</div>
     <div id="catalog-empty" class="empty-state" hidden><Icon name="search" size={34}/><h2>No encontramos ese equipo.</h2><p>Prueba con otro nombre o consulta por una fabricación a medida.</p><button class="button button-dark" id="reset-search">Ver todos los equipos <Icon/></button></div>
     <div class="catalog-help"><div><h2>¿Tu proyecto necesita algo diferente?</h2><p>También fabricamos equipos y mobiliario a medida.</p></div><a class="button button-dark" data-contact-setting="contacto_medida" href={whatsappUrl('Hola INOX 304, estoy buscando un equipo a medida. ¿Me pueden asesorar?')} target="_blank" rel="noopener noreferrer">Solicita asesoría <Icon name="diagonal"/></a></div>
   </div></section>
 </Layout>
 <script>
+  import { normalizeCategory } from '../../data/categories';
   const search = document.querySelector<HTMLInputElement>('#catalog-search');
   const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-filter]')];
   let active = 'todos';
@@ -31,7 +33,7 @@ import { whatsappUrl } from '../../data/site';
     const empty = document.querySelector<HTMLElement>('#catalog-empty'); if (empty) empty.hidden = count > 0;
     if (updateUrl) { const url = new URL(window.location.href); active === 'todos' ? url.searchParams.delete('categoria') : url.searchParams.set('categoria', active); search?.value ? url.searchParams.set('buscar', search.value) : url.searchParams.delete('buscar'); history.replaceState({}, '', url); }
   }
-  function readUrl() { const params = new URLSearchParams(location.search); const category = params.get('categoria'); active = buttons.some(button => button.dataset.filter === category) ? category! : 'todos'; if (search) search.value = params.get('buscar') || ''; render(false); }
+  function readUrl() { const params = new URLSearchParams(location.search); const category = normalizeCategory(params.get('categoria')); active = category ?? 'todos'; if (search) search.value = params.get('buscar') || ''; render(false); }
   buttons.forEach(button => button.addEventListener('click', () => { active = button.dataset.filter || 'todos'; render(); }));
   search?.addEventListener('input', () => render());
   document.querySelector('.catalog-tools')?.addEventListener('submit', event => { event.preventDefault(); render(); });

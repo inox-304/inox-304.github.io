@@ -1,8 +1,8 @@
-import { categoryNames, cmsProductRoute, contactUrl, parseCms, resolveContact, validatePublishedUrl, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
+import { categoryNames, cmsProductRoute, contactUrl, formatProductPrice, parseCms, resolveContact, validatePublishedUrl, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
 import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
 
-type Bootstrap = { config: { catalogUrl: string; contactsUrl: string; settingsUrl: string }; routes: Record<string, string>; data: CmsData };
+type Bootstrap = { config: { catalogUrl: string; contactsUrl: string; settingsUrl: string }; snapshot?: boolean; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
 const payload: Bootstrap | null = node ? JSON.parse(node.textContent || 'null') : null;
 let current = payload?.data;
@@ -55,6 +55,8 @@ function updateDetail(data: CmsData) {
     if (related) related.hidden = true;
     detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => { anchor.removeAttribute('href'); anchor.hidden = true; });
     document.title = `Equipo no disponible | ${data.settings.empresa}`;
+    detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', 'null');
+    document.dispatchEvent(new CustomEvent('inox:product-updated', { detail: { product: null } }));
     return;
   }
   if (unavailable) unavailable.hidden = true;
@@ -104,10 +106,22 @@ function updateDetail(data: CmsData) {
     } else anchor.removeAttribute('href');
   });
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? 'Consulta medidas, disponibilidad y opciones para tu negocio.' : 'Por el momento no hay un contacto de cotización disponible.';
+  const price = formatProductPrice(product);
+  const priceNode = detail.querySelector<HTMLElement>('[data-product-price]');
+  if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
+  const technicalSheet = detail.querySelector<HTMLAnchorElement>('[data-product-technical-sheet]');
+  if (technicalSheet) {
+    technicalSheet.hidden = !product.technicalSheet;
+    if (product.technicalSheet) technicalSheet.href = withBase(product.technicalSheet);
+    else technicalSheet.removeAttribute('href');
+  }
+  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet;
   const relatedProducts = visibleCmsProducts(data).filter(item => item.category === product.category && item.id !== product.id).slice(0, 3);
   if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts); }
   document.title = `${product.name} | ${data.settings.empresa}`;
   const description = document.querySelector<HTMLMetaElement>('meta[name="description"]'); if (description) description.content = product.summary;
+  detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', JSON.stringify(product));
+  document.dispatchEvent(new CustomEvent('inox:product-updated', { detail: { product } }));
 }
 
 function updateContacts(data: CmsData) {
@@ -164,6 +178,7 @@ async function fetchCsv(url: string, signal: AbortSignal) {
 }
 async function start() {
   if (!payload || !current) return;
+  if (payload.snapshot) { apply(current); document.documentElement.dataset.cmsState = 'published'; return; }
   // Generic product routes have no build-time data; known IDs can still use the bundled fallback.
   if (document.querySelector('[data-product-detail=""]')) updateDetail(current);
   const rawUrls = [payload.config.catalogUrl, payload.config.contactsUrl, payload.config.settingsUrl];
@@ -172,7 +187,7 @@ async function start() {
   if (urls.some(url => !url)) { document.documentElement.dataset.cmsState = 'fallback'; console.warn('INOX CMS: configure all three published Google Sheets CSV URLs. Static content retained.'); return; }
   const controller = new AbortController(); const timeout = window.setTimeout(() => controller.abort(), 12000);
   try {
-    const [catalogCsv, contactsCsv, settingsCsv] = await Promise.all(urls.map(url => fetchCsv(url, controller.signal)));
+    const [catalogCsv, contactsCsv, settingsCsv] = await Promise.all(urls.map(url => fetchCsv(withBase(url), controller.signal)));
     const data = parseCms(catalogCsv, contactsCsv, settingsCsv);
     apply(data); document.documentElement.dataset.cmsState = 'live';
   } catch (error) {

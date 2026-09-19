@@ -29,7 +29,7 @@ const stage = getProductStage(product.image);
     --pedestal-bottom: 14%;
     --equipment-bottom: calc(var(--pedestal-bottom) + var(--pedestal-height) * .52);
     isolation: isolate; aspect-ratio: 1; min-height: 0; width: 100%; overflow: hidden;
-    background: #172020; padding: clamp(20px, 4.5%, 30px);
+    background: #152031; padding: clamp(20px, 4.5%, 30px);
   }
   .product-studio[data-stage-shape="wide"] { --pedestal-height: 18%; }
   .studio-backdrop { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
@@ -39,12 +39,12 @@ const stage = getProductStage(product.image);
   }
   .studio-spotlight {
     position: absolute; inset: -6% 2% 4%;
-    background: radial-gradient(ellipse at 50% 0%, #ffefcebd 0%, #ede5cf59 35%, #eee9d714 60%, transparent 80%);
+    background: radial-gradient(ellipse at 50% 0%, #deedffbd 0%, #d0e0f459 35%, #dbe6f814 60%, transparent 80%);
     filter: blur(20px);
   }
   .studio-floor-light {
     position: absolute; inset: 71% 0 0;
-    background: radial-gradient(ellipse at 50% 50%, #dbd3b750, transparent 69%);
+    background: radial-gradient(ellipse at 50% 50%, #c5d8ef50, transparent 69%);
   }
   .studio-pedestal {
     position: absolute; z-index: 1; left: 50%; bottom: var(--pedestal-bottom);
@@ -73,9 +73,9 @@ const stage = getProductStage(product.image);
     width: var(--image-width); height: var(--image-height);
     padding: 0; max-width: none; max-height: none; aspect-ratio: auto; object-fit: fill; mix-blend-mode: normal;
   }
-  .product-studio > .eyebrow, .product-studio > .photo-caption { position: relative; z-index: 4; color: #e0e2dc; }
+  .product-studio > .eyebrow, .product-studio > .photo-caption { position: relative; z-index: 4; color: #dee2e8; }
   .product-studio > .eyebrow { font-size: 9px; }
-  .product-studio > .photo-caption { border-color: #8c928f; font-size: 8px; margin-top: auto; }
+  .product-studio > .photo-caption { border-color: #8c929b; font-size: 8px; margin-top: auto; }
   .studio-backdrop[hidden], .studio-pedestal[hidden], .equipment-shadow[hidden] { display: none; }
   @media (max-width: 900px) {
     .product-detail-photo.product-studio { max-width: 640px; margin-inline: auto; }

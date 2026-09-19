@@ -2,6 +2,7 @@
 import { withBase } from '../lib/paths';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
+import CategoryIcon from '../components/CategoryIcon.astro';
 import ProductCard from '../components/ProductCard.astro';
 import Services from '../components/Services.astro';
 import { categories } from '../data/products';
@@ -31,7 +32,7 @@ import { whatsappUrl } from '../data/site';
   <section id="coleccion" class="section section-light collection-section">
     <div class="shell">
       <div class="section-heading"><div><span class="eyebrow">01 / NUESTRA COLECCIÓN</span><h2>Diseñados para<br/>trabajar <span class="soft-text">en serio.</span></h2></div><div class="section-heading-side"><p>Equipamiento para cocinas profesionales<br/>y negocios que no se detienen.</p><a class="text-link dark-link" href={withBase('/catalogo/')}>Ver todos los equipos <Icon name="diagonal"/></a></div></div>
-      <div class="category-links" aria-label="Categorías de equipos">{categories.map(category => <a href={withBase(`/catalogo/?categoria=${category.id}`)}>{category.shortName}<Icon name="diagonal" size={13}/></a>)}</div>
+      <nav class="category-links category-strip" aria-label="Categorías de equipos">{categories.map(category => <a href={withBase(`/catalogo/?categoria=${category.id}`)}><CategoryIcon category={category.id}/><span>{category.shortName}</span><Icon name="diagonal" size={13}/></a>)}</nav>
       <div class="product-grid" data-cms-products="featured">{featuredProducts.map((product, index) => <ProductCard product={product} index={index}/>)}</div>
       <div class="collection-bottom"><p>Cada negocio tiene su equipo ideal.<br/><strong>Te ayudamos a encontrar el tuyo.</strong></p><a class="button button-dark" href={withBase('/catalogo/')}>Todo el catálogo <Icon name="arrow"/></a></div>
     </div>
@@ -55,7 +56,7 @@ import { whatsappUrl } from '../data/site';
 </Layout>
 <style>
   .hero{height:100svh;min-height:740px;max-height:950px}
-  .hero-atmosphere{background:linear-gradient(90deg,rgba(11,19,18,.72),rgba(11,19,18,.3)),url('/images/brand/stone-texture.webp') center/cover;opacity:.8}
+  .hero-atmosphere{background:linear-gradient(90deg,rgba(9,16,28,.72),rgba(9,16,28,.3)),url('/images/brand/stone-texture.webp') center/cover;opacity:.8}
   .hero-stage{mask-image:linear-gradient(90deg,transparent,#000 28%)}
   .hero-copy{padding-top:145px;padding-bottom:105px}
   @media(max-width:900px){.hero,.hero-inner{height:auto;min-height:880px}.hero-copy{padding-top:128px;padding-bottom:345px}.hero-stage{top:360px;mask-image:linear-gradient(180deg,transparent,#000 15%,#000 85%,transparent)}}

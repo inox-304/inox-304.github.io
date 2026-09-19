@@ -15,7 +15,7 @@ const canonical = new URL(withBase(Astro.url.pathname), Astro.site);
   <head>
     <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>{title} | INOX 304</title><meta name="description" content={description}/>
-    <meta name="theme-color" content="#111414"/><link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml"/>
+    <meta name="theme-color" content="#0b1422"/><link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml"/>
     <link rel="canonical" href={canonical}/>{noindex && <meta name="robots" content="noindex"/>}
     <meta property="og:type" content="website"/><meta property="og:locale" content="es_PE"/><meta property="og:site_name" content="INOX 304"/><meta property="og:title" content={`${title} | INOX 304`}/><meta property="og:description" content={description}/><meta property="og:url" content={canonical}/><meta property="og:image" content={new URL(withBase(image), Astro.site)}/>
     <link rel="preload" href={withBase('/fonts/dm-sans-latin.woff2')} as="font" type="font/woff2" crossorigin/>

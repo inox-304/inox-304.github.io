@@ -8,11 +8,15 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "test": "node scripts/verify-build.mjs"
+    "test": "node scripts/verify-build.mjs",
+    "check:models": "node scripts/check-models.mjs",
+    "sync": "node --env-file-if-exists=.env scripts/sync-cms.mjs",
+    "build:published": "npm run sync && node --env-file-if-exists=.env scripts/configure-domain.mjs && npm run build && npm test && npm run check:models"
   },
   "dependencies": {
-    "astro": "7.3.3",
     "@astrojs/sitemap": "3.7.4",
+    "@google/model-viewer": "4.3.1",
+    "astro": "7.3.3",
     "sharp": "0.35.4"
   },
   "devDependencies": {

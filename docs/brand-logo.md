@@ -1,4 +1,8 @@
-# Blue flame logo
+# Corrected brand colors
+
+Current source: owner's `logo con los colores correcto.html` from `recursos noc`. The extracted 1400 × 560 WebP is preserved as `public/images/brand/inox304-correct-colors.webp`. The component implements its red outer flame, blue engraved snowflake with a subtle double pulse, and untouched silver lettering. It omits the standalone preview controls, backdrop and iframe wrappers. Motion pauses offscreen, on hidden tabs and for reduced-motion preferences.
+
+## Previous version
 
 Source: user-provided `logo-inox-flama-azul.html` from Downloads, supplied on 2026-09-19.
 

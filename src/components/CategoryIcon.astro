@@ -1,0 +1,10 @@
+---
+import { withBase } from '../lib/paths';
+import type { ProductCategory } from '../data/categories';
+interface Props { category: ProductCategory }
+const { category } = Astro.props;
+---
+<span class="category-icon" aria-hidden="true">
+  <img class="category-icon-normal" src={withBase(`/images/categories/${category}-normal.svg`)} width="40" height="40" alt="" loading="lazy" decoding="async"/>
+  <img class="category-icon-highlight" src={withBase(`/images/categories/${category}-resaltado.svg`)} width="40" height="40" alt="" loading="lazy" decoding="async"/>
+</span>

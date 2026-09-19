@@ -6,4 +6,8 @@ dist/
 !.env.example
 .DS_Store
 work/
+.generated/
+public/images/cms/
+public/documents/cms/
+public/models/cms/
 *.log

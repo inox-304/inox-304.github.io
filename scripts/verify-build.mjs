@@ -131,7 +131,12 @@ try {
     if (!(await isFile(path.join(dist, route)))) errors.push(`Missing main route: ${route}`);
   }
   const productPages = htmlFiles.filter(filename => /^catalogo\/[^/]+\/index\.html$/.test(relativeName(filename)));
-  if (!productPages.length) errors.push('The generated catalog has no product detail pages.');
+  const snapshotFile = path.join(root, '.generated/cms-snapshot.json');
+  if (await isFile(snapshotFile)) {
+    const snapshot = JSON.parse(await readFile(snapshotFile, 'utf8'));
+    const expected = snapshot.products.filter(product => product.visible).length;
+    if (productPages.length !== expected) errors.push(`Expected ${expected} published product pages, found ${productPages.length}.`);
+  } else if (!productPages.length) errors.push('The generated catalog has no product detail pages.');
   for (const filename of htmlFiles) await verifyHtml(filename);
   for (const filename of files.filter(filename => filename.endsWith('.css'))) {
     await verifyCss(await readFile(filename, 'utf8'), filename);

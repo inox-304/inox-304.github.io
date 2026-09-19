@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="inox304-linea-fria-normal-title">
+<title id="inox304-linea-fria-normal-title">Línea fría · normal</title>
+<defs>
+<linearGradient id="inox304-linea-fria-normal-metal" x1="18" y1="10" x2="44" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#A5B3C7"/><stop offset=".52" stop-color="#899DB8"/><stop offset="1" stop-color="#7B8CA6"/></linearGradient>
+
+</defs>
+
+<g stroke="url(#inox304-linea-fria-normal-metal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M32 11v42M13.8 21.5l36.4 21M13.8 42.5l36.4-21"/>
+<path d="m25.8 15.4 6.2 6.2 6.2-6.2M25.8 48.6l6.2-6.2 6.2 6.2M14.5 29.1l8.5-2.3-2.3-8.5M49.5 34.9 41 37.2l2.3 8.5M20.7 45.7l2.3-8.5-8.5-2.3M43.3 18.3 41 26.8l8.5 2.3"/></g>
+</svg>

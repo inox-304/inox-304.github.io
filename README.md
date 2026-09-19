@@ -7,7 +7,7 @@ Sitio estático en Astro y TypeScript para presentar el equipamiento comercial e
 Requisitos: una versión de Node.js compatible con la versión de Astro del proyecto y npm. El entorno de desarrollo utiliza Node.js 24.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
@@ -34,14 +34,14 @@ npm run preview
 
 | Ubicación | Contenido |
 | --- | --- |
-| `src/data/products.ts` | Archivo completo de 32 productos y sus seis categorías, transcrito de los PDF proporcionados. |
+| `src/data/products.ts` | Archivo completo de 32 productos y sus cuatro categorías, transcrito de los PDF proporcionados. |
 | `src/data/catalog.ts` | Selección pública `visibleProducts` utilizada por el catálogo y las fichas. |
 | `src/data/site.ts` | Datos comerciales, contacto y enlace de WhatsApp. |
 | `src/pages/` | Inicio, catálogo, fichas individuales y contacto. |
 | `src/styles/global.css` | Estilos y adaptación a distintas pantallas. |
 | `public/images/products/` | 21 recortes limpios WebP y fotografías originales extraídas del catálogo. |
 | `public/images/brand/` | Logotipo oficial, fondos de estudio para escritorio/tablet/móvil y textura suministrados por el propietario. |
-| `src/components/FlameLogo.astro` | Logo metálico con flama azul animada a partir del HTML suministrado; se pausa fuera de pantalla y respeta movimiento reducido. Fuente en `docs/brand-logo.md`. |
+| `src/components/FlameLogo.astro` | Logo metálico con flama roja y copo azul animados a partir del HTML suministrado; se pausa fuera de pantalla y respeta movimiento reducido. Fuente en `docs/brand-logo.md`. |
 | `src/components/Services.astro` | Instalación de equipos, extracción y ductería, redes de gas y mantenimiento, con desplegables accesibles. |
 | `src/components/ProductStage.astro` | Presentación de recortes limpios sobre fondos de estudio adaptados a la pantalla. |
 | `src/styles/motion.css`, `src/scripts/motion.ts` | Respuesta de botones, flechas, tarjetas, navegación y entradas al desplazarse. Sin dependencias adicionales; respeta movimiento reducido. |
@@ -52,17 +52,19 @@ npm run preview
 | `docs/resource-inventory.md` | Revisión de los 30 archivos de recursos noc, correspondencia con 21 equipos, variantes y originales conservados. |
 | `scripts/verify-build.mjs` | Verificación local del resultado de compilación. |
 
-Se muestran **los 32 productos archivados**. P01 vuelve al catálogo con la imagen limpia suministrada por el propietario. Hay 21 equipos con nuevos recortes transparentes; los otros 11 conservan su foto original hasta recibir un reemplazo del mismo modelo. No hay precios de venta ni disponibilidad en tiempo real.
+Se muestran **los 32 productos archivados**. P01 vuelve al catálogo con la imagen limpia suministrada por el propietario. Hay 21 equipos con nuevos recortes transparentes; los otros 11 conservan su foto original hasta recibir un reemplazo del mismo modelo. No se inventaron precios; el panel permite añadir importes autorizados y elegir si se muestran. No hay disponibilidad en tiempo real.
 
 Los nombres, modelos, características y datos comerciales proceden de los PDF entregados por el propietario, cuya fuente declarada es la página de Facebook de INOX 304, consultada el 18 de septiembre de 2026. No se han añadido reseñas, certificaciones ni plazos de garantía inventados. Las imágenes extraídas sirven para la primera versión; los originales de mayor resolución mejorarán las fichas.
 
 ## Contacto y cotizaciones
 
-El administrador de catálogo y contactos está preparado para Google Sheets. Sus tres pestañas de datos son `Catalogo`, `Contactos` y `Ajustes`; permiten editar equipos, visibilidad, destacados y el contacto de WhatsApp de cada producto o tipo de botón. **Todavía falta conectar la cuenta de INOX y configurar las tres fuentes CSV publicadas.** La web conserva sus datos actuales hasta completar ese paso. La configuración y sus límites se explican en `docs/cms.md`; las variables públicas de conexión están en `.env.example`.
+El administrador se organiza en tres pestañas privadas de Google Sheets: **Catalogo**, **Contactos** y **Ajustes**. Permite editar productos, precios, fotos, galerías, fichas PDF, modelos GLB y WhatsApp, con casillas para publicar o dejar borradores. La integración está preparada; **falta autorizar la cuenta de INOX y configurar `CMS_EXPORT_URL`**.
 
-Los cambios de la hoja se consultan al recargar la web. Las nuevas filas se pueden mostrar sin editar código; las rutas individuales destinadas a buscadores se generan al reconstruir el sitio. El formato de imágenes y el logo se mantienen como recursos de la web.
+El flujo recomendado es **Sheets + Drive → Apps Script → GitHub Actions → web estática**. Solo se exportan filas publicadas y contactos activos. GitHub descarga los recursos referenciados, optimiza las imágenes y genera todas las rutas de producto. Un producto despublicado desaparece de la siguiente compilación. Las actualizaciones se pueden ejecutar manualmente; una vez configurada la URL también se revisan aproximadamente cada 30 minutos, sujeto a la cola de GitHub. La web y la sincronización no dependen de que esta PC esté encendida.
 
-Para comprobar la lectura del catálogo y los contactos, ejecuta `node scripts/test-cms.mjs`.
+Lee [la puesta en marcha](docs/publicacion-sheets.md), [las columnas del panel](docs/cms.md) y [el prompt para ChatGPT o Gemini](docs/PROMPT-ADMINISTRAR-INOX304.md). Las plantillas iniciales contienen los 32 equipos actuales. El modo CSV público anterior se conserva por compatibilidad; no ofrece la misma retirada de rutas y no es la opción recomendada.
+
+Para comprobar los datos y la importación, ejecuta `node scripts/test-cms.mjs` y `node scripts/test-cms-import.mjs`.
 
 El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto prepara un mensaje con la consulta y abre WhatsApp hacia el número configurado en `src/data/site.ts`; el visitante revisa y envía ese mensaje desde WhatsApp. Abrir el enlace no confirma que la empresa haya recibido la consulta.
 
@@ -93,8 +95,14 @@ Remove-Item Env:PUBLIC_SITE_BASE_PATH
 Remove-Item Env:PUBLIC_SITE_URL
 ```
 
-Cuando se active Google Sheets, las tres variables `PUBLIC_CMS_*` deben configurarse también como variables del repositorio en GitHub Actions. Contienen únicamente enlaces CSV comerciales públicos. Tras cambiar esas variables, ejecuta de nuevo el flujo de despliegue. La cuenta propietaria puede configurar un dominio propio más adelante; GitHub usa `github.io`, no `github.com`, para las direcciones gratuitas de Pages.
+Cuando se active Google Sheets, configura `CMS_EXPORT_URL` en las variables de GitHub Actions según `docs/publicacion-sheets.md`. El exportador es público solo para los datos comerciales marcados para publicar; la hoja maestra conserva sus permisos privados. Tras cambiar esa variable, ejecuta el flujo de despliegue. La cuenta propietaria puede configurar un dominio propio más adelante; GitHub usa `github.io`, no `github.com`, para las direcciones gratuitas de Pages.
 
 El 19 de septiembre de 2026 la cuenta pasó de `inoxweb304-creator` a `inoxweb304` y finalmente a `inox-304`. El repositorio usa `inox-304.github.io` para publicar en la raíz del dominio, como Arenas. El remoto local y la dirección predeterminada de desarrollo usan los nombres actuales. GitHub redirige los enlaces antiguos del repositorio, pero no los del sitio de Pages: comparte la dirección nueva.
 
 Se conserva el identificador de la copia anterior en Sites en `.openai/hosting.json`, pero GitHub Pages es el alojamiento elegido. Los pushes a GitHub no publican en Sites.
+
+## Portabilidad, dominio propio y 360°
+
+[LEEME-PRIMERO.md](LEEME-PRIMERO.md) explica cómo llevar esta carpeta en un pendrive, arrancar en otra PC y migrar a un dominio propio. `INICIAR-WEB.cmd` instala dependencias si faltan y abre el servidor; `ACTUALIZAR-Y-COMPILAR.cmd` sincroniza y compila sin publicar por su cuenta.
+
+El visor de [modelos 3D](docs/modelos-3d.md) se carga solo al pulsar Ver 360°; cada equipo puede tener su propio GLB y galería. No se ha incorporado ningún modelo de muestra al catálogo público. Usa `npm run check:models` para validar archivos antes de publicar.

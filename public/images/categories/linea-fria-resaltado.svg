@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="inox304-linea-fria-resaltado-title">
+<title id="inox304-linea-fria-resaltado-title">Línea fría · resaltada</title>
+<defs>
+<linearGradient id="inox304-linea-fria-resaltado-metal" x1="18" y1="10" x2="44" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".31" stop-color="#F0F5FD"/><stop offset=".49" stop-color="#AEC0D7"/><stop offset=".53" stop-color="#FFFFFF"/><stop offset=".78" stop-color="#DAE5F2"/><stop offset="1" stop-color="#FAFCFF"/></linearGradient>
+<radialGradient id="inox304-linea-fria-resaltado-halo"><stop stop-color="#3689FF" stop-opacity=".19"/><stop offset=".52" stop-color="#267CFA" stop-opacity=".08"/><stop offset="1" stop-color="#176AEB" stop-opacity="0"/></radialGradient>
+</defs>
+<circle cx="32" cy="32" r="31" fill="url(#inox304-linea-fria-resaltado-halo)"/>
+<g stroke="url(#inox304-linea-fria-resaltado-metal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M32 11v42M13.8 21.5l36.4 21M13.8 42.5l36.4-21"/>
+<path d="m25.8 15.4 6.2 6.2 6.2-6.2M25.8 48.6l6.2-6.2 6.2 6.2M14.5 29.1l8.5-2.3-2.3-8.5M49.5 34.9 41 37.2l2.3 8.5M20.7 45.7l2.3-8.5-8.5-2.3M43.3 18.3 41 26.8l8.5 2.3"/></g>
+</svg>

@@ -2,10 +2,12 @@
 import { withBase } from '../lib/paths';
 ---
 <span class="flame-logo" data-flame-logo>
-  <img src={withBase('/images/brand/inox304-flame-metal.webp')} alt="INOX 304 · Alta calidad" width="1400" height="560" decoding="async" />
+  <img src={withBase('/images/brand/inox304-correct-colors.webp')} alt="INOX 304 · Alta calidad" width="1400" height="560" decoding="async" />
   <canvas class="flame-tint" aria-hidden="true"></canvas>
   <canvas class="flame-flow" aria-hidden="true"></canvas>
   <canvas class="flame-glow" aria-hidden="true"></canvas>
+  <canvas class="flame-ice" aria-hidden="true"></canvas>
+  <canvas class="flame-ice-aura" aria-hidden="true"></canvas>
 </span>
 <style>
   .flame-logo{position:relative;display:block;width:100%;isolation:isolate}
@@ -14,11 +16,11 @@ import { withBase } from '../lib/paths';
   .flame-tint{mix-blend-mode:multiply;opacity:.86}
   .flame-flow{mix-blend-mode:screen;opacity:.78}
   .flame-glow{mix-blend-mode:screen;opacity:.2;filter:blur(.7px)}
+  .flame-ice-aura{mix-blend-mode:screen;filter:blur(.4px)}
   @media(prefers-reduced-motion:reduce){.flame-glow{opacity:.16}}
 </style>
 <script>
-  // The supplied HTML paints blue only inside the connected outer flame.
-  // Keep the original silver lettering and inner snowflake untouched.
+  // Owner's corrected HTML: red outer flame, blue snowflake, silver lettering.
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   function makeCanvas(width: number, height: number) {
     const canvas = document.createElement('canvas');
@@ -35,6 +37,8 @@ import { withBase } from '../lib/paths';
     const tint = logo.querySelector<HTMLCanvasElement>('.flame-tint')!;
     const flow = logo.querySelector<HTMLCanvasElement>('.flame-flow')!;
     const glow = logo.querySelector<HTMLCanvasElement>('.flame-glow')!;
+    const ice = logo.querySelector<HTMLCanvasElement>('.flame-ice')!;
+    const iceAura = logo.querySelector<HTMLCanvasElement>('.flame-ice-aura')!;
     let ready = false;
     let visible = false;
     let frame = 0;
@@ -127,19 +131,65 @@ import { withBase } from '../lib/paths';
       const mask = makeCanvas(drawWidth, drawHeight);
       mask.getContext('2d')!.drawImage(fullMask, 0, 0, drawWidth, drawHeight);
       x0 *= scale; y0 *= scale; x1 *= scale; y1 *= scale;
-      for (const canvas of [tint, flow, glow]) {
+      for (const canvas of [tint, flow, glow, ice, iceAura]) {
         canvas.width = drawWidth;
         canvas.height = drawHeight;
       }
       const tintContext = tint.getContext('2d')!;
-      const blue = tintContext.createLinearGradient(x0, y1, x1, y0);
-      blue.addColorStop(0, '#0755cf');
-      blue.addColorStop(.47, '#078ced');
-      blue.addColorStop(1, '#1cb8ff');
-      tintContext.fillStyle = blue;
+      const red = tintContext.createLinearGradient(x0, y1, x1, y0);
+      red.addColorStop(0, '#b80815');
+      red.addColorStop(.47, '#ec1421');
+      red.addColorStop(1, '#ff3036');
+      tintContext.fillStyle = red;
       tintContext.fillRect(0, 0, drawWidth, drawHeight);
       tintContext.globalCompositeOperation = 'destination-in';
       tintContext.drawImage(mask, 0, 0);
+      // Reproduce the supplied connected-relief mask; do not tint the metal plate.
+      const iceMask = makeCanvas(width, height);
+      const iceMaskContext = iceMask.getContext('2d')!;
+      const iceData = iceMaskContext.createImageData(width, height);
+      const iceMember = new Uint8Array(width * height);
+      const iceCx = width * (193.6 / 1400), iceCy = height * (381.7 / 560);
+      const iceRx = width * (48 / 1400), iceRy = height * (51 / 560);
+      const iceStart = Math.round(iceCy) * width + Math.round(iceCx);
+      let iceHead = 0, iceTail = 1;
+      queue[0] = iceStart; iceMember[iceStart] = 1;
+      const iceLight = (p: number) => (pixels[p * 4] + pixels[p * 4 + 1] + pixels[p * 4 + 2]) / 3;
+      const inIce = (p: number) => ((p % width - iceCx) / iceRx) ** 2 + ((Math.floor(p / width) - iceCy) / iceRy) ** 2 < 1;
+      while (iceHead < iceTail) {
+        const p = queue[iceHead++], px = p % width, py = Math.floor(p / width);
+        for (const n of [px > 0 ? p - 1 : -1, px + 1 < width ? p + 1 : -1, py > 0 ? p - width : -1, py + 1 < height ? p + width : -1]) {
+          if (n < 0 || iceMember[n] || !inIce(n) || pixels[n * 4 + 3] < 64 || iceLight(n) < 120) continue;
+          iceMember[n] = 1; queue[iceTail++] = n;
+        }
+      }
+      for (let k = 0; k < iceTail; k++) {
+        const p = queue[k], x = p % width, y = Math.floor(p / width), i = p * 4;
+        const radial = Math.sqrt(((x - iceCx) / iceRx) ** 2 + ((y - iceCy) / iceRy) ** 2);
+        const coverage = smooth(116, 157, iceLight(p)) * (1 - smooth(.975, 1, radial));
+        iceData.data[i] = iceData.data[i + 1] = iceData.data[i + 2] = 255;
+        iceData.data[i + 3] = Math.round(pixels[i + 3] * coverage);
+      }
+      iceMaskContext.putImageData(iceData, 0, 0);
+      const iceSurface = makeCanvas(drawWidth, drawHeight), ic = iceSurface.getContext('2d')!;
+      ic.drawImage(original, 0, 0, drawWidth, drawHeight);
+      const iceBlue = ic.createLinearGradient(iceCx * scale, (iceCy + iceRy) * scale, iceCx * scale, (iceCy - iceRy) * scale);
+      iceBlue.addColorStop(0, '#0755cf'); iceBlue.addColorStop(.47, '#078ced'); iceBlue.addColorStop(1, '#1cb8ff');
+      ic.globalCompositeOperation = 'multiply'; ic.globalAlpha = .86;
+      ic.fillStyle = iceBlue; ic.fillRect(0, 0, drawWidth, drawHeight);
+      ic.globalCompositeOperation = 'screen'; ic.globalAlpha = .38;
+      ic.fillStyle = 'rgb(19,148,245)'; ic.fillRect(0, 0, drawWidth, drawHeight);
+      ic.globalAlpha = 1; ic.globalCompositeOperation = 'destination-in'; ic.drawImage(iceMask, 0, 0, drawWidth, drawHeight);
+      const iceContext = ice.getContext('2d')!, iceAuraContext = iceAura.getContext('2d')!;
+      function paintIce(time: number) {
+        const phase = time % 2.5;
+        const beat = (start: number, duration: number) => { const q = (phase - start) / duration; return q > 0 && q < 1 ? Math.sin(Math.PI * q) ** 2 : 0; };
+        const pulse = reducedMotion.matches ? 0 : beat(.14, .28) + .62 * beat(.51, .36);
+        iceContext.clearRect(0, 0, drawWidth, drawHeight); iceContext.save();
+        iceContext.translate(iceCx * scale, iceCy * scale); iceContext.scale(1 + .014 * pulse, 1 + .014 * pulse);
+        iceContext.translate(-iceCx * scale, -iceCy * scale); iceContext.drawImage(iceSurface, 0, 0); iceContext.restore();
+        iceAuraContext.clearRect(0, 0, drawWidth, drawHeight); iceAuraContext.globalAlpha = .18 + .2 * pulse; iceAuraContext.drawImage(ice, 0, 0);
+      }
       const textureWidth = 112, textureHeight = 172;
       const texture = makeCanvas(textureWidth, textureHeight);
       const textureContext = texture.getContext('2d')!;
@@ -177,9 +227,9 @@ import { withBase } from '../lib/paths';
             const small = noise(u * 10.5 + warp, v * 13.8 + time * 1.27);
             const heat = Math.min(1, smooth(.40, .80, n) * .81 + Math.pow(smooth(.52, .85, small), 2) * .19);
             const index = (y * textureWidth + x) * 4;
-            field.data[index] = 4 + 37 * heat;
-            field.data[index + 1] = 61 + 161 * heat;
-            field.data[index + 2] = 231 + 24 * heat;
+            field.data[index] = 231 + 24 * heat;
+            field.data[index + 1] = 4 + 37 * heat;
+            field.data[index + 2] = 10 + 32 * heat;
             field.data[index + 3] = 45 + 153 * heat;
           }
         }
@@ -191,6 +241,7 @@ import { withBase } from '../lib/paths';
         flowContext.drawImage(mask, 0, 0);
         glowContext.clearRect(0, 0, drawWidth, drawHeight);
         glowContext.drawImage(flow, 0, 0);
+        paintIce(time);
       };
       ready = true;
       logo.dataset.ready = 'true';

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="inox304-linea-neutra-normal-title">
+<title id="inox304-linea-neutra-normal-title">Línea neutra · normal</title>
+<defs>
+<linearGradient id="inox304-linea-neutra-normal-metal" x1="18" y1="10" x2="44" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#A5B3C7"/><stop offset=".52" stop-color="#899DB8"/><stop offset="1" stop-color="#7B8CA6"/></linearGradient>
+
+</defs>
+
+<g stroke="url(#inox304-linea-neutra-normal-metal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 23v-6h36v6"/>
+<rect x="10" y="23" width="44" height="6" rx="1.5"/>
+<path d="M15 29v22M49 29v22M15 43h34M15 47h34"/></g>
+</svg>

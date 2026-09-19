@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="inox304-mobiliario-normal-title">
+<title id="inox304-mobiliario-normal-title">Mobiliario · normal</title>
+<defs>
+<linearGradient id="inox304-mobiliario-normal-metal" x1="18" y1="10" x2="44" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#A5B3C7"/><stop offset=".52" stop-color="#899DB8"/><stop offset="1" stop-color="#7B8CA6"/></linearGradient>
+
+</defs>
+
+<g stroke="url(#inox304-mobiliario-normal-metal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 52V13a1 1 0 0 1 1-1h32a1 1 0 0 1 1 1v39"/>
+<path d="M15 24h34M15 36h34M15 48h34"/>
+<path d="M19 20h9M19 32h9M36 32h9M36 44h9"/></g>
+</svg>

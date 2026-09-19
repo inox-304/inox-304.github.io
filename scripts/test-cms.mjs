@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCsv, parseCms, normalizeWhatsapp, safeImage, safeHttps, validatePublishedUrl, resolveContact, visibleCmsProducts, cmsProductRoute } from '../src/lib/cms.ts';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { parseCsv, parseCms, normalizeWhatsapp, safeImage, safeHttps, safeTechnicalSheet, safeModel, formatProductPrice, validatePublishedUrl, resolveContact, visibleCmsProducts, cmsProductRoute } from '../src/lib/cms.ts';
 
 const header = 'id,slug,nombre,categoria,descripcion,caracteristicas,imagen,visible,destacado,orden,contacto_id\n';
 const catalog = header + 'P01,equipo-prueba,Equipo de prueba,coccion,Descripción,Acero|Dos puertas,/images/products/example.webp,SI,SI,1,ventas\n';
@@ -25,6 +29,57 @@ test('published product visibility and ordering control the visible dataset', ()
   assert.equal(data.products[0].id,'P02');
   assert.deepEqual(visibleCmsProducts(data).map(product => product.id),['P01']);
   assert.deepEqual(data.products[1].features,['Acero','Dos puertas']);
+  assert.equal(data.products[1].category, 'linea-caliente');
+});
+
+test('new publicar checkbox is opt-in and incomplete unpublished drafts do not break published products', () => {
+  const modern = catalog.replace('visible,', 'publicar,');
+  assert.equal(parseCms(modern, contacts, settings).products[0].visible, true);
+  assert.equal(parseCms(modern.replace(',SI,SI,', ',,SI,'), contacts, settings).products[0].visible, false);
+  const draft = 'P99,,,,,,,FALSE,FALSE,,\n';
+  assert.equal(parseCms(modern + draft, contacts, settings).products.length, 1);
+  assert.throws(() => parseCms(modern + draft.replace('FALSE,FALSE', 'TRUE,FALSE'), contacts, settings));
+  assert.equal(parseCms(catalog.replace(',SI,SI,', ',,SI,'), contacts, settings).products[0].visible, true);
+});
+
+const extendedCatalog = (fields = {}) => {
+  const rows = parseCsv(catalog);
+  const names = ['precio','moneda','mostrar_precio','ficha_tecnica','modelo_3d','poster_3d','galeria'];
+  rows[0].push(...names); rows[1].push(...names.map(name => fields[name] ?? ''));
+  return rows.map(row => row.map(value => `"${value.replaceAll('"','""')}"`).join(',')).join('\n');
+};
+
+test('optional commercial fields remain hidden until explicitly enabled and preserve exact entered values', () => {
+  const legacy = parseCms(catalog, contacts, settings).products[0];
+  assert.equal(formatProductPrice(legacy), '');
+  assert.deepEqual(legacy.gallery, []);
+  const product = parseCms(extendedCatalog({ precio:'1250,50', moneda:'PEN', mostrar_precio:'TRUE', ficha_tecnica:'/documents/P01.pdf', modelo_3d:'/models/P01.glb', poster_3d:'/images/poster.webp', galeria:'/images/side.webp | https://assets.example.com/back.webp' }), contacts, settings).products[0];
+  assert.equal(product.price, 1250.5);
+  assert.equal(product.showPrice, true);
+  assert.match(formatProductPrice(product), /1,250\.50/);
+  assert.equal(product.model3d, '/models/P01.glb');
+  assert.equal(product.gallery.length, 2);
+  assert.equal(formatProductPrice({ ...product, showPrice:false }), '');
+  assert.equal(formatProductPrice({ showPrice:true }), '');
+  for (const precio of ['-20','1,250.50','NaN','1e9','20.999']) assert.throws(() => parseCms(extendedCatalog({precio}), contacts, settings));
+  assert.throws(() => parseCms(extendedCatalog({moneda:'UNKNOWN'}), contacts, settings));
+});
+
+test('PDF and GLB links use expected media types; Drive sharing pages require importing first', () => {
+  assert.equal(safeTechnicalSheet('/documents/spec.pdf'), '/documents/spec.pdf');
+  assert.equal(safeModel('https://cdn.example.com/model.glb?v=1'), 'https://cdn.example.com/model.glb?v=1');
+  for (const bad of ['javascript:alert(1)', '/models/../secret.glb', 'https://cdn.example.com/model.html', 'https://drive.google.com/file/d/ID/view']) assert.equal(safeModel(bad), '');
+  assert.equal(safeTechnicalSheet('https://example.com/page.html'), '');
+  assert.equal(safeImage('https://drive.google.com/file/d/ID/view'), '');
+  assert.throws(() => parseCms(extendedCatalog({galeria:'https://drive.google.com/file/d/ID/view'}),contacts,settings));
+  assert.throws(() => parseCms(extendedCatalog({modelo_3d:'https://example.com/x.html'}),contacts,settings));
+});
+
+test('local generated snapshot URLs are allowlisted without allowing arbitrary local paths', () => {
+  assert.equal(validatePublishedUrl('/cms/live/catalogo.csv'), '/cms/live/catalogo.csv');
+  assert.equal(validatePublishedUrl('/cms/live/contactos.csv'), '/cms/live/contactos.csv');
+  assert.equal(validatePublishedUrl('/cms/live/ajustes.csv'), '/cms/live/ajustes.csv');
+  for (const bad of ['/cms/live/../private.csv','/cms/plantillas/Catalogo.csv','//evil.example/catalogo.csv','/secrets.csv']) assert.equal(validatePublishedUrl(bad),'');
 });
 test('malicious URL protocols, local traversal and duplicate IDs invalidate whole payload', () => {
   for (const value of ['javascript:alert(1)','data:image/svg+xml,x','//evil.example/a.png','/images/../secret','https://user:pass@example.com/a.png']) assert.equal(safeImage(value),'');
@@ -59,4 +114,27 @@ test('project deployment keeps stable and new CMS product links under its base e
   assert.equal(cmsProductRoute({id:'P02'},routes,'/inox304/'),'/inox304/catalogo/segundo-equipo/');
   assert.equal(cmsProductRoute({id:'P99'},routes,'/inox304/'),'/inox304/equipo/?id=P99');
   assert.equal(cmsProductRoute({id:'P99'},routes,'/'),'/equipo/?id=P99');
+});
+
+test('build snapshot adds new products, retires bundled products and allows an empty published catalog', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'inox-cms-test-'));
+  try {
+    mkdirSync(join(directory, '.generated'));
+    const data = parseCms(catalog.replace('P01,equipo-prueba', 'P99,nuevo-publicado'), contacts, settings);
+    data.contacts.push({ id:'especialista', name:'Especialista', whatsapp:'51911111111', phone:'911 111 111', email:'', message:'Hola', active:true });
+    const evaluate = () => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+      const { visibleProducts, featuredProducts } = await import(${JSON.stringify(new URL('../src/data/catalog.ts', import.meta.url).href)});
+      const { site, whatsappUrl } = await import(${JSON.stringify(new URL('../src/data/site.ts', import.meta.url).href)});
+      console.log(JSON.stringify({ ids: visibleProducts.map(product => product.id), featured: featuredProducts.map(product => product.id), phone: site.whatsapp, contact: whatsappUrl('consulta'), specialist: whatsappUrl('consulta', 'especialista') }));
+    `], { cwd: directory, encoding: 'utf8' }));
+    const snapshot = join(directory, '.generated', 'cms-snapshot.json');
+    writeFileSync(snapshot, JSON.stringify(data));
+    assert.deepEqual(evaluate(), { ids: ['P99'], featured: ['P99'], phone: '51964270406', contact: 'https://wa.me/51964270406?text=consulta', specialist: 'https://wa.me/51911111111?text=consulta' });
+    data.products = []; data.contacts = [];
+    writeFileSync(snapshot, JSON.stringify(data));
+    assert.deepEqual(evaluate(), { ids: [], featured: [], phone: '', contact: '/contacto/', specialist: '/contacto/' });
+  } finally {
+    assert.ok(resolve(directory).startsWith(resolve(tmpdir()) + sep));
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

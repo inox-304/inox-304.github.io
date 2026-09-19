@@ -1,0 +1,28 @@
+---
+import ProductStage from './ProductStage.astro';
+import type { Product } from '../data/products';
+import type { CmsProduct } from '../lib/cms';
+import '../styles/product-media.css';
+
+interface Props { product: Product & Partial<CmsProduct>; category: string }
+const { product, category } = Astro.props;
+const media = { id: product.id, name: product.name, image: product.image, gallery: product.gallery || [], model3d: product.model3d || '', modelPoster: product.modelPoster || '' };
+---
+<div class="product-media" data-product-media data-initial-product={JSON.stringify(media)}>
+  <div class="product-media-frame">
+    <ProductStage product={product} category={category}/>
+    <div class="product-gallery-photo" data-gallery-photo hidden>
+      <img data-gallery-image alt="" width="1200" height="1200" decoding="async"/>
+    </div>
+    <div class="product-model" data-model-host hidden></div>
+    <p class="product-media-status" data-media-status role="status" aria-live="polite" hidden></p>
+  </div>
+  <div class="product-media-toolbar" data-media-toolbar hidden aria-label="Vistas del equipo">
+    <div class="product-photo-options" data-photo-options role="group" aria-label="Fotografías del equipo"></div>
+    <button type="button" class="product-view-button product-model-button" data-show-model hidden aria-pressed="false">Ver 360° <span aria-hidden="true">↻</span></button>
+  </div>
+  <p class="product-media-help" data-model-help hidden>Arrastra para girar y pellizca para acercar. Con teclado: flechas para girar y + / − para zoom.</p>
+</div>
+<script>
+  import '../scripts/product-media';
+</script>
