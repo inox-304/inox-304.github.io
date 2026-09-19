@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: process.env.PUBLIC_SITE_URL || 'https://inox304.michael-silv.chatgpt.site',
+  site: process.env.PUBLIC_SITE_URL || 'https://inoxweb304-creator.github.io',
   base: process.env.PUBLIC_SITE_BASE_PATH || '/',
   output: 'static',
   devToolbar: { enabled: false },
