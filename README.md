@@ -74,7 +74,15 @@ El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto p
 - Revisar los recortes suministrados que todavía conservan bordes o rótulos pequeños de las imágenes originales.
 - Revisar el video final y su composición en móvil cuando se disponga del material definitivo.
 
-## Publicación en GitHub Pages
+## Publicación principal en Sites
+
+La dirección configurada para la publicación principal es **https://inox304.michael-silv.chatgpt.site/**, con base `/`. `.openai/hosting.json` identifica el sitio y la carpeta estática `dist/`. La publicación en Sites requiere compilar, verificar y publicar la misma revisión de código mediante la herramienta Sites; los pushes a GitHub no actualizan Sites automáticamente.
+
+Para usar un dominio propio, hay que registrar el dominio, asociarlo al alojamiento y configurar sus registros DNS. Después se debe cambiar `PUBLIC_SITE_URL` al dominio verificado y reconstruir para actualizar enlaces canónicos, sitemap y enlaces de productos compartidos por WhatsApp.
+
+Cuando se conecte Google Sheets, configura las tres variables `PUBLIC_CMS_*` antes de compilar también para Sites; Astro las incorpora en los archivos públicos durante la compilación.
+
+## Publicación adicional en GitHub Pages
 
 La web está publicada en **https://inoxweb304-creator.github.io/inox304/**. El despliegue está configurado en `.github/workflows/deploy.yml`: cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. El propietario ya activó **Settings → Pages → Build and deployment → Source: GitHub Actions**. La primera publicación se verificó el 19 de septiembre de 2026.
 
@@ -84,11 +92,13 @@ Para comprobar localmente la compilación de GitHub Pages desde PowerShell:
 
 ```powershell
 $env:PUBLIC_SITE_BASE_PATH = '/inox304/'
+$env:PUBLIC_SITE_URL = 'https://inoxweb304-creator.github.io'
 npm run build
 npm test
 node scripts/test-cms.mjs
 node scripts/test-paths.mjs
 Remove-Item Env:PUBLIC_SITE_BASE_PATH
+Remove-Item Env:PUBLIC_SITE_URL
 ```
 
 Cuando se active Google Sheets, las tres variables `PUBLIC_CMS_*` deben configurarse también como variables del repositorio en GitHub Actions. Contienen únicamente enlaces CSV comerciales públicos. Tras cambiar esas variables, ejecuta de nuevo el flujo de despliegue. La cuenta propietaria puede configurar un dominio propio más adelante; GitHub usa `github.io`, no `github.com`, para las direcciones gratuitas de Pages.
