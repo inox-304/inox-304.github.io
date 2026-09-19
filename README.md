@@ -76,15 +76,15 @@ El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto p
 
 ## Publicación principal en GitHub Pages
 
-La web está publicada en **https://inoxweb304-creator.github.io/inox304/**. El despliegue está configurado en `.github/workflows/deploy.yml`: cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. El propietario ya activó **Settings → Pages → Build and deployment → Source: GitHub Actions**. La primera publicación se verificó el 19 de septiembre de 2026.
+La dirección de la web es **https://inoxweb304.github.io/** y su repositorio es **https://github.com/inoxweb304/inoxweb304.github.io**. El despliegue está configurado en `.github/workflows/deploy.yml`: cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. El propietario ya activó **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 El flujo calcula `PUBLIC_SITE_URL` a partir del usuario propietario y `PUBLIC_SITE_BASE_PATH` a partir del nombre del repositorio. Un repositorio llamado exactamente `<usuario>.github.io` usa `/`; los demás usan `/<repositorio>/`. Así, la publicación se adapta al renombrar la cuenta y el repositorio. En desarrollo, la base predeterminada sigue siendo `/`. Los enlaces, archivos multimedia, rutas de productos y datos de Sheets respetan esa base. `robots.txt`, el sitemap y los enlaces canónicos se generan con la dirección configurada.
 
 Para comprobar localmente la compilación de GitHub Pages desde PowerShell:
 
 ```powershell
-$env:PUBLIC_SITE_BASE_PATH = '/inox304/'
-$env:PUBLIC_SITE_URL = 'https://inoxweb304-creator.github.io'
+$env:PUBLIC_SITE_BASE_PATH = '/'
+$env:PUBLIC_SITE_URL = 'https://inoxweb304.github.io'
 npm run build
 npm test
 node scripts/test-cms.mjs
@@ -95,6 +95,6 @@ Remove-Item Env:PUBLIC_SITE_URL
 
 Cuando se active Google Sheets, las tres variables `PUBLIC_CMS_*` deben configurarse también como variables del repositorio en GitHub Actions. Contienen únicamente enlaces CSV comerciales públicos. Tras cambiar esas variables, ejecuta de nuevo el flujo de despliegue. La cuenta propietaria puede configurar un dominio propio más adelante; GitHub usa `github.io`, no `github.com`, para las direcciones gratuitas de Pages.
 
-Para acortar la dirección como en Arenas, la cuenta propietaria puede cambiar su usuario a `inoxweb304` si GitHub confirma su disponibilidad y renombrar el repositorio a `inoxweb304.github.io`. Ese cambio todavía está pendiente. Después hay que actualizar el remoto y la dirección predeterminada de desarrollo, ejecutar el flujo de publicación y volver a verificar Pages. Cambiar solamente el nombre visible del perfil no modifica la dirección.
+El 19 de septiembre de 2026 la cuenta se renombró de `inoxweb304-creator` a `inoxweb304` y el repositorio de `inox304` a `inoxweb304.github.io`, para usar una dirección corta como la de Arenas. El remoto local y la dirección predeterminada de desarrollo ya usan esos nombres. GitHub redirige los enlaces antiguos del repositorio, pero no garantiza redirecciones del sitio de Pages: comparte la dirección nueva.
 
 Se conserva el identificador de la copia anterior en Sites en `.openai/hosting.json`, pero GitHub Pages es el alojamiento elegido. Los pushes a GitHub no publican en Sites.
