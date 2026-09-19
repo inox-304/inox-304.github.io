@@ -1,0 +1,126 @@
+/* The home navigation sits directly on the photographic hero. */
+.site-header {
+  z-index: 50;
+  border-bottom: 1px solid rgb(229 235 224 / 10%);
+  background: #111918;
+}
+.site-header.site-header-overlay {
+  position: absolute;
+  inset: 0 0 auto;
+  background: linear-gradient(180deg, rgb(8 16 14 / 64%), transparent);
+  border-bottom-color: transparent;
+}
+.site-header .header-inner {
+  height: 112px;
+  width: calc(100% - 96px);
+  gap: 30px;
+}
+.site-header .header-inner .brand-logo {
+  width: 178px;
+  max-height: 72px;
+  height: auto;
+}
+.site-header .desktop-nav {
+  flex: 1;
+  justify-content: center;
+  gap: clamp(6px, 1.65vw, 25px);
+}
+.site-header .desktop-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #e3e9df;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .015em;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 28%);
+  transition: color 250ms ease, background 320ms ease, border-color 320ms ease, box-shadow 320ms ease, backdrop-filter 320ms ease;
+}
+.site-header .desktop-nav a::after,
+.site-header .header-cta::after { display: none; }
+.site-header .desktop-nav a[aria-current] { color: var(--accent); border-color: rgb(203 182 143 / 28%); }
+.site-header .header-cta {
+  min-height: 45px;
+  padding: 12px 17px;
+  gap: 18px;
+  border: 1px solid rgb(221 231 215 / 29%);
+  border-radius: 999px;
+  background: rgb(10 22 19 / 40%);
+  color: #eff2e9;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: background 320ms ease, border-color 320ms ease, box-shadow 320ms ease, backdrop-filter 320ms ease;
+}
+.site-header :is(.desktop-nav a, .header-cta):is(:hover, :focus-visible) {
+  background: rgb(227 236 220 / 13%);
+  color: #fffdf4;
+  border-color: rgb(213 192 153 / 51%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 6px 22px rgb(0 0 0 / 10%);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  backdrop-filter: blur(22px) saturate(1.2);
+}
+.site-header .menu-toggle {
+  width: 46px;
+  height: 46px;
+  padding: 11px;
+  border: 1px solid rgb(226 235 218 / 28%);
+  border-radius: 50%;
+  background: rgb(219 231 211 / 7%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.site-header .menu-toggle span { margin-block: 7px; }
+.site-header .mobile-nav {
+  padding: 12px 26px 26px;
+  border-top: 1px solid rgb(223 235 215 / 17%);
+  border-bottom: 1px solid rgb(223 235 215 / 20%);
+  border-radius: 0 0 18px 18px;
+  background: rgb(12 22 19 / 90%);
+  max-height: calc(100svh - 88px);
+  overflow-y: auto;
+  -webkit-backdrop-filter: blur(24px) saturate(1.15);
+  backdrop-filter: blur(24px) saturate(1.15);
+}
+.site-header .mobile-nav a {
+  padding: 17px 9px;
+  font-size: 16px;
+  color: #e6eee0;
+  transition: background 260ms ease, color 260ms ease;
+}
+.site-header .mobile-nav a:is(:hover, :focus-visible) { color: #f5ead3; background: rgb(228 238 219 / 6%); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header :is(.desktop-nav a, .header-cta):is(:hover, :focus-visible) { background: #26312a; }
+  .site-header .mobile-nav { background: #14211b; }
+}
+@media (max-width: 1200px) {
+  .site-header .header-inner { width: calc(100% - 64px); gap: 18px; }
+  .site-header .header-inner .brand-logo { width: 154px; }
+  .site-header .desktop-nav { gap: 3px; }
+  .site-header .desktop-nav a { padding-inline: 11px; font-size: 11px; }
+  .site-header .header-cta { font-size: 10px; gap: 10px; padding-inline: 13px; }
+}
+@media (max-width: 900px) {
+  .site-header .header-inner { height: 88px; width: calc(100% - 48px); }
+  .site-header .header-inner .brand-logo { width: 158px; max-height: 64px; }
+  .site-header .desktop-nav,
+  .site-header .header-cta { display: none; }
+  .site-header .menu-toggle { display: block; }
+}
+@media (max-width: 600px) {
+  .site-header .header-inner { width: calc(100% - 40px); }
+  .site-header .header-inner .brand-logo { width: 147px; max-height: 61px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-header :is(.desktop-nav a, .header-cta, .mobile-nav a) { transition: none; }
+}

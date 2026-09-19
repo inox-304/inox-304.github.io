@@ -1,0 +1,14 @@
+---
+import Brand from './Brand.astro';
+import Icon from './Icon.astro';
+import { site, whatsappUrl } from '../data/site';
+---
+<footer class="site-footer">
+  <div class="shell footer-top">
+    <div><Brand footer/><p>Diseñamos. Fabricamos. Instalamos.<br/>Acero que está a la altura de tu negocio.</p></div>
+    <div class="footer-column"><span class="eyebrow">EXPLORA</span><a href="/catalogo/">Nuestros equipos</a><a href="/#a-medida">Fabricación a medida</a><a href="/#instalaciones">Instalaciones y servicios</a><a href="/#nosotros">Conoce INOX 304</a></div>
+    <div class="footer-column"><span class="eyebrow">CONVERSEMOS</span><a href={whatsappUrl()} target="_blank" rel="noopener noreferrer"><span data-cms-phone>+51 {site.phone}</span> <Icon name="diagonal" size={14}/></a><a data-cms-email href={`mailto:${site.email}`}>{site.email}</a><a data-cms-facebook href={site.facebook} target="_blank" rel="noopener noreferrer">Facebook <Icon name="diagonal" size={14}/></a></div>
+    <div class="footer-column"><span class="eyebrow">ENCUÉNTRANOS</span><p><span data-business="direccion">{site.address}</span><br/><span class="muted" data-business="referencia_direccion">Frente a Tottus · 4.º paradero</span></p><a href="/contacto/">Ver ubicación <Icon name="arrow" size={14}/></a></div>
+  </div>
+  <div class="shell footer-bottom"><span>© {new Date().getFullYear()} <span data-business="empresa">INOX 304</span>. Todos los derechos reservados.</span><span>HECHO PARA DURAR.</span><a href="#top">Volver arriba ↑</a></div>
+</footer>

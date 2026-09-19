@@ -1,0 +1,21 @@
+---
+import { cmsConfig } from '../data/cms-config';
+import { products } from '../data/products';
+import { featuredProducts } from '../data/catalog';
+import { site } from '../data/site';
+const payload = {
+  config: cmsConfig,
+  routes: Object.fromEntries(products.map(product => [product.id, `/catalogo/${product.slug}/`])),
+  data: {
+    products: products.map((product, index) => ({ ...product, visible: true, featured: featuredProducts.some(item => item.id === product.id), order: index, contactId: 'ventas' })),
+    contacts: [
+      { id: 'ventas', name: 'Ventas', whatsapp: site.whatsapp, phone: site.phone, email: site.email, message: 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.', active: true },
+      { id: 'instalaciones', name: 'Instalaciones', whatsapp: site.whatsapp, phone: site.phone, email: site.email, message: 'Hola INOX 304, quiero asesoría para un proyecto de instalación.', active: true },
+    ],
+    settings: { empresa: site.name, direccion: site.address, referencia_direccion: 'Frente a Tottus · 4.º paradero', facebook: site.facebook, contacto_principal: 'ventas', contacto_instalaciones: 'instalaciones', contacto_medida: 'ventas', contacto_formulario: 'ventas' },
+  },
+};
+const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+---
+<script id="inox-cms-bootstrap" type="application/json" set:html={json}></script>
+<script>import '../scripts/cms';</script>

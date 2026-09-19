@@ -1,0 +1,245 @@
+/* A quiet, tactile motion system. Content never depends on animation to appear. */
+:root {
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+}
+
+/* Same-origin page links keep native navigation; unsupported browsers ignore this opt-in. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-group(root) { animation: none; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
+    animation-timing-function: ease-out;
+  }
+}
+
+.button {
+  --motion-x: 0px;
+  --motion-y: 0px;
+  --button-lift: 0px;
+  --button-scale: 1;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transform: translate3d(var(--motion-x), calc(var(--motion-y) + var(--button-lift)), 0) scale(var(--button-scale));
+  border-radius: 999px;
+  -webkit-backdrop-filter: blur(7px) saturate(1.05);
+  backdrop-filter: blur(7px) saturate(1.05);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 11%);
+  transition: transform 320ms var(--ease-out), box-shadow 360ms var(--ease-out), border-color 320ms ease, background 320ms ease, color 240ms ease, backdrop-filter 360ms ease;
+}
+
+.button-light { background: rgb(238 243 229 / 13%); color: #f7f8f2; border-color: rgb(225 235 214 / 38%); }
+.button-dark { background: rgb(20 30 25 / 88%); color: #f4f6ed; border-color: rgb(46 65 43 / 48%); }
+.button:hover { transform: translate3d(var(--motion-x), calc(var(--motion-y) + var(--button-lift)), 0) scale(var(--button-scale)); }
+.button-light:is(:hover, :focus-visible) { background: rgb(226 238 215 / 22%); color: #fffef6; border-color: rgb(218 198 163 / 68%); }
+.button-dark:is(:hover, :focus-visible) { background: rgb(20 34 25 / 73%); color: #fffef4; border-color: rgb(84 106 70 / 75%); }
+.button:is(:hover, :focus-visible) { -webkit-backdrop-filter: blur(22px) saturate(1.25); backdrop-filter: blur(22px) saturate(1.25); }
+
+.button::before,
+.button::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.button::before {
+  inset: -1px;
+  background: linear-gradient(125deg, rgb(255 255 255 / 10%), transparent 48%, rgb(206 190 157 / 5%));
+  opacity: 0;
+  transition: opacity 420ms var(--ease-out);
+}
+
+.button::after {
+  inset: -45% -25%;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 19%) 48%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 620ms var(--ease-out);
+}
+
+.button svg,
+.text-link svg,
+.header-cta svg,
+.category-links svg,
+.product-arrow svg,
+.card-link svg,
+.circle-cta svg,
+.scroll-cue > span {
+  transition: transform 360ms var(--ease-out);
+}
+
+.button:focus-visible::before { opacity: 1; }
+.button:focus-visible::after { transform: translateX(100%); }
+.button:focus-visible svg { transform: translateX(4px); }
+.button-light:focus-visible { outline-color: var(--paper); }
+.button-dark:focus-visible { outline-color: var(--ink); }
+
+.desktop-nav a,
+.text-link,
+.header-cta,
+.category-links a,
+.footer-column a {
+  position: relative;
+}
+
+.desktop-nav a::after,
+.text-link::after,
+.header-cta::after,
+.category-links a::after,
+.footer-column a::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 360ms var(--ease-out);
+  pointer-events: none;
+}
+
+.text-link::after,
+.header-cta::after { bottom: -1px; }
+.text-link:hover { border-color: transparent; }
+.desktop-nav a[aria-current]::after { transform: scaleX(1); }
+
+:is(.desktop-nav a, .text-link, .header-cta, .category-links a, .footer-column a):focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.product-card-image {
+  transition: background 400ms ease, box-shadow 400ms var(--ease-out);
+}
+
+.product-card-image img { transition: transform 650ms var(--ease-out); }
+.product-card:hover .product-card-image img { transform: none; }
+.product-arrow {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: background 300ms ease, color 300ms ease, border-color 300ms ease, transform 400ms var(--ease-out), backdrop-filter 320ms ease;
+}
+.product-card:is(:hover, :focus-visible) .product-arrow { background: rgb(19 31 23 / 74%); color: var(--paper); border-color: rgb(41 62 37 / 65%); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.product-card:focus-visible .product-arrow svg { transform: translate(2px, -2px); }
+.product-card:focus-visible .card-link svg { transform: translateX(4px); }
+
+.circle-cta {
+  --motion-x: 0px;
+  --motion-y: 0px;
+  transform: translate3d(var(--motion-x), var(--motion-y), 0);
+  background: rgb(249 252 241 / 13%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: transform 360ms var(--ease-out), background 360ms ease, color 360ms ease, border-color 360ms ease, backdrop-filter 360ms ease;
+}
+.circle-cta:is(:hover, :focus-visible) { background: rgb(20 34 24 / 76%); color: var(--paper); -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); }
+.circle-cta:focus-visible svg { transform: translate(4px, -4px); }
+
+.filter-pills button,
+.video-toggle {
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  transition: background 260ms ease, color 260ms ease, border-color 260ms ease, transform 240ms var(--ease-out), box-shadow 240ms ease, backdrop-filter 320ms ease;
+}
+.filter-pills button:is(:hover, :focus-visible) { background: rgb(252 254 245 / 57%); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.filter-pills button.active { background: rgb(20 32 23 / 87%); box-shadow: 0 3px 10px rgb(20 25 25 / 12%); }
+.filter-pills button.active:is(:hover, :focus-visible) { background: rgb(20 32 23 / 73%); }
+.video-toggle { background: rgb(12 22 17 / 40%); }
+.video-toggle:is(:hover, :focus-visible) { background: rgb(20 33 24 / 62%); border-color: rgb(216 198 160 / 60%); -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); }
+.search-field { transition: border-color 260ms ease, box-shadow 260ms ease; }
+.search-field:focus-within { border-color: var(--ink); box-shadow: 0 1px 0 var(--ink); }
+.quote-form input,
+.quote-form select,
+.quote-form textarea { transition: border-color 260ms ease, box-shadow 260ms ease; }
+.quote-form :is(input, select, textarea):focus { border-color: #405535; box-shadow: 0 1px 0 #405535; }
+
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    --button-lift: -3px;
+    transform: translate3d(var(--motion-x), calc(var(--motion-y) + var(--button-lift)), 0) scale(var(--button-scale));
+    box-shadow: 0 8px 22px rgb(0 0 0 / 14%), inset 0 1px 0 rgb(255 255 255 / 18%);
+  }
+  .button:hover::before { opacity: 1; }
+  .button:hover::after { transform: translateX(100%); }
+  .button:hover svg { transform: translateX(4px); }
+  :is(.desktop-nav a, .text-link, .header-cta, .category-links a, .footer-column a):hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  :is(.text-link, .header-cta, .category-links a):hover svg { transform: translate(3px, -1px); }
+  .product-card:hover .product-card-image { box-shadow: inset 0 0 0 1px rgb(20 25 25 / 5%); }
+  .product-card:not(.product-cutout):hover .product-card-image { background: #dce2d5; }
+  .product-card:hover .product-card-image img { transform: scale(1.045); }
+  .product-card:hover .product-arrow { border-color: var(--ink); transform: scale(1.06); }
+  .product-card:hover .product-arrow svg { transform: translate(2px, -2px); }
+  .product-card:hover .card-link svg { transform: translateX(4px); }
+  .circle-cta:hover { border-color: var(--ink); }
+  .circle-cta:hover svg { transform: translate(5px, -5px); }
+  .filter-pills button:hover { transform: translateY(-2px); }
+  .scroll-cue:hover > span { transform: translateY(4px); }
+}
+
+.button:active {
+  --motion-x: 0px;
+  --motion-y: 0px;
+  --button-lift: 0px;
+  --button-scale: .975;
+  transform: scale(.975);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 16%);
+  transition-duration: 100ms;
+}
+.circle-cta:active { transform: scale(.95); transition-duration: 100ms; }
+.filter-pills button:active,
+.video-toggle:active { transform: scale(.96); transition-duration: 100ms; }
+.menu-toggle:active { opacity: .65; }
+
+@keyframes menu-enter {
+  from { opacity: .65; translate: 0 -8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+.mobile-nav:not([hidden]) > a { animation: menu-enter 380ms var(--ease-out) both; }
+.mobile-nav:not([hidden]) > a:nth-child(2) { animation-delay: 35ms; }
+.mobile-nav:not([hidden]) > a:nth-child(3) { animation-delay: 70ms; }
+.mobile-nav:not([hidden]) > a:nth-child(4) { animation-delay: 105ms; }
+.mobile-nav:not([hidden]) > a:nth-child(5) { animation-delay: 140ms; }
+.mobile-nav:not([hidden]) > a:nth-child(6) { animation-delay: 175ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+  .button,
+  .button:hover,
+  .button:active,
+  .circle-cta,
+  .circle-cta:active,
+  .filter-pills button,
+  .filter-pills button:hover,
+  .filter-pills button:active,
+  .video-toggle:active,
+  .product-card .product-card-image img,
+  .product-card .product-arrow,
+  :is(.button, .text-link, .header-cta, .category-links a, .product-card, .circle-cta) svg,
+  .scroll-cue > span { transform: none !important; }
+  .button::after { display: none; }
+  .mobile-nav:not([hidden]) > a { animation: none; }
+}
+
+@media (forced-colors: active) {
+  .button::before,
+  .button::after { display: none; }
+  .button { border-color: ButtonText; }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .button-light,
+  .button-light:is(:hover, :focus-visible) { background: #344232; }
+  .button-dark,
+  .button-dark:is(:hover, :focus-visible) { background: #263622; }
+}

@@ -1,0 +1,41 @@
+---
+import Brand from './Brand.astro';
+import Icon from './Icon.astro';
+import { whatsappUrl } from '../data/site';
+import '../styles/header.css';
+const pathname = Astro.url.pathname;
+---
+<header class:list={['site-header', { 'site-header-overlay': pathname === '/' }]}>
+  <div class="header-inner shell">
+    <Brand />
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a href="/catalogo/" aria-current={pathname.startsWith('/catalogo') ? 'page' : undefined}>Catálogo</a>
+      <a href="/#a-medida">A medida</a>
+      <a href="/#instalaciones">Instalaciones</a>
+      <a href="/#nosotros">Nosotros</a>
+      <a href="/contacto/" aria-current={pathname === '/contacto/' ? 'page' : undefined}>Contacto</a>
+    </nav>
+    <a class="header-cta" href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Hablemos de tu proyecto <Icon name="diagonal" size={17}/></a>
+    <button class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span></button>
+  </div>
+  <nav id="mobile-menu" class="mobile-nav" aria-label="Navegación móvil" hidden>
+    <a href="/catalogo/">Catálogo <Icon/></a><a href="/#a-medida">A medida <Icon/></a><a href="/#instalaciones">Instalaciones <Icon/></a><a href="/#nosotros">Nosotros <Icon/></a><a href="/contacto/">Contacto <Icon/></a>
+    <a href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Cotizar por WhatsApp <Icon name="whatsapp"/></a>
+  </nav>
+</header>
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+  const menu = document.querySelector<HTMLElement>('#mobile-menu');
+  function closeMenu() {
+    if (!toggle || !menu) return;
+    toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-label', 'Abrir menú'); menu.hidden = true;
+  }
+  toggle?.addEventListener('click', () => {
+    if (!menu || !toggle) return;
+    const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!isOpen)); toggle.setAttribute('aria-label', isOpen ? 'Abrir menú' : 'Cerrar menú'); menu.hidden = isOpen;
+  });
+  menu?.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') { closeMenu(); toggle.focus(); } });
+  window.matchMedia('(min-width: 901px)').addEventListener('change', event => { if (event.matches) closeMenu(); });
+</script>

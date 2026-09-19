@@ -1,0 +1,30 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { site, whatsappUrl } from '../data/site';
+---
+<Layout title="Conversemos sobre tu proyecto" description="Contacta con INOX 304 en Cusco. Solicita asesoría, cotiza equipamiento gastronómico o cuéntanos tu proyecto de fabricación a medida.">
+  <section class="page-intro"><div class="shell"><a class="breadcrumb" href="/">Inicio <span>/</span> Contacto</a><span class="eyebrow">EL PRIMER PASO ES CONVERSAR</span><h1>Las grandes ideas<br/><em>empiezan aquí.</em></h1></div></section>
+  <section class="section section-light contact-page"><div class="shell contact-layout"><div class="contact-info"><span class="eyebrow">ESTAMOS PARA AYUDARTE</span><h2>Cuéntanos qué<br/>tienes en mente.</h2><p>Un equipo, una cocina completa o un proyecto desde cero. Encontremos la solución para tu negocio.</p><div class="contact-method"><Icon name="whatsapp"/><div><span>ESCRÍBENOS</span><a href={whatsappUrl()} target="_blank" rel="noopener noreferrer"><span data-cms-phone>+51 {site.phone}</span></a></div></div><div class="contact-method"><Icon name="mail"/><div><span>CORREO</span><a data-cms-email href={`mailto:${site.email}`}>{site.email}</a></div></div><div class="contact-method"><Icon name="pin"/><div><span>VISÍTANOS EN CUSCO</span><p><span data-business="direccion">{site.address}</span><br/><span data-business="referencia_direccion">Frente a Tottus · 4.º paradero</span></p><a class="map-link" data-cms-map href="https://goo.gl/maps/zfGBMGg8PpziHLSY9" target="_blank" rel="noopener noreferrer">Cómo llegar <Icon name="diagonal" size={14}/></a></div></div></div>
+    <form id="quote-form" class="quote-form" data-whatsapp={site.whatsapp}><div class="form-top"><span class="eyebrow">TU PROYECTO, A TU MEDIDA</span><Icon name="diagonal" size={25}/></div><label>¿Cómo te llamas?<input name="name" autocomplete="name" placeholder="Tu nombre" required maxlength="100"/></label><label>Tu negocio o proyecto<input name="business" autocomplete="organization" placeholder="Ej. Restaurante, cafetería, hotel…" maxlength="150"/></label><label>¿Qué necesitas?<select name="need"><option>Equipamiento para mi negocio</option><option>Fabricación a medida</option><option>Un proyecto integral</option><option>Instalación o mantenimiento</option><option>Asesoría para elegir equipos</option></select></label><label>Cuéntanos un poco más<textarea name="message" rows="4" placeholder="Tipo de equipo, medidas de tu espacio, ciudad…" required maxlength="1500"></textarea></label><button class="button button-dark" type="submit">Continuar en WhatsApp <Icon name="whatsapp"/></button><p class="form-note">Se abrirá WhatsApp con tu consulta lista para enviar. Tú decides cuándo enviarla.</p><p id="form-status" class="form-status" role="status" aria-live="polite"></p><a id="quote-fallback" class="text-link dark-link" href={whatsappUrl()} target="_blank" rel="noopener noreferrer" hidden>Abrir mi consulta en WhatsApp <Icon/></a></form>
+  </div></section>
+  <section class="location-strip"><div class="shell"><span class="eyebrow">CERCA DE TU PROYECTO</span><p>Cusco <span>↔</span> Lima <span>↗</span> Todo el Perú</p></div></section>
+</Layout>
+<script>
+  const form = document.querySelector<HTMLFormElement>('#quote-form');
+  form?.addEventListener('submit', event => {
+    event.preventDefault(); if (!form.reportValidity()) return;
+    const data = new FormData(form);
+    const name = String(data.get('name') || '').trim(); const message = String(data.get('message') || '').trim();
+    const status = document.querySelector<HTMLElement>('#form-status');
+    if (!name || !message) { if (status) status.textContent = 'Completa tu nombre y cuéntanos qué necesitas.'; return; }
+    const business = String(data.get('business') || '').trim();
+    const intro = form.dataset.contactMessage || `Hola ${form.dataset.company || 'INOX 304'}.`;
+    if (!form.dataset.whatsapp) { if (status) status.textContent = 'Por el momento no hay un contacto disponible para esta consulta.'; return; }
+    const text = `${intro}\nSoy ${name}.${business ? `\nMi negocio/proyecto: ${business}.` : ''}\nNecesito: ${data.get('need')}.\n\n${message}`;
+    const url = `https://wa.me/${form.dataset.whatsapp}?text=${encodeURIComponent(text)}`;
+    const fallback = document.querySelector<HTMLAnchorElement>('#quote-fallback'); if (fallback) { fallback.href = url; fallback.hidden = false; }
+    window.open(url, '_blank', 'noopener,noreferrer');
+    if (status) status.textContent = 'Tu consulta está preparada. Si WhatsApp no se abrió, usa el enlace de abajo.';
+  });
+</script>

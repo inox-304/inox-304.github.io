@@ -1,0 +1,22 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import ProductStage from '../../components/ProductStage.astro';
+import { visibleProducts } from '../../data/catalog';
+import { categories, type Product } from '../../data/products';
+import { whatsappUrl } from '../../data/site';
+export function getStaticPaths() { return visibleProducts.map(product => ({ params: { slug: product.slug }, props: { product } })); }
+interface Props { product: Product }
+const { product } = Astro.props;
+const category = categories.find(item => item.id === product.category)!;
+const related = visibleProducts.filter(item => item.category === product.category && item.id !== product.id).slice(0, 3);
+const quoteUrl = whatsappUrl(`Hola INOX 304, me interesa ${product.name}. Me gustaría conocer las opciones y recibir una cotización. https://inox304.pe/catalogo/${product.slug}/`);
+---
+<Layout title={product.name} description={product.summary} image={product.image}>
+  <section class="section-light product-page" data-product-detail={product.id}><div class="shell">
+    <nav class="breadcrumbs" aria-label="Ruta de navegación"><a href="/">Inicio</a><span>/</span><a href="/catalogo/">Catálogo</a><span>/</span><a data-product-category data-product-category-link href={`/catalogo/?categoria=${category.id}`}>{category.shortName}</a></nav>
+    <div data-product-unavailable hidden role="status"><h2>Este equipo ya no está disponible en el catálogo.</h2><p>Explora los equipos actuales o consulta con nuestro equipo.</p><a class="button button-dark" href="/catalogo/">Ver catálogo</a></div><div class="product-detail-grid"><ProductStage product={product} category={category.name}/><div class="product-detail-copy"><span class="eyebrow" data-product-category>{category.name}</span><h1 data-product-name>{product.name}</h1><p class="product-summary" data-product-summary>{product.summary}</p><div class="product-detail-cta"><a class="button button-dark" data-product-quote href={quoteUrl} target="_blank" rel="noopener noreferrer">Cotizar este equipo <Icon name="whatsapp"/></a><p data-product-quote-note>Consulta medidas, disponibilidad y opciones para tu negocio.</p></div><div class="specifications"><h2>Detalles que hacen la diferencia</h2><ul data-product-features>{product.features.map(feature => <li><Icon name="check" size={17}/><span>{feature}</span></li>)}</ul></div><a class="text-link dark-link" href="/contacto/">¿Necesitas ayuda para elegir? <Icon name="arrow" size={17}/></a></div></div>
+    {related.length > 0 && <section class="related-products"><div class="section-heading"><div><span class="eyebrow">COMPLETA TU ESPACIO</span><h2>También te puede interesar.</h2></div><a class="text-link dark-link" data-product-category-link href={`/catalogo/?categoria=${category.id}`}>Ver categoría <Icon/></a></div><div class="product-grid">{related.map((item, index) => <ProductCard product={item} index={index}/>)}</div></section>}
+  </div></section>
+</Layout>

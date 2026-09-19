@@ -1,0 +1,88 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import ProductCard from '../components/ProductCard.astro';
+import Services from '../components/Services.astro';
+import { categories } from '../data/products';
+import { featuredProducts } from '../data/catalog';
+import { whatsappUrl } from '../data/site';
+---
+<Layout home>
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="hero-atmosphere" aria-hidden="true"></div>
+    <div class="hero-stage" aria-hidden="true">
+      <video id="hero-video" class="hero-video" poster="/media/hero-poster.jpg" muted loop playsinline preload="none"><source data-src="/media/hero-clean.mp4" type="video/mp4"/></video>
+      <div class="hero-stage-shade"></div>
+    </div>
+    <div class="hero-inner shell">
+      <div class="hero-copy">
+        <span class="eyebrow hero-eyebrow"><span class="tiny-line"></span> EQUIPAMIENTO QUE TRANSFORMA</span>
+        <h1 id="hero-heading">Acero que<br/>impulsa<br/>tu <em>negocio.</em></h1>
+        <p>Diseño preciso. Fabricación a medida.<br/>Equipos preparados para tu siguiente gran idea.</p>
+        <div class="hero-actions"><a class="button button-light" href="/catalogo/">Explora el catálogo <Icon name="diagonal"/></a><a class="text-link" href="#a-medida">Hagámoslo a tu medida <Icon size={17}/></a></div>
+      </div>
+      <div class="hero-foot"><a class="scroll-cue" href="#coleccion"><span>↓</span> DESCUBRE INOX 304</a><div class="hero-foot-note"><span class="live-dot"></span> DISEÑADO PARA EXIGIRLE MÁS</div><button class="video-toggle" aria-label="Reproducir video de presentación" aria-pressed="false"><span data-video-icon>▶</span><span data-video-label>Reproducir</span></button></div>
+    </div>
+  </section>
+
+  <section class="value-strip" aria-label="Nuestra especialidad"><div class="shell value-strip-inner"><div><span class="value-number">304</span><span>ACERO INOXIDABLE<br/><b>AISI 304</b></span></div><span class="value-rule"></span><div><span class="value-symbol">↗</span><span>DE LA IDEA AL ESPACIO<br/><b>Fabricación a medida</b></span></div><span class="value-rule"></span><div><span class="value-symbol">◎</span><span>DESDE CUSCO Y LIMA<br/><b>Envíos a todo el Perú</b></span></div></div></section>
+
+  <section id="coleccion" class="section section-light collection-section">
+    <div class="shell">
+      <div class="section-heading"><div><span class="eyebrow">01 / NUESTRA COLECCIÓN</span><h2>Diseñados para<br/>trabajar <span class="soft-text">en serio.</span></h2></div><div class="section-heading-side"><p>Equipamiento para cocinas profesionales<br/>y negocios que no se detienen.</p><a class="text-link dark-link" href="/catalogo/">Ver todos los equipos <Icon name="diagonal"/></a></div></div>
+      <div class="category-links" aria-label="Categorías de equipos">{categories.map(category => <a href={`/catalogo/?categoria=${category.id}`}>{category.shortName}<Icon name="diagonal" size={13}/></a>)}</div>
+      <div class="product-grid" data-cms-products="featured">{featuredProducts.map((product, index) => <ProductCard product={product} index={index}/>)}</div>
+      <div class="collection-bottom"><p>Cada negocio tiene su equipo ideal.<br/><strong>Te ayudamos a encontrar el tuyo.</strong></p><a class="button button-dark" href="/catalogo/">Todo el catálogo <Icon name="arrow"/></a></div>
+    </div>
+  </section>
+
+  <section id="a-medida" class="custom-section">
+    <img class="custom-background" src="/images/hero-studio.webp" alt="" loading="lazy" decoding="async" width="1672" height="941"/>
+    <div class="custom-overlay"></div>
+    <div class="shell custom-content"><span class="eyebrow">02 / HECHO A TU MEDIDA</span><h2>Tu espacio.<br/>Tu visión.<br/><em>Nuestra precisión.</em></h2><p>Hay proyectos que no caben en un catálogo.<br/>Diseñamos, fabricamos e instalamos la solución<br class="desktop-only"/> que tu negocio necesita.</p><a class="button button-light" data-contact-setting="contacto_medida" href={whatsappUrl('Hola INOX 304, tengo un proyecto de fabricación a medida. Me gustaría recibir asesoría.')} target="_blank" rel="noopener noreferrer">Cuéntanos tu proyecto <Icon name="diagonal"/></a><span class="custom-caption">FABRICACIÓN EN ACERO INOXIDABLE AISI 304</span></div>
+  </section>
+
+  <Services/>
+
+  <section id="nosotros" class="section section-light about-section"><div class="shell">
+    <div class="section-heading"><div><span class="eyebrow">04 / DE PRINCIPIO A FIN</span><h2>Más que equipos.<br/><span class="soft-text">Un proyecto contigo.</span></h2></div><p class="about-intro">En INOX 304 unimos diseño, fabricación e instalación de equipamiento gastronómico. Acompañamos a restaurantes, hoteles, cafeterías y negocios que quieren dar el siguiente paso.</p></div>
+    <div class="process-grid">{[{n:'01',title:'Lo imaginamos',text:'Escuchamos tu idea, conocemos tu espacio y definimos contigo lo que necesitas.'},{n:'02',title:'Lo fabricamos',text:'Damos forma a tu proyecto en acero inoxidable, con medidas y acabados para tu operación.'},{n:'03',title:'Lo implementamos',text:'Instalamos tus equipos y coordinamos las pruebas para poner tu proyecto en marcha.'}].map(item => <article class="process-card"><div><span>{item.n}</span><Icon name="plus" size={18}/></div><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
+    <div class="sector-line"><span class="eyebrow">UN EQUIPO PARA CADA NEGOCIO</span><p>Restaurantes <span>·</span> Hoteles <span>·</span> Cafeterías <span>·</span> Panaderías <span>·</span> Pollerías</p></div>
+  </div></section>
+
+  <section class="contact-band"><div class="shell"><div><span class="eyebrow">EL SIGUIENTE PASO EMPIEZA AQUÍ</span><h2>Hagamos espacio<br/>para tu próximo proyecto.</h2></div><a class="circle-cta" href="/contacto/" aria-label="Conversemos sobre tu proyecto"><Icon name="diagonal" size={42}/></a></div></section>
+</Layout>
+<style>
+  .hero{height:100svh;min-height:740px;max-height:950px}
+  .hero-atmosphere{background:linear-gradient(90deg,rgba(11,19,18,.72),rgba(11,19,18,.3)),url('/images/brand/stone-texture.webp') center/cover;opacity:.8}
+  .hero-stage{mask-image:linear-gradient(90deg,transparent,#000 28%)}
+  .hero-copy{padding-top:145px;padding-bottom:105px}
+  @media(max-width:900px){.hero,.hero-inner{height:auto;min-height:880px}.hero-copy{padding-top:128px;padding-bottom:345px}.hero-stage{top:360px;mask-image:linear-gradient(180deg,transparent,#000 15%,#000 85%,transparent)}}
+  @media(max-width:600px){.hero,.hero-inner{min-height:890px}.hero-copy{padding-top:124px;padding-bottom:385px}.hero-stage{top:495px;bottom:66px}}
+</style>
+<script>
+  const video = document.querySelector<HTMLVideoElement>('#hero-video');
+  const toggle = document.querySelector<HTMLButtonElement>('.video-toggle');
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  let loaded = false;
+  function updatePlayback() {
+    if (!video || !toggle) return;
+    const playing = !video.paused;
+    toggle.setAttribute('aria-label', playing ? 'Pausar video de presentación' : 'Reproducir video de presentación');
+    toggle.setAttribute('aria-pressed', String(playing));
+    const label = toggle.querySelector('[data-video-label]'); const icon = toggle.querySelector('[data-video-icon]');
+    if (label) label.textContent = playing ? 'Pausar' : 'Reproducir';
+    if (icon) icon.textContent = playing ? 'Ⅱ' : '▶';
+  }
+  async function playVideo() {
+    if (!video) return;
+    if (!loaded) { video.querySelectorAll('source').forEach(source => { source.src = source.dataset.src || ''; }); video.load(); loaded = true; }
+    try { await video.play(); } catch { updatePlayback(); }
+  }
+  toggle?.addEventListener('click', () => { if (!video) return; video.paused ? void playVideo() : video.pause(); });
+  video?.addEventListener('play', updatePlayback); video?.addEventListener('pause', updatePlayback);
+  motion.addEventListener('change', () => { if (motion.matches) video?.pause(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) video?.pause(); });
+  if (!motion.matches && !connection?.saveData) void playVideo();
+</script>

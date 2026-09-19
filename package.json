@@ -1,0 +1,22 @@
+{
+  "name": "inox304-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "node scripts/verify-build.mjs"
+  },
+  "dependencies": {
+    "astro": "7.3.3",
+    "@astrojs/sitemap": "3.7.4",
+    "sharp": "0.35.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "typescript": "6.0.3"
+  }
+}

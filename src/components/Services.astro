@@ -1,0 +1,50 @@
+---
+import Icon from './Icon.astro';
+import { whatsappUrl } from '../data/site';
+const services = [
+  {title:'Equipamiento e instalación', text:'Diseño y fabricación a medida de mobiliario y equipos gastronómicos. Instalación de los equipos para implementar tu cocina profesional.'},
+  {title:'Extracción y ductería', text:'Sistemas de extracción y ductería como parte del equipamiento integral de cocinas y espacios gastronómicos.'},
+  {title:'Redes de gas y puesta en marcha', text:'Implementación de redes de gas dentro del proyecto, instalación y pruebas de funcionamiento de los equipos.'},
+  {title:'Mantenimiento de equipos', text:'Mantenimiento de equipamiento gastronómico y soporte técnico. Cuéntanos qué equipo tienes y qué atención necesita.'},
+];
+---
+<section id="instalaciones" class="installation-section section" aria-labelledby="installation-title">
+  <div class="shell installation-layout">
+    <div class="installation-intro">
+      <span class="eyebrow">03 / INSTALACIONES Y SERVICIOS</span>
+      <h2 id="installation-title">Cada parte.<br/>Un solo <em>proyecto.</em></h2>
+      <p>Del equipo a la cocina completa. Conoce cómo podemos acompañar la implementación de tu espacio.</p>
+      <a class="button button-light" data-contact-setting="contacto_instalaciones" href={whatsappUrl('Hola INOX 304, quiero asesoría para un proyecto de instalación.')} target="_blank" rel="noopener noreferrer">Conversemos sobre tu instalación <Icon name="diagonal"/></a>
+    </div>
+    <div class="service-list">
+      {services.map((service,index) => <details class="service-item" name="installation-service" open={index===0}>
+        <summary><span class="service-number">0{index+1}</span><h3>{service.title}</h3><span class="service-plus"><Icon name="plus" size={20}/></span></summary>
+        <div class="service-content"><p>{service.text}</p></div>
+      </details>)}
+    </div>
+  </div>
+</section>
+<style>
+  .installation-section{background:linear-gradient(90deg,rgba(13,20,19,.95),rgba(13,20,19,.84)),url('/images/brand/stone-texture.webp') center/cover;color:var(--paper)}
+  .installation-layout{display:grid;grid-template-columns:.95fr 1.05fr;gap:90px;align-items:start}
+  .installation-intro>.eyebrow{color:var(--accent);font-size:9px;margin-bottom:28px}
+  .installation-intro h2{font-size:clamp(36px,4vw,58px);font-weight:500;line-height:1.1;letter-spacing:-2px;margin-bottom:25px}
+  .installation-intro h2 em{color:var(--accent);font-style:normal}
+  .installation-intro>p{font-size:13px;line-height:1.9;max-width:340px;color:#b9c2bb;margin-bottom:30px}
+  .installation-intro .button{font-size:11px;gap:24px}
+  .service-item{border-top:1px solid #59645f}
+  .service-item:last-child{border-bottom:1px solid #59645f}
+  .service-item summary{list-style:none;display:flex;align-items:center;gap:21px;cursor:pointer;padding:27px 0}
+  .service-item summary::-webkit-details-marker{display:none}
+  .service-number{font-size:10px;color:#adb8ac;font-variant-numeric:tabular-nums}
+  .service-item h3{font-size:19px;font-weight:500;line-height:1.4;letter-spacing:-.5px;margin:0;flex:1}
+  .service-plus{display:grid;place-items:center;width:32px;height:32px;border:1px solid #68756a;border-radius:50%;transition:transform .4s cubic-bezier(.22,1,.36,1),background .3s,color .3s}
+  .service-item[open] .service-plus{transform:rotate(45deg);background:var(--accent);color:var(--ink);border-color:var(--accent)}
+  .service-item summary:hover .service-plus,.service-item summary:focus-visible .service-plus{background:var(--paper);color:var(--ink)}
+  .service-content{padding:0 47px 26px 37px}
+  .service-content p{color:#c2cbc3;font-size:13px;line-height:1.85;margin:0}
+  @media(prefers-reduced-motion:no-preference){.service-item[open] .service-content{animation:service-enter .38s cubic-bezier(.22,1,.36,1) both}@keyframes service-enter{from{opacity:.65;transform:translateY(-6px)}to{opacity:1;transform:none}}}
+  @media(max-width:1150px){.installation-layout{gap:50px}.service-item h3{font-size:17px}}
+  @media(max-width:900px){.installation-layout{grid-template-columns:1fr;gap:40px}.installation-intro>p{max-width:450px}.service-item h3{font-size:19px}}
+  @media(max-width:600px){.installation-intro h2{font-size:39px;letter-spacing:-1.3px}.installation-intro>.eyebrow{font-size:8px}.installation-intro .button{width:100%;font-size:10px}.service-item summary{gap:13px;padding:21px 0}.service-item h3{font-size:16px;letter-spacing:-.25px}.service-number{font-size:9px}.service-content{padding:0 15px 24px 27px}.service-content p{font-size:12px}}
+</style>
