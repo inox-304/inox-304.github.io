@@ -52,3 +52,11 @@ test('existing stable IDs retain paths; new IDs including inherited object keys 
   assert.equal(cmsProductRoute({id:'P99'},routes),'/equipo/?id=P99');
   for (const id of ['constructor','toString','__proto__']) assert.equal(cmsProductRoute({id},routes),`/equipo/?id=${id}`);
 });
+
+test('project deployment keeps stable and new CMS product links under its base exactly once', () => {
+  const routes = { P01: '/catalogo/equipo-original/', P02: '/inox304/catalogo/segundo-equipo/' };
+  assert.equal(cmsProductRoute({id:'P01'},routes,'/inox304/'),'/inox304/catalogo/equipo-original/');
+  assert.equal(cmsProductRoute({id:'P02'},routes,'/inox304/'),'/inox304/catalogo/segundo-equipo/');
+  assert.equal(cmsProductRoute({id:'P99'},routes,'/inox304/'),'/inox304/equipo/?id=P99');
+  assert.equal(cmsProductRoute({id:'P99'},routes,'/'),'/equipo/?id=P99');
+});

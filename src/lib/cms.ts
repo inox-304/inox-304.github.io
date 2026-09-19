@@ -1,3 +1,5 @@
+import { withBase } from './paths.ts';
+
 export type CmsContact = { id: string; name: string; whatsapp: string; phone: string; email: string; message: string; active: boolean };
 export type CmsProduct = { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string };
 export type CmsData = { products: CmsProduct[]; contacts: CmsContact[]; settings: Record<string, string> };
@@ -102,8 +104,9 @@ export function resolveContact(data: CmsData, requested = ''): CmsContact | unde
     || data.contacts.find(contact => contact.active && contact.whatsapp);
 }
 export function contactUrl(contact: CmsContact, message: string) { return `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`; }
-export function cmsProductRoute(product: Pick<CmsProduct, 'id'>, routes: Record<string, string>) {
-  return Object.hasOwn(routes, product.id) && typeof routes[product.id] === 'string'
+export function cmsProductRoute(product: Pick<CmsProduct, 'id'>, routes: Record<string, string>, base?: string) {
+  const path = Object.hasOwn(routes, product.id) && typeof routes[product.id] === 'string'
     ? routes[product.id]
     : `/equipo/?id=${encodeURIComponent(product.id)}`;
+  return withBase(path, base);
 }

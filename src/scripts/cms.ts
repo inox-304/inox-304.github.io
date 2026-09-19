@@ -1,4 +1,5 @@
 import { categoryNames, cmsProductRoute, contactUrl, parseCms, resolveContact, validatePublishedUrl, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
+import { withBase } from '../lib/paths';
 
 type Bootstrap = { config: { catalogUrl: string; contactsUrl: string; settingsUrl: string }; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
@@ -31,7 +32,7 @@ function createCard(product: CmsProduct, index: number): HTMLAnchorElement {
   setText('.product-index', String(index + 1).padStart(2, '0'), card);
   setText('.product-card-info .eyebrow', category(product), card);
   setText('.product-card-info h3', product.name, card);
-  const image = card.querySelector('img'); if (image) { image.src = product.image; image.alt = product.name; image.removeAttribute('srcset'); }
+  const image = card.querySelector('img'); if (image) { image.src = withBase(product.image); image.alt = product.name; image.removeAttribute('srcset'); }
   return card;
 }
 function fillCards(container: Element, products: CmsProduct[]) {
@@ -65,14 +66,14 @@ function updateDetail(data: CmsData) {
   const cutout = /\.webp(?:\?|$)/i.test(product.image);
   stage?.classList.toggle('product-studio', cutout);
   const backdrop = stage?.querySelector<HTMLElement>('.studio-backdrop'); if (backdrop) backdrop.hidden = !cutout;
-  const image = detail.querySelector<HTMLImageElement>('.equipment-image'); if (image) { image.src = product.image; image.alt = product.name; }
+  const image = detail.querySelector<HTMLImageElement>('.equipment-image'); if (image) { image.src = withBase(product.image); image.alt = product.name; }
   const list = detail.querySelector('[data-product-features]');
   if (list) {
     const featureTemplate = list.firstElementChild?.cloneNode(true) as HTMLElement | undefined;
     const items = product.features.map(feature => { const li = featureTemplate?.cloneNode(true) as HTMLElement || document.createElement('li'); const span = li.querySelector('span'); if (span) span.textContent = feature; else li.textContent = feature; return li; });
     list.replaceChildren(...items);
   }
-  detail.querySelectorAll<HTMLAnchorElement>('[data-product-category-link]').forEach(anchor => { anchor.href = `/catalogo/?categoria=${encodeURIComponent(product.category)}`; });
+  detail.querySelectorAll<HTMLAnchorElement>('[data-product-category-link]').forEach(anchor => { anchor.href = withBase(`/catalogo/?categoria=${encodeURIComponent(product.category)}`); });
   const contact = resolveContact(data, product.contactId);
   detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
     anchor.hidden = !contact;

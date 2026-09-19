@@ -1,4 +1,5 @@
 ---
+import { withBase } from '../../lib/paths';
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
 import ProductCard from '../../components/ProductCard.astro';
@@ -7,7 +8,7 @@ import { categories } from '../../data/products';
 import { whatsappUrl } from '../../data/site';
 ---
 <Layout title="Catálogo de equipos" description="Explora nuestros equipos de cocción, refrigeración, lavado, mobiliario y preparación. Encuentra tu equipo y solicita una cotización personalizada.">
-  <section class="page-intro"><div class="shell"><a class="breadcrumb" href="/">Inicio <span>/</span> Catálogo</a><div class="section-heading"><div><span class="eyebrow">PRECISIÓN EN CADA DETALLE</span><h1>Equipa tu<br/><em>siguiente paso.</em></h1></div><p>Equipos para trabajar mejor.<br/>Soluciones para crecer contigo.</p></div></div></section>
+  <section class="page-intro"><div class="shell"><a class="breadcrumb" href={withBase('/')}>Inicio <span>/</span> Catálogo</a><div class="section-heading"><div><span class="eyebrow">PRECISIÓN EN CADA DETALLE</span><h1>Equipa tu<br/><em>siguiente paso.</em></h1></div><p>Equipos para trabajar mejor.<br/>Soluciones para crecer contigo.</p></div></div></section>
   <section class="section-light catalog-section"><div class="shell">
     <form class="catalog-tools" role="search" aria-label="Buscar equipos"><label class="search-field"><Icon name="search"/><span class="sr-only">Buscar un equipo</span><input id="catalog-search" type="search" name="buscar" placeholder="Busca una cocina, un lavadero…" autocomplete="off"/></label><span id="result-count" class="results-count" role="status" aria-live="polite">{visibleProducts.length} equipos</span></form>
     <div class="filter-pills" role="group" aria-label="Filtrar por categoría"><button class="active" data-filter="todos" aria-pressed="true">Todos</button>{categories.map(category => <button data-filter={category.id} aria-pressed="false">{category.shortName}</button>)}</div>

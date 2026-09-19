@@ -73,4 +73,21 @@ El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto p
 - Revisar los recortes suministrados que todavía conservan bordes o rótulos pequeños de las imágenes originales.
 - Revisar el video final y su composición en móvil cuando se disponga del material definitivo.
 
-Esta primera versión es local. El dominio, alojamiento y despliegue público todavía no están configurados. Antes de publicarla, confirma el dominio canónico de `astro.config.mjs` y la configuración de indexación del sitio.
+## Publicación en GitHub Pages
+
+El despliegue está preparado en `.github/workflows/deploy.yml`. Cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. La dirección prevista es `https://inoxweb304-creator.github.io/inox304/`. La activación inicial de Pages todavía requiere que el propietario del repositorio seleccione **Settings → Pages → Build and deployment → Source: GitHub Actions**. Los permisos actuales de colaborador permiten subir código, pero no activar Pages.
+
+El flujo configura `PUBLIC_SITE_URL=https://inoxweb304-creator.github.io` y `PUBLIC_SITE_BASE_PATH=/inox304/`. En desarrollo, la base predeterminada sigue siendo `/`. Los enlaces, archivos multimedia, rutas de productos y datos de Sheets respetan esa base. `robots.txt`, el sitemap y los enlaces canónicos se generan con la dirección configurada.
+
+Para comprobar localmente la compilación de GitHub Pages desde PowerShell:
+
+```powershell
+$env:PUBLIC_SITE_BASE_PATH = '/inox304/'
+npm run build
+npm test
+node scripts/test-cms.mjs
+node scripts/test-paths.mjs
+Remove-Item Env:PUBLIC_SITE_BASE_PATH
+```
+
+Cuando se active Google Sheets, las tres variables `PUBLIC_CMS_*` deben configurarse también como variables del repositorio en GitHub Actions. Contienen únicamente enlaces CSV comerciales públicos. Tras cambiar esas variables, ejecuta de nuevo el flujo de despliegue. La cuenta propietaria puede configurar un dominio propio más adelante; GitHub usa `github.io`, no `github.com`, para las direcciones gratuitas de Pages.

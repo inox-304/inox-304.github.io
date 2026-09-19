@@ -1,25 +1,26 @@
 ---
+import { withBase } from '../lib/paths';
 import Brand from './Brand.astro';
 import Icon from './Icon.astro';
 import { whatsappUrl } from '../data/site';
 import '../styles/header.css';
 const pathname = Astro.url.pathname;
 ---
-<header class:list={['site-header', { 'site-header-overlay': pathname === '/' }]}>
+<header class:list={['site-header', { 'site-header-overlay': pathname === withBase('/') || pathname === withBase('/').replace(/\/$/, '') }]}>
   <div class="header-inner shell">
     <Brand />
     <nav class="desktop-nav" aria-label="Navegación principal">
-      <a href="/catalogo/" aria-current={pathname.startsWith('/catalogo') ? 'page' : undefined}>Catálogo</a>
-      <a href="/#a-medida">A medida</a>
-      <a href="/#instalaciones">Instalaciones</a>
-      <a href="/#nosotros">Nosotros</a>
-      <a href="/contacto/" aria-current={pathname === '/contacto/' ? 'page' : undefined}>Contacto</a>
+      <a href={withBase('/catalogo/')} aria-current={pathname.startsWith(withBase('/catalogo/')) ? 'page' : undefined}>Catálogo</a>
+      <a href={withBase('/#a-medida')}>A medida</a>
+      <a href={withBase('/#instalaciones')}>Instalaciones</a>
+      <a href={withBase('/#nosotros')}>Nosotros</a>
+      <a href={withBase('/contacto/')} aria-current={pathname === withBase('/contacto/') ? 'page' : undefined}>Contacto</a>
     </nav>
     <a class="header-cta" href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Hablemos de tu proyecto <Icon name="diagonal" size={17}/></a>
     <button class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span></button>
   </div>
   <nav id="mobile-menu" class="mobile-nav" aria-label="Navegación móvil" hidden>
-    <a href="/catalogo/">Catálogo <Icon/></a><a href="/#a-medida">A medida <Icon/></a><a href="/#instalaciones">Instalaciones <Icon/></a><a href="/#nosotros">Nosotros <Icon/></a><a href="/contacto/">Contacto <Icon/></a>
+    <a href={withBase('/catalogo/')}>Catálogo <Icon/></a><a href={withBase('/#a-medida')}>A medida <Icon/></a><a href={withBase('/#instalaciones')}>Instalaciones <Icon/></a><a href={withBase('/#nosotros')}>Nosotros <Icon/></a><a href={withBase('/contacto/')}>Contacto <Icon/></a>
     <a href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Cotizar por WhatsApp <Icon name="whatsapp"/></a>
   </nav>
 </header>

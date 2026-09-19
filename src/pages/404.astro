@@ -1,5 +1,6 @@
 ---
+import { withBase } from '../lib/paths';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 ---
-<Layout title="Página no encontrada" noindex><section class="not-found shell"><span class="eyebrow">404 / FUERA DEL CATÁLOGO</span><h1>Por aquí todavía<br/>no hay un proyecto.</h1><p>Pero tenemos muchos equipos que pueden ser parte del tuyo.</p><a class="button button-light" href="/catalogo/">Explora el catálogo <Icon/></a></section></Layout>
+<Layout title="Página no encontrada" noindex><section class="not-found shell"><span class="eyebrow">404 / FUERA DEL CATÁLOGO</span><h1>Por aquí todavía<br/>no hay un proyecto.</h1><p>Pero tenemos muchos equipos que pueden ser parte del tuyo.</p><a class="button button-light" href={withBase('/catalogo/')}>Explora el catálogo <Icon/></a></section></Layout>

@@ -1,4 +1,5 @@
 ---
+import { withBase } from '../lib/paths';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 import ProductStage from '../components/ProductStage.astro';
@@ -8,16 +9,16 @@ const placeholder = { ...products[0], id: '', name: 'Equipo de catálogo', summa
 ---
 <Layout title="Consulta de equipo" description="Consulta los detalles de un equipo del catálogo actualizado de INOX 304." noindex>
   <section class="section-light product-page" data-product-detail=""><div class="shell">
-    <nav class="breadcrumbs" aria-label="Ruta de navegación"><a href="/">Inicio</a><span>/</span><a href="/catalogo/">Catálogo</a><span>/</span><a data-product-category-link href="/catalogo/" data-product-category>Equipo</a></nav>
-    <div data-product-unavailable role="status"><h2>Consulta el catálogo actualizado.</h2><p>Si el equipo no está disponible, puedes explorar nuestras opciones actuales.</p><a class="button button-dark" href="/catalogo/">Ver catálogo <Icon/></a></div>
+    <nav class="breadcrumbs" aria-label="Ruta de navegación"><a href={withBase('/')}>Inicio</a><span>/</span><a href={withBase('/catalogo/')}>Catálogo</a><span>/</span><a data-product-category-link href={withBase('/catalogo/')} data-product-category>Equipo</a></nav>
+    <div data-product-unavailable role="status"><h2>Consulta el catálogo actualizado.</h2><p>Si el equipo no está disponible, puedes explorar nuestras opciones actuales.</p><a class="button button-dark" href={withBase('/catalogo/')}>Ver catálogo <Icon/></a></div>
     <div class="product-detail-grid" hidden>
       <ProductStage product={placeholder} category="Equipo"/>
       <div class="product-detail-copy"><span class="eyebrow" data-product-category>Equipo</span><h1 data-product-name>Equipo de catálogo</h1><p class="product-summary" data-product-summary></p>
         <div class="product-detail-cta"><a class="button button-dark" data-product-quote target="_blank" rel="noopener noreferrer" hidden>Cotizar este equipo <Icon name="whatsapp"/></a><p data-product-quote-note>Consulta medidas, disponibilidad y opciones para tu negocio.</p></div>
         <div class="specifications"><h2>Detalles que hacen la diferencia</h2><ul data-product-features><li><Icon name="check" size={17}/><span></span></li></ul></div>
-        <a class="text-link dark-link" href="/contacto/">¿Necesitas ayuda para elegir? <Icon name="arrow" size={17}/></a>
+        <a class="text-link dark-link" href={withBase('/contacto/')}>¿Necesitas ayuda para elegir? <Icon name="arrow" size={17}/></a>
       </div>
     </div>
-    <section class="related-products" hidden><div class="section-heading"><div><span class="eyebrow">COMPLETA TU ESPACIO</span><h2>También te puede interesar.</h2></div><a class="text-link dark-link" data-product-category-link href="/catalogo/">Ver categoría <Icon/></a></div><div class="product-grid">{products.slice(0,3).map((product,index) => <ProductCard product={product} index={index}/>)}</div></section>
+    <section class="related-products" hidden><div class="section-heading"><div><span class="eyebrow">COMPLETA TU ESPACIO</span><h2>También te puede interesar.</h2></div><a class="text-link dark-link" data-product-category-link href={withBase('/catalogo/')}>Ver categoría <Icon/></a></div><div class="product-grid">{products.slice(0,3).map((product,index) => <ProductCard product={product} index={index}/>)}</div></section>
   </div></section>
 </Layout>

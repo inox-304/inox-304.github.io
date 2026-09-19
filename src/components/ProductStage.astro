@@ -1,4 +1,5 @@
 ---
+import { withBase } from '../lib/paths';
 import type { Product } from '../data/products';
 interface Props { product: Product; category: string }
 const { product, category } = Astro.props;
@@ -6,12 +7,12 @@ const isCutout = product.image.endsWith('.webp');
 ---
 <div class:list={['product-detail-photo', {'product-studio': isCutout}]}>
   <picture class="studio-backdrop" aria-hidden="true" hidden={!isCutout}>
-    <source media="(max-width: 600px)" srcset="/images/brand/studio-portrait.webp"/>
-    <source media="(max-width: 900px)" srcset="/images/brand/studio-landscape.webp"/>
-    <img src="/images/brand/studio-wide.webp" alt="" width="1672" height="941"/>
+    <source media="(max-width: 600px)" srcset={withBase('/images/brand/studio-portrait.webp')}/>
+    <source media="(max-width: 900px)" srcset={withBase('/images/brand/studio-landscape.webp')}/>
+    <img src={withBase('/images/brand/studio-wide.webp')} alt="" width="1672" height="941"/>
   </picture>
   <span class="eyebrow" data-product-id-label>INOX 304 / {product.id}</span>
-  <img class="equipment-image" src={product.image} alt={product.name} width="800" height="800" fetchpriority="high"/>
+  <img class="equipment-image" src={withBase(product.image)} alt={product.name} width="800" height="800" fetchpriority="high"/>
   <span class="photo-caption" data-product-caption>{category.toUpperCase()}</span>
 </div>
 <style>

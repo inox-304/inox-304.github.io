@@ -3,9 +3,10 @@ import { cmsConfig } from '../data/cms-config';
 import { products } from '../data/products';
 import { featuredProducts } from '../data/catalog';
 import { site } from '../data/site';
+import { withBase } from '../lib/paths';
 const payload = {
   config: cmsConfig,
-  routes: Object.fromEntries(products.map(product => [product.id, `/catalogo/${product.slug}/`])),
+  routes: Object.fromEntries(products.map(product => [product.id, withBase(`/catalogo/${product.slug}/`)])),
   data: {
     products: products.map((product, index) => ({ ...product, visible: true, featured: featuredProducts.some(item => item.id === product.id), order: index, contactId: 'ventas' })),
     contacts: [

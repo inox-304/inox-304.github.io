@@ -1,0 +1,46 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_SITE_URL: https://inoxweb304-creator.github.io
+      PUBLIC_SITE_BASE_PATH: /inox304/
+      PUBLIC_CMS_CATALOG_URL: ${{ vars.PUBLIC_CMS_CATALOG_URL }}
+      PUBLIC_CMS_CONTACTS_URL: ${{ vars.PUBLIC_CMS_CONTACTS_URL }}
+      PUBLIC_CMS_SETTINGS_URL: ${{ vars.PUBLIC_CMS_SETTINGS_URL }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Build, verify and upload website
+        uses: withastro/action@v6
+        with:
+          node-version: 24
+          package-manager: npm
+          build-cmd: npm run build && npm test && node scripts/test-cms.mjs && node scripts/test-paths.mjs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,11 +1,13 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import config from '../astro.config.mjs';
 
 // Read the actual static output so this also catches stale links and missing media.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
-const origin = 'https://build.invalid';
+const origin = new URL(config.site).origin;
+const base = `/${(config.base || '/').split('/').filter(Boolean).join('/')}`.replace(/\/?$/, '/');
 const errors = [];
 const titleOwners = new Map();
 let referenceCount = 0;
@@ -24,7 +26,7 @@ function relativeName(filename) {
 }
 
 function publicPath(filename) {
-  return `/${relativeName(filename)}`.replace(/index\.html$/, '');
+  return `${base}${relativeName(filename)}`.replace(/index\.html$/, '');
 }
 
 function decodeEntities(value) {
@@ -55,7 +57,11 @@ async function verifyReference(rawValue, filename, context) {
     errors.push(`${relativeName(filename)}: invalid URL encoding: ${value}`);
     return;
   }
-  const target = path.resolve(dist, `.${decodedPath}`);
+  if (!decodedPath.startsWith(base)) {
+    errors.push(`${relativeName(filename)}: ${context} escapes site base ${base}: ${value}`);
+    return;
+  }
+  const target = path.resolve(dist, decodedPath.slice(base.length));
   const relative = path.relative(dist, target);
   if (relative.startsWith('..') || path.isAbsolute(relative)) {
     errors.push(`${relativeName(filename)}: URL escapes the build directory: ${value}`);
