@@ -56,7 +56,8 @@ import { whatsappUrl } from '../data/site';
 </Layout>
 <style>
   .hero{height:100svh;min-height:740px;max-height:950px}
-  .hero-atmosphere{background:linear-gradient(90deg,rgba(9,16,28,.72),rgba(9,16,28,.3)),url('/images/brand/stone-texture.webp') center/cover;opacity:.8}
+  .hero-atmosphere{background:linear-gradient(90deg,rgba(7,28,55,.76),rgba(15,43,77,.4)),url('/images/brand/stone-texture.webp') center/cover;opacity:.85}
+  .hero-stage-shade::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(30,87,155,.18),rgba(40,117,202,.07) 65%,rgba(32,86,157,.14));pointer-events:none}
   .hero-stage{mask-image:linear-gradient(90deg,transparent,#000 28%)}
   .hero-copy{padding-top:145px;padding-bottom:105px}
   @media(max-width:900px){.hero,.hero-inner{height:auto;min-height:880px}.hero-copy{padding-top:128px;padding-bottom:345px}.hero-stage{top:360px;mask-image:linear-gradient(180deg,transparent,#000 15%,#000 85%,transparent)}}
