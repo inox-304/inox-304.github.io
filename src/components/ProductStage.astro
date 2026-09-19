@@ -1,27 +1,88 @@
 ---
 import { withBase } from '../lib/paths';
+import { getProductStage } from '../lib/product-stage';
 import type { Product } from '../data/products';
 interface Props { product: Product; category: string }
 const { product, category } = Astro.props;
-const isCutout = product.image.endsWith('.webp');
+const stage = getProductStage(product.image);
 ---
-<div class:list={['product-detail-photo', {'product-studio': isCutout}]}>
-  <picture class="studio-backdrop" aria-hidden="true" hidden={!isCutout}>
-    <source media="(max-width: 600px)" srcset={withBase('/images/brand/studio-portrait.webp')}/>
-    <source media="(max-width: 900px)" srcset={withBase('/images/brand/studio-landscape.webp')}/>
-    <img src={withBase('/images/brand/studio-wide.webp')} alt="" width="1672" height="941"/>
-  </picture>
+<div class:list={['product-detail-photo', { 'product-studio': stage.isCutout }]} data-stage-shape={stage.shape} style={stage.style}>
+  <div class="studio-backdrop" aria-hidden="true" hidden={!stage.isCutout}>
+    <img src={withBase('/images/brand/stone-texture.webp')} alt="" width="1672" height="941"/>
+    <span class="studio-spotlight"></span>
+    <span class="studio-floor-light"></span>
+  </div>
   <span class="eyebrow" data-product-id-label>INOX 304 / {product.id}</span>
-  <img class="equipment-image" src={withBase(product.image)} alt={product.name} width="800" height="800" fetchpriority="high"/>
+  <div class="studio-pedestal" aria-hidden="true" hidden={!stage.isCutout}>
+    <div class="pedestal-surface"><img src={withBase('/images/brand/marble-plinth.webp')} alt="" width="1916" height="821"/></div>
+  </div>
+  <span class="equipment-shadow" aria-hidden="true" hidden={!stage.isCutout}></span>
+  <div class="equipment-crop">
+    <img class="equipment-image" src={withBase(product.image)} alt={product.name} width={stage.width} height={stage.height} fetchpriority="high"/>
+  </div>
   <span class="photo-caption" data-product-caption>{category.toUpperCase()}</span>
 </div>
 <style>
-  .product-studio{isolation:isolate;aspect-ratio:1;min-height:0;overflow:hidden;background:#172020;padding:26px}
-  .studio-backdrop{position:absolute;inset:0;z-index:-1;pointer-events:none}
-  .studio-backdrop img{padding:0;width:100%;height:100%;max-height:none;aspect-ratio:auto;object-fit:cover;mix-blend-mode:normal}
-  .product-studio .equipment-image{position:absolute;inset:auto 10% 17%;width:80%;height:67%;padding:0;aspect-ratio:auto;max-height:none;object-fit:contain;object-position:center bottom;mix-blend-mode:normal;filter:drop-shadow(0 15px 12px rgba(0,0,0,.32))}
-  .product-studio>.eyebrow{position:relative;color:#e0e2dc;font-size:9px;z-index:1}
-  .product-studio>.photo-caption{position:relative;color:#e0e2dc;border-color:#8c928f;font-size:8px;margin-top:auto;z-index:1}
-  @media(min-width:601px) and (max-width:900px){.product-studio{aspect-ratio:4/3}}
-  @media(max-width:600px){.product-studio{aspect-ratio:3/4;padding:20px}.product-studio .equipment-image{bottom:17%;height:61%;inset-inline:7%;width:86%}}
+  .equipment-crop { display: contents; }
+  .product-detail-photo.product-studio {
+    --pedestal-height: 20%;
+    --pedestal-bottom: 14%;
+    --equipment-bottom: calc(var(--pedestal-bottom) + var(--pedestal-height) * .52);
+    isolation: isolate; aspect-ratio: 1; min-height: 0; width: 100%; overflow: hidden;
+    background: #172020; padding: clamp(20px, 4.5%, 30px);
+  }
+  .product-studio[data-stage-shape="wide"] { --pedestal-height: 18%; }
+  .studio-backdrop { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .product-studio .studio-backdrop > img {
+    position: absolute; inset: 0; padding: 0; width: 100%; height: 100%; max-height: none;
+    aspect-ratio: auto; object-fit: cover; mix-blend-mode: normal;
+  }
+  .studio-spotlight {
+    position: absolute; inset: -6% 2% 4%;
+    background: radial-gradient(ellipse at 50% 0%, #ffefcebd 0%, #ede5cf59 35%, #eee9d714 60%, transparent 80%);
+    filter: blur(20px);
+  }
+  .studio-floor-light {
+    position: absolute; inset: 71% 0 0;
+    background: radial-gradient(ellipse at 50% 50%, #dbd3b750, transparent 69%);
+  }
+  .studio-pedestal {
+    position: absolute; z-index: 1; left: 50%; bottom: var(--pedestal-bottom);
+    width: var(--pedestal-width); height: var(--pedestal-height); transform: translateX(-50%);
+    filter: drop-shadow(0 7px 5px #0008); pointer-events: none;
+  }
+  .pedestal-surface { position: absolute; inset: 0; overflow: hidden; }
+  /* Normalize the generated asset's transparent canvas without changing its marble pixels. */
+  .product-studio .pedestal-surface > img {
+    position: absolute; left: -3.5196%; top: -69.5652%; width: 107.0391%; height: 209.9744%;
+    padding: 0; max-width: none; max-height: none; aspect-ratio: auto; object-fit: fill; mix-blend-mode: normal;
+  }
+  .equipment-shadow {
+    position: absolute; z-index: 2; left: 50%; bottom: calc(var(--equipment-bottom) - 1%);
+    width: calc(var(--equipment-width) * .94); height: 3%; transform: translateX(-50%);
+    background: radial-gradient(ellipse, #111c 0%, #1117 36%, transparent 72%);
+    filter: blur(2px); pointer-events: none;
+  }
+  .product-studio .equipment-crop {
+    display: block; position: absolute; z-index: 3; left: 50%; bottom: var(--equipment-bottom);
+    width: var(--equipment-width); height: var(--equipment-height); transform: translateX(-50%);
+    overflow: hidden; filter: drop-shadow(1px 3px 2px #0005);
+  }
+  .product-studio .equipment-crop > .equipment-image {
+    position: absolute; left: var(--image-left); top: var(--image-top);
+    width: var(--image-width); height: var(--image-height);
+    padding: 0; max-width: none; max-height: none; aspect-ratio: auto; object-fit: fill; mix-blend-mode: normal;
+  }
+  .product-studio > .eyebrow, .product-studio > .photo-caption { position: relative; z-index: 4; color: #e0e2dc; }
+  .product-studio > .eyebrow { font-size: 9px; }
+  .product-studio > .photo-caption { border-color: #8c928f; font-size: 8px; margin-top: auto; }
+  .studio-backdrop[hidden], .studio-pedestal[hidden], .equipment-shadow[hidden] { display: none; }
+  @media (max-width: 900px) {
+    .product-detail-photo.product-studio { max-width: 640px; margin-inline: auto; }
+  }
+  @media (max-width: 600px) {
+    .product-detail-photo.product-studio { padding: 20px; }
+    .studio-pedestal { filter: drop-shadow(0 4px 3px #0008); }
+    .product-studio > .photo-caption { padding-top: 10px; }
+  }
 </style>

@@ -1,5 +1,6 @@
 import { categoryNames, cmsProductRoute, contactUrl, parseCms, resolveContact, validatePublishedUrl, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
 import { withBase } from '../lib/paths';
+import { getProductStage } from '../lib/product-stage';
 
 type Bootstrap = { config: { catalogUrl: string; contactsUrl: string; settingsUrl: string }; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
@@ -27,7 +28,7 @@ function createCard(product: CmsProduct, index: number): HTMLAnchorElement {
   card.hidden = false;
   card.href = route(product); card.dataset.productId = product.id;
   card.dataset.category = product.category; card.dataset.name = `${product.name} ${product.summary} ${category(product)}`;
-  card.classList.toggle('product-cutout', /\.webp(?:\?|$)/i.test(product.image));
+  card.classList.toggle('product-cutout', getProductStage(product.image).isCutout);
   card.removeAttribute('data-reveal'); card.removeAttribute('style');
   setText('.product-index', String(index + 1).padStart(2, '0'), card);
   setText('.product-card-info .eyebrow', category(product), card);
@@ -48,6 +49,7 @@ function updateDetail(data: CmsData) {
   const grid = detail.querySelector<HTMLElement>('.product-detail-grid');
   const related = detail.querySelector<HTMLElement>('.related-products');
   if (!product) {
+    const image = detail.querySelector<HTMLImageElement>('.equipment-image'); if (image) image.onload = null;
     if (unavailable) unavailable.hidden = false;
     if (grid) grid.hidden = true;
     if (related) related.hidden = true;
@@ -63,10 +65,29 @@ function updateDetail(data: CmsData) {
   setText('[data-product-id-label]', `${data.settings.empresa} / ${product.id}`, detail);
   setText('[data-product-caption]', category(product).toUpperCase(), detail);
   const stage = detail.querySelector<HTMLElement>('.product-detail-photo');
-  const cutout = /\.webp(?:\?|$)/i.test(product.image);
-  stage?.classList.toggle('product-studio', cutout);
-  const backdrop = stage?.querySelector<HTMLElement>('.studio-backdrop'); if (backdrop) backdrop.hidden = !cutout;
-  const image = detail.querySelector<HTMLImageElement>('.equipment-image'); if (image) { image.src = withBase(product.image); image.alt = product.name; }
+  const image = detail.querySelector<HTMLImageElement>('.equipment-image');
+  if (stage && image) {
+    const source = withBase(product.image);
+    const expectedSource = new URL(source, location.href).href;
+    const applyStage = (natural?: { width: number; height: number }) => {
+      const profile = getProductStage(product.image, natural);
+      stage.classList.toggle('product-studio', profile.isCutout);
+      stage.dataset.stageShape = profile.shape;
+      stage.style.cssText = profile.style;
+      stage.querySelectorAll<HTMLElement>('.studio-backdrop, .studio-pedestal, .equipment-shadow').forEach(element => { element.hidden = !profile.isCutout; });
+      image.width = profile.width; image.height = profile.height;
+    };
+    // Clear placeholder geometry before loading a different product or CMS image.
+    applyStage();
+    const loaded = () => {
+      if (image.onload !== loaded || image.currentSrc !== expectedSource || !image.naturalWidth || !image.naturalHeight) return;
+      applyStage({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onload = loaded;
+    image.removeAttribute('srcset');
+    image.src = source; image.alt = product.name;
+    if (image.complete) loaded();
+  }
   const list = detail.querySelector('[data-product-features]');
   if (list) {
     const featureTemplate = list.firstElementChild?.cloneNode(true) as HTMLElement | undefined;
