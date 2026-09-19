@@ -75,7 +75,7 @@ El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto p
 
 ## Publicación en GitHub Pages
 
-El despliegue está preparado en `.github/workflows/deploy.yml`. Cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. La dirección prevista es `https://inoxweb304-creator.github.io/inox304/`. La activación inicial de Pages todavía requiere que el propietario del repositorio seleccione **Settings → Pages → Build and deployment → Source: GitHub Actions**. Los permisos actuales de colaborador permiten subir código, pero no activar Pages.
+La web está publicada en **https://inoxweb304-creator.github.io/inox304/**. El despliegue está configurado en `.github/workflows/deploy.yml`: cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. El propietario ya activó **Settings → Pages → Build and deployment → Source: GitHub Actions**. La primera publicación se verificó el 19 de septiembre de 2026.
 
 El flujo configura `PUBLIC_SITE_URL=https://inoxweb304-creator.github.io` y `PUBLIC_SITE_BASE_PATH=/inox304/`. En desarrollo, la base predeterminada sigue siendo `/`. Los enlaces, archivos multimedia, rutas de productos y datos de Sheets respetan esa base. `robots.txt`, el sitemap y los enlaces canónicos se generan con la dirección configurada.
 
