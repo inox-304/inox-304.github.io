@@ -41,6 +41,7 @@ npm run preview
 | `src/styles/global.css` | Estilos y adaptación a distintas pantallas. |
 | `public/images/products/` | 21 recortes limpios WebP y fotografías originales extraídas del catálogo. |
 | `public/images/brand/` | Logotipo oficial, fondos de estudio para escritorio/tablet/móvil y textura suministrados por el propietario. |
+| `src/components/FlameLogo.astro` | Logo metálico con flama azul animada a partir del HTML suministrado; se pausa fuera de pantalla y respeta movimiento reducido. Fuente en `docs/brand-logo.md`. |
 | `src/components/Services.astro` | Instalación de equipos, extracción y ductería, redes de gas y mantenimiento, con desplegables accesibles. |
 | `src/components/ProductStage.astro` | Presentación de recortes limpios sobre fondos de estudio adaptados a la pantalla. |
 | `src/styles/motion.css`, `src/scripts/motion.ts` | Respuesta de botones, flechas, tarjetas, navegación y entradas al desplazarse. Sin dependencias adicionales; respeta movimiento reducido. |

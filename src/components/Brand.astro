@@ -1,13 +1,14 @@
 ---
 import { withBase } from '../lib/paths';
+import FlameLogo from './FlameLogo.astro';
 interface Props { footer?: boolean }
 const { footer = false } = Astro.props;
 ---
 <a class:list={['brand', { 'brand-footer': footer }]} href={withBase('/')} aria-label="INOX 304 — Inicio">
-  <img class="brand-logo" src={withBase('/images/brand/inox304-logo.webp')} alt="INOX 304 · Alta calidad" width="800" height="320" decoding="async"/>
+  <span class="brand-logo"><FlameLogo /></span>
 </a>
 <style>
-  .brand-logo{width:218px;height:auto;max-height:87px;object-fit:contain}
+  .brand-logo{display:block;width:218px;height:auto;max-height:87px;aspect-ratio:5/2}
   .brand-footer .brand-logo{width:232px}
   @media(max-width:1150px){.brand-logo{width:187px}}
   @media(max-width:600px){.brand-logo{width:166px;max-height:68px}.brand-footer .brand-logo{width:170px}}

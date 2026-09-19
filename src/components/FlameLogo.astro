@@ -1,0 +1,212 @@
+---
+import { withBase } from '../lib/paths';
+---
+<span class="flame-logo" data-flame-logo>
+  <img src={withBase('/images/brand/inox304-flame-metal.webp')} alt="INOX 304 · Alta calidad" width="1400" height="560" decoding="async" />
+  <canvas class="flame-tint" aria-hidden="true"></canvas>
+  <canvas class="flame-flow" aria-hidden="true"></canvas>
+  <canvas class="flame-glow" aria-hidden="true"></canvas>
+</span>
+<style>
+  .flame-logo{position:relative;display:block;width:100%;isolation:isolate}
+  .flame-logo img{display:block;width:100%;height:auto}
+  .flame-logo canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .flame-tint{mix-blend-mode:multiply;opacity:.86}
+  .flame-flow{mix-blend-mode:screen;opacity:.78}
+  .flame-glow{mix-blend-mode:screen;opacity:.2;filter:blur(.7px)}
+  @media(prefers-reduced-motion:reduce){.flame-glow{opacity:.16}}
+</style>
+<script>
+  // The supplied HTML paints blue only inside the connected outer flame.
+  // Keep the original silver lettering and inner snowflake untouched.
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  function makeCanvas(width: number, height: number) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  }
+  function smooth(start: number, end: number, value: number) {
+    const amount = Math.max(0, Math.min(1, (value - start) / (end - start)));
+    return amount * amount * (3 - 2 * amount);
+  }
+  for (const logo of document.querySelectorAll<HTMLElement>('[data-flame-logo]')) {
+    const original = logo.querySelector('img')!;
+    const tint = logo.querySelector<HTMLCanvasElement>('.flame-tint')!;
+    const flow = logo.querySelector<HTMLCanvasElement>('.flame-flow')!;
+    const glow = logo.querySelector<HTMLCanvasElement>('.flame-glow')!;
+    let ready = false;
+    let visible = false;
+    let frame = 0;
+    let last = 0;
+    let lastPaint = 0;
+    let elapsed = 1.8;
+    let paint: (time: number) => void = () => {};
+
+    function sync() {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      last = 0;
+      const animated = ready && visible && !document.hidden && !reducedMotion.matches;
+      logo.dataset.animated = String(animated);
+      if (animated) frame = requestAnimationFrame(tick);
+    }
+    function tick(now: number) {
+      frame = 0;
+      if (!ready || !visible || document.hidden || reducedMotion.matches) return;
+      if (!last) last = now;
+      elapsed += Math.min(.065, (now - last) / 1000);
+      last = now;
+      if (now - lastPaint >= 1000 / 24) {
+        paint(elapsed);
+        lastPaint = now;
+      }
+      frame = requestAnimationFrame(tick);
+    }
+    function initialize() {
+      if (ready || !original.naturalWidth) return;
+      const width = original.naturalWidth;
+      const height = original.naturalHeight;
+      const sample = makeCanvas(width, height);
+      const sampleContext = sample.getContext('2d', { willReadFrequently: true });
+      if (!sampleContext) return;
+      sampleContext.drawImage(original, 0, 0);
+      const pixels = sampleContext.getImageData(0, 0, width, height).data;
+      const limit = Math.floor(width * .23);
+      const seen = new Uint8Array(width * height);
+      const queue = new Int32Array(width * height);
+      let largest: Int32Array<ArrayBufferLike> = new Int32Array(0);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < limit; x++) {
+          const start = y * width + x;
+          if (seen[start] || pixels[start * 4 + 3] < 64) continue;
+          let head = 0;
+          let tail = 1;
+          queue[0] = start;
+          seen[start] = 1;
+          while (head < tail) {
+            const position = queue[head++];
+            const px = position % width;
+            const py = Math.floor(position / width);
+            const adjacent = [px > 0 ? position - 1 : -1, px + 1 < limit ? position + 1 : -1,
+              py > 0 ? position - width : -1, py + 1 < height ? position + width : -1];
+            for (const next of adjacent) {
+              if (next < 0 || seen[next] || pixels[next * 4 + 3] < 64) continue;
+              seen[next] = 1;
+              queue[tail++] = next;
+            }
+          }
+          if (tail > largest.length) largest = queue.slice(0, tail);
+        }
+      }
+      if (!largest.length) return;
+      const membership = new Uint8Array(width * height);
+      for (const position of largest) membership[position] = 1;
+      const fullMask = makeCanvas(width, height);
+      const fullMaskContext = fullMask.getContext('2d')!;
+      const maskData = fullMaskContext.createImageData(width, height);
+      let x0 = width, y0 = height, x1 = 0, y1 = 0;
+      for (const position of largest) {
+        const x = position % width;
+        const y = Math.floor(position / width);
+        if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
+        if (!(membership[position - 1] && membership[position + 1] &&
+          membership[position - width] && membership[position + width])) continue;
+        const index = position * 4;
+        maskData.data[index] = maskData.data[index + 1] = maskData.data[index + 2] = 255;
+        maskData.data[index + 3] = pixels[index + 3];
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y);
+        x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+      fullMaskContext.putImageData(maskData, 0, 0);
+
+      // Half-size drawing buffers remain sharp at the largest 232px display size.
+      const scale = .5;
+      const drawWidth = Math.round(width * scale);
+      const drawHeight = Math.round(height * scale);
+      const mask = makeCanvas(drawWidth, drawHeight);
+      mask.getContext('2d')!.drawImage(fullMask, 0, 0, drawWidth, drawHeight);
+      x0 *= scale; y0 *= scale; x1 *= scale; y1 *= scale;
+      for (const canvas of [tint, flow, glow]) {
+        canvas.width = drawWidth;
+        canvas.height = drawHeight;
+      }
+      const tintContext = tint.getContext('2d')!;
+      const blue = tintContext.createLinearGradient(x0, y1, x1, y0);
+      blue.addColorStop(0, '#0755cf');
+      blue.addColorStop(.47, '#078ced');
+      blue.addColorStop(1, '#1cb8ff');
+      tintContext.fillStyle = blue;
+      tintContext.fillRect(0, 0, drawWidth, drawHeight);
+      tintContext.globalCompositeOperation = 'destination-in';
+      tintContext.drawImage(mask, 0, 0);
+      const textureWidth = 112, textureHeight = 172;
+      const texture = makeCanvas(textureWidth, textureHeight);
+      const textureContext = texture.getContext('2d')!;
+      const field = textureContext.createImageData(textureWidth, textureHeight);
+      const grid = new Float32Array(4096);
+      let seed = 137;
+      for (let index = 0; index < grid.length; index++) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        grid[index] = seed / 4294967296;
+      }
+      function noise(x: number, y: number) {
+        const ix = Math.floor(x), iy = Math.floor(y);
+        let fx = x - ix, fy = y - iy;
+        fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+        const a = grid[(iy & 63) * 64 + (ix & 63)];
+        const b = grid[(iy & 63) * 64 + ((ix + 1) & 63)];
+        const c = grid[((iy + 1) & 63) * 64 + (ix & 63)];
+        const d = grid[((iy + 1) & 63) * 64 + ((ix + 1) & 63)];
+        return (a + (b - a) * fx) * (1 - fy) + (c + (d - c) * fx) * fy;
+      }
+      function fractalNoise(x: number, y: number) {
+        return .56 * noise(x, y) + .29 * noise(x * 2.07 + 13, y * 2.07 + 7) +
+          .15 * noise(x * 4.13 + 23, y * 4.13 + 3);
+      }
+      const flowContext = flow.getContext('2d')!;
+      const glowContext = glow.getContext('2d')!;
+      paint = (time) => {
+        for (let y = 0; y < textureHeight; y++) {
+          const v = y / (textureHeight - 1);
+          const bend = Math.sin(v * 6.4 - time * .43) * .24;
+          for (let x = 0; x < textureWidth; x++) {
+            const u = x / (textureWidth - 1);
+            const warp = noise(u * 3.1, v * 4.8 + time * .23) - .5;
+            const n = fractalNoise(u * 3.8 + bend + warp * .5, v * 5.2 + time * .68);
+            const small = noise(u * 10.5 + warp, v * 13.8 + time * 1.27);
+            const heat = Math.min(1, smooth(.40, .80, n) * .81 + Math.pow(smooth(.52, .85, small), 2) * .19);
+            const index = (y * textureWidth + x) * 4;
+            field.data[index] = 4 + 37 * heat;
+            field.data[index + 1] = 61 + 161 * heat;
+            field.data[index + 2] = 231 + 24 * heat;
+            field.data[index + 3] = 45 + 153 * heat;
+          }
+        }
+        textureContext.putImageData(field, 0, 0);
+        flowContext.globalCompositeOperation = 'source-over';
+        flowContext.clearRect(0, 0, drawWidth, drawHeight);
+        flowContext.drawImage(texture, x0, y0, x1 - x0 + scale, y1 - y0 + scale);
+        flowContext.globalCompositeOperation = 'destination-in';
+        flowContext.drawImage(mask, 0, 0);
+        glowContext.clearRect(0, 0, drawWidth, drawHeight);
+        glowContext.drawImage(flow, 0, 0);
+      };
+      ready = true;
+      logo.dataset.ready = 'true';
+      paint(elapsed);
+      sync();
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      sync();
+    }, { threshold: .05 });
+    observer.observe(logo);
+    original.addEventListener('load', initialize, { once: true });
+    document.addEventListener('visibilitychange', sync);
+    reducedMotion.addEventListener('change', sync);
+    window.addEventListener('pagehide', () => cancelAnimationFrame(frame));
+    window.addEventListener('pageshow', sync);
+    if (original.complete) initialize();
+  }
+</script>
