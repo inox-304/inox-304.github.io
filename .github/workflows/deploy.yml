@@ -16,8 +16,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PUBLIC_SITE_URL: https://inoxweb304-creator.github.io
-      PUBLIC_SITE_BASE_PATH: /inox304/
+      PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io
+      PUBLIC_SITE_BASE_PATH: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}/', github.event.repository.name) }}
       PUBLIC_CMS_CATALOG_URL: ${{ vars.PUBLIC_CMS_CATALOG_URL }}
       PUBLIC_CMS_CONTACTS_URL: ${{ vars.PUBLIC_CMS_CONTACTS_URL }}
       PUBLIC_CMS_SETTINGS_URL: ${{ vars.PUBLIC_CMS_SETTINGS_URL }}
