@@ -121,6 +121,12 @@ USE_TZ = True
 STATIC_URL = '/admin-static/'
 STATIC_ROOT = DATA_DIR / 'admin-static'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+WHITENOISE_MAX_AGE = 0 if DEBUG else 3600
+if ENVIRONMENT == 'production':
+    STORAGES = {
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+    }
 MEDIA_ROOT = DATA_DIR / 'media'
 MEDIA_URL = '/media/'
 FRONTEND_DIST = Path(os.getenv('FRONTEND_DIST', PROJECT_DIR / 'dist-server')).resolve()

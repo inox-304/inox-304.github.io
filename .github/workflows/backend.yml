@@ -48,3 +48,7 @@ jobs:
           DJANGO_SECRET_KEY: ci-only-security-check-9t3k6m2q8v1j5d0r7a4p2x6c8b1n0s5f3h9w4y7z
           DJANGO_ALLOWED_HOSTS: inox.example
           PUBLIC_SITE_URL: https://inox.example
+      - name: Validate deployable container
+        run: |
+          docker build -t inox-admin-check .
+          docker run --rm -e DJANGO_ENV=production -e DJANGO_SECRET_KEY=ci-only-container-validation-9t3k6m2q8v1j5d0r7a4p2x6c8b1n0s5f -e DJANGO_ALLOWED_HOSTS=inox.example -e PUBLIC_SITE_URL=https://inox.example -e DATABASE_URL=postgresql://check:check@localhost/inox inox-admin-check backend/.venv/bin/python backend/manage.py collectstatic --noinput
