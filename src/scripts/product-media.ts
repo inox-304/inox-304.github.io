@@ -1,10 +1,14 @@
-import { safeImage, safeModel, type CmsProduct } from '../lib/cms';
+import { safeImage, safeModel, safePreviewAsset, type CmsProduct } from '../lib/cms';
 import { withBase } from '../lib/paths';
 import type { ModelViewerElement } from '@google/model-viewer';
 
 type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'gallery' | 'model3d' | 'modelPoster'>>;
 let viewerModule: Promise<typeof import('@google/model-viewer')> | undefined;
 let closeActiveViewer: (() => void) | undefined;
+let privatePreview = false;
+try { privatePreview = JSON.parse(document.querySelector('#inox-cms-bootstrap')?.textContent || 'null')?.preview === true; } catch { /* Public asset validation remains active. */ }
+const imageUrl = (value: string) => safePreviewAsset(value, safeImage, privatePreview);
+const modelUrl = (value: string) => safePreviewAsset(value, safeModel, privatePreview);
 
 function loadViewer() {
   // This import and all model downloads occur only after an explicit 360° click.
@@ -64,7 +68,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   }
   async function showModel() {
     if (!product) return;
-    const model = safeModel(product.model3d || '');
+    const model = modelUrl(product.model3d || '');
     if (!model) return;
     if (button.getAttribute('aria-pressed') === 'true') { selectPhoto(selectedPhoto); return; }
     closeActiveViewer?.(); resetViewer(); closeActiveViewer = resetViewer;
@@ -95,7 +99,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       element.setAttribute('camera-orbit', '35deg 72deg auto');
       element.setAttribute('min-camera-orbit', 'auto 10deg auto');
       element.setAttribute('max-camera-orbit', 'auto 90deg auto');
-      const poster = safeImage(product.modelPoster || product.image);
+      const poster = imageUrl(product.modelPoster || product.image);
       if (poster) element.setAttribute('poster', withBase(poster));
       element.addEventListener('load', () => {
         if (request !== revision) return;
@@ -113,8 +117,8 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   function update(next: MediaProduct | null) {
     resetViewer(); message(); product = next; selectedPhoto = 0;
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
-    sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(safeImage).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
-    const model = next ? safeModel(next.model3d || '') : '';
+    sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
+    const model = next ? modelUrl(next.model3d || '') : '';
     button.hidden = !model; toolbar.hidden = !model && sources.length < 2;
     photos.replaceChildren();
     if (!toolbar.hidden) sources.forEach((_source, index) => {

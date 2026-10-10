@@ -1,3 +1,5 @@
+> **DOCUMENTACIÓN ANTERIOR — Sheets fue sustituido por el panel privado.** Consulta [PANEL-ADMINISTRACION.md](PANEL-ADMINISTRACION.md). Este flujo ya no se ejecuta al publicar.
+
 # Administrar INOX 304 con Google Sheets
 
 ## La idea, en palabras simples

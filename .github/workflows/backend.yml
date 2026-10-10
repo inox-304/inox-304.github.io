@@ -1,0 +1,54 @@
+name: Private administration checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: inox
+          POSTGRES_USER: inox
+          POSTGRES_PASSWORD: integration-test-only
+        ports:
+          - 5432:5432
+        options: --health-cmd "pg_isready -U inox" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DJANGO_ENV: test
+      DATABASE_URL: postgresql://inox:integration-test-only@127.0.0.1:5432/inox
+      DATABASE_SSLMODE: disable
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+          python-version: '3.13'
+      - run: npm ci
+      - run: npm run build:server
+      - name: Frontend integration and media budgets
+        run: |
+          node --test src/lib/cms-api.test.ts
+          node scripts/test-product-stage.mjs
+          node scripts/test-model-budget.mjs
+      - run: uv sync --project backend --locked
+      - run: uv run --project backend python backend/manage.py makemigrations --check --dry-run
+      - run: npm run server:test
+      - name: Production security configuration
+        run: uv run --project backend python backend/manage.py check --deploy --fail-level WARNING
+        env:
+          DJANGO_ENV: production
+          DJANGO_SECRET_KEY: ci-only-security-check-9t3k6m2q8v1j5d0r7a4p2x6c8b1n0s5f3h9w4y7z
+          DJANGO_ALLOWED_HOSTS: inox.example
+          PUBLIC_SITE_URL: https://inox.example
+      - name: Validate deployable container
+        run: |
+          docker build -t inox-admin-check .
+          docker run --rm -e DJANGO_ENV=production -e DJANGO_SECRET_KEY=ci-only-container-validation-9t3k6m2q8v1j5d0r7a4p2x6c8b1n0s5f -e DJANGO_ALLOWED_HOSTS=inox.example -e PUBLIC_SITE_URL=https://inox.example -e DATABASE_URL=postgresql://check:check@localhost/inox inox-admin-check backend/.venv/bin/python backend/manage.py collectstatic --noinput

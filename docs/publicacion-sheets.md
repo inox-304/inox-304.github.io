@@ -1,3 +1,5 @@
+> **DOCUMENTACIÓN ANTERIOR — Sheets fue sustituido por el panel privado.** Consulta [PANEL-ADMINISTRACION.md](PANEL-ADMINISTRACION.md). Este flujo ya no se ejecuta al publicar.
+
 # Conectar la hoja privada con la web
 
 La hoja sigue privada. El exportador entrega solamente productos con `publicar` marcado, contactos con `activo` marcado y ajustes comerciales permitidos. GitHub importa ese contenido y copia las fotos, fichas y modelos desde Drive a la propia web.

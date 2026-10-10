@@ -1,0 +1,10 @@
+{% extends 'security/base.html' %}
+{% block title %}Guardar códigos de recuperación{% endblock %}
+{% block content %}
+<p class="eyebrow">TU ACCESO ESTÁ PROTEGIDO</p><h1>Guarda estos códigos</h1>
+<p class="intro">Cada código permite entrar una sola vez si pierdes tu autenticador. Esta es la única vez que se muestran.</p>
+<ul class="recovery-list">{% for code in codes %}<li><code>{{ code }}</code></li>{% endfor %}</ul>
+<a class="primary" href="{{ download_url }}" download="inox304-codigos-recuperacion.txt">Descargar códigos</a>
+<div class="note"><strong>Guárdalos en un lugar privado</strong><p>Por ejemplo, en tu gestor de contraseñas o en una copia impresa segura. Los códigos anteriores dejan de funcionar.</p></div>
+<a class="secondary" href="{% url 'admin:index' %}">Ya los guardé · Ir al panel →</a>
+{% endblock %}

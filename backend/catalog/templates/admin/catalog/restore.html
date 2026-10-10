@@ -1,0 +1,6 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Se restaurarán los campos de <strong>{{ log.label }}</strong> al estado anterior al cambio del {{ log.created_at }}. Esta operación quedará registrada. Las variantes y galerías tienen su propio historial.</p>
+<h2>Datos que se restaurarán</h2><dl>{% for key,value in log.before.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>
+<form method="post">{% csrf_token %}<input type="submit" value="Restaurar versión anterior"><a href="../">Cancelar</a></form>
+{% endblock %}

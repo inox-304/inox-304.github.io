@@ -8,25 +8,25 @@ Todavía hacen falta los modelos originales de INOX: no se ha publicado ningún 
 
 1. Conserva el diseño original editable fuera de la carpeta pública. Exporta una copia **GLB / glTF 2.0** con texturas y geometría incluidas en el mismo archivo.
 2. Usa metros, apoya el equipo en el suelo y centra su geometría. Revisa la escala, las patas, puertas y etiquetas. Elimina tornillos y piezas internas que nunca se ven.
-3. Objetivo práctico inicial: **2–5 MB y hasta 150 000 triángulos por producto**. La importación desde Drive admite hasta 8 MB por archivo; para archivos locales, el validador admite hasta 12 MB. En ambos casos se rechazan más de 300 000 triángulos. Son presupuestos del proyecto, no garantía de rendimiento: se revisará cada modelo en un celular real.
+3. Objetivo práctico inicial: **2–5 MB y hasta 150 000 triángulos por producto**. La carga desde el panel admite hasta 8 MB por archivo; para archivos incluidos en el código, el validador admite hasta 12 MB. En ambos casos se rechazan más de 300 000 triángulos. Son presupuestos del proyecto, no garantía de rendimiento: se revisará cada modelo en un celular real.
 4. Usa texturas de hasta 2048 × 2048 como punto de partida; 1024 suele bastar para superficies pequeñas. Reutiliza el material del acero y evita transparencias innecesarias. Los iconos o renders de 8K no deben convertirse en texturas 8K para cada equipo.
 5. Exporta sin compresión de malla o con **Draco**. El visor incluye decodificadores locales Draco y KTX2/Basis. Por ahora no uses `EXT_meshopt_compression` obligatorio.
 6. Crea un render WebP de portada, idealmente 1200–1600 px, para mantener la fotografía visible antes de cargar el visor.
 
-## Asignar desde Sheets
+## Asignar desde el panel
 
-En la fila del producto:
+Abre el producto en `/admin/` y despliega **Ficha y modelo 3D**. Sube el GLB y, opcionalmente, una portada. En la sección de galería puedes añadir hasta ocho fotos. Guarda y usa **Abrir vista previa privada**; marca **Publicado en la web** cuando esté listo.
 
-| Columna | Uso |
+| Campo | Uso |
 | --- | --- |
-| `modelo_3d` | Enlace del GLB en Drive con la sincronización activada; también admite ruta local `/models/P03.glb` o URL HTTPS directa. |
-| `poster_3d` | Portada del visor; si queda vacía se usa `imagen`. |
-| `galeria` | Hasta ocho fotos extra separadas con `|`. Se descargan al seleccionar la vista. |
-| `publicar` | Activa o desactiva el producto completo. |
+| Modelo GLB | Archivo subido o ruta existente `/models/P03.glb`; también admite URL HTTPS directa. |
+| Poster 3D | Portada del visor; si queda vacía se usa la imagen principal. |
+| Galería | Hasta ocho fotos extra; se descargan al seleccionar la vista. |
+| Publicado en la web | Muestra u oculta el producto completo sin borrarlo. |
 
-Los enlaces de compartir de Google Drive no son URLs de archivos 3D utilizables directamente por el navegador. El flujo de sincronización descarga el recurso autorizado desde Drive y publica una copia optimizada con la web; Sheets conserva la relación con el producto. Un recurso alojado en otro dominio necesita permitir la descarga CORS. Nunca pongas una contraseña o token de Drive en la tabla pública.
+El panel guarda los archivos fuera del código y protege los borradores. No hay sincronización con Sheets ni Drive. Un recurso alojado en otro dominio necesita permitir la descarga CORS. No pegues enlaces que contengan contraseñas o tokens.
 
-Para una carga local, guarda `P03.glb` en `public/models/` y escribe `/models/P03.glb` en Sheets. Puedes comprobar una carpeta antes de subirla:
+Para mantener un archivo dentro del proyecto, guarda `P03.glb` en `public/models/` y escribe `/models/P03.glb` en el campo de URL existente. Puedes comprobar una carpeta antes de subirla:
 
 ```powershell
 npm run check:models

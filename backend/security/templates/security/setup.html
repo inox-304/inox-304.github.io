@@ -1,0 +1,11 @@
+{% extends 'security/base.html' %}
+{% block title %}Activar autenticador{% endblock %}
+{% block content %}
+<p class="eyebrow">ACTIVACIÓN SEGURA</p><h1>Configura tu autenticador</h1>
+<p class="intro">En Google Authenticator, Microsoft Authenticator u otra aplicación compatible, agrega una cuenta y escanea este QR.</p>
+<div class="qr"><img src="{% url 'security:setup_qr' %}" width="232" height="232" alt="Código QR para inscribir el autenticador"></div>
+<details class="manual-key"><summary>Configurar manualmente</summary><p>Selecciona un código basado en tiempo y escribe esta clave:</p><code>{{ secret }}</code></details>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Activar y guardar recuperación</button></form>
+<p class="hint">El panel estará disponible cuando confirmes el código. Mantén esta clave en privado.</p>
+<form class="secondary-form" action="{% url 'security:logout' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Cancelar</button></form>
+{% endblock %}

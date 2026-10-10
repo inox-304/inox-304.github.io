@@ -1,12 +1,13 @@
 ---
-import { cmsConfig } from '../data/cms-config';
+import { apiMode } from '../data/cms-mode';
+import { emptyCmsData } from '../lib/cms-api';
+import ProductCard from './ProductCard.astro';
 import { visibleProducts as products, featuredProducts } from '../data/catalog';
 import { buildCmsData } from '../data/cms-build';
 import { site } from '../data/site';
 import { withBase } from '../lib/paths';
-const payload = {
-  config: buildCmsData ? { catalogUrl: '', contactsUrl: '', settingsUrl: '' } : cmsConfig,
-  snapshot: !!buildCmsData,
+const payload = apiMode ? { mode: 'api', apiUrl: '/api/catalog/', routes: {}, data: emptyCmsData() } : {
+  mode: 'static',
   routes: Object.fromEntries(products.map(product => [product.id, withBase(`/catalogo/${product.slug}/`)])),
   data: buildCmsData || {
     products: products.map((product, index) => ({ currency: 'PEN', showPrice: false, technicalSheet: '', model3d: '', modelPoster: '', gallery: [], ...product, visible: true, featured: featuredProducts.some(item => item.id === product.id), order: index, contactId: 'ventas' })),
@@ -14,10 +15,17 @@ const payload = {
       { id: 'ventas', name: 'Ventas', whatsapp: site.whatsapp, phone: site.phone, email: site.email, message: 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.', active: true },
       { id: 'instalaciones', name: 'Instalaciones', whatsapp: site.whatsapp, phone: site.phone, email: site.email, message: 'Hola INOX 304, quiero asesoría para un proyecto de instalación.', active: true },
     ],
-    settings: { empresa: site.name, direccion: site.address, referencia_direccion: 'Frente a Tottus · 4.º paradero', facebook: site.facebook, contacto_principal: 'ventas', contacto_instalaciones: 'instalaciones', contacto_medida: 'ventas', contacto_formulario: 'ventas' },
+    settings: { empresa: site.name, direccion: site.address, referencia_direccion: site.addressReference, facebook: site.facebook, instagram: site.instagram, tiktok: site.tiktok, horarios: site.hours, contacto_principal: 'ventas', contacto_instalaciones: 'instalaciones', contacto_medida: 'ventas', contacto_formulario: 'ventas' },
   },
 };
 const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+const placeholder = { id: '', slug: 'equipo', name: 'Equipo', category: 'linea-neutra' as const, summary: '', features: [], image: '/images/brand/stone-texture.webp', featured: false };
 ---
+<template data-cms-card-template><ProductCard product={placeholder} href={withBase('/catalogo/')}/></template>
+<p class="cms-update-status" data-cms-status role="status" aria-live="polite" hidden></p>
 <script id="inox-cms-bootstrap" type="application/json" set:html={json}></script>
 <script>import '../scripts/cms';</script>
+<style>
+  .cms-update-status { position: fixed; bottom: 16px; right: 16px; max-width: min(360px, calc(100% - 32px)); margin: 0; padding: 12px 16px; background: #eef3f8; color: #263e58; border: 1px solid #ced9e5; border-radius: 6px; font-size: .78rem; line-height: 1.5; z-index: 20; }
+  .cms-update-status[hidden] { display: none; }
+</style>

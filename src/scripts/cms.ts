@@ -1,15 +1,19 @@
-import { categoryNames, cmsProductRoute, contactUrl, formatProductPrice, parseCms, resolveContact, validatePublishedUrl, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
+import { categoryNames, cmsProductRoute, contactUrl, formatAvailability, formatProductPrice, resolveContact, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
+import { apiProductRoute, catalogSlug, emptyCmsData, parsePublicCatalog } from '../lib/cms-api';
 import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
 
-type Bootstrap = { config: { catalogUrl: string; contactsUrl: string; settingsUrl: string }; snapshot?: boolean; routes: Record<string, string>; data: CmsData };
+type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
-const payload: Bootstrap | null = node ? JSON.parse(node.textContent || 'null') : null;
-let current = payload?.data;
-const cardTemplate = document.querySelector<HTMLAnchorElement>('.product-card')?.cloneNode(true) as HTMLAnchorElement | undefined;
+let payload: Bootstrap | null = null;
+try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { /* An invalid bootstrap is replaced by a fresh public request. */ }
+const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
+let lastApplied = '';
+const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLAnchorElement>('.product-card') || document.querySelector<HTMLAnchorElement>('.product-card');
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
+const defaultHero = [...document.querySelectorAll<HTMLElement>('[data-business="hero_title"], [data-business="hero_description"], [data-business="home_text"]')].map(element => ({ element, children: [...element.childNodes].map(child => child.cloneNode(true)) }));
 
-function route(product: CmsProduct) { return cmsProductRoute(product, payload?.routes || {}); }
+function route(product: CmsProduct) { return apiMode ? apiProductRoute(product) : cmsProductRoute(product, payload?.routes || {}); }
 function category(product: CmsProduct) { return categoryNames[product.category] || product.category; }
 function setText(selector: string, value: string, root: ParentNode = document) { root.querySelectorAll(selector).forEach(element => { element.textContent = value; }); }
 function createCard(product: CmsProduct, index: number): HTMLAnchorElement {
@@ -43,8 +47,9 @@ function fillCards(container: Element, products: CmsProduct[]) {
 
 function updateDetail(data: CmsData) {
   const detail = document.querySelector<HTMLElement>('[data-product-detail]'); if (!detail) return;
-  const productId = detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
-  const product = data.products.find(item => item.id === productId && item.visible);
+  const productId = payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
+  const slug = apiMode ? catalogSlug(location.pathname) : '';
+  const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
   const unavailable = detail.querySelector<HTMLElement>('[data-product-unavailable]');
   const grid = detail.querySelector<HTMLElement>('.product-detail-grid');
   const related = detail.querySelector<HTMLElement>('.related-products');
@@ -109,13 +114,47 @@ function updateDetail(data: CmsData) {
   const price = formatProductPrice(product);
   const priceNode = detail.querySelector<HTMLElement>('[data-product-price]');
   if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
+  const unit = detail.querySelector<HTMLElement>('[data-product-unit]');
+  if (unit) { unit.textContent = product.unitLabel || product.chargeUnit || ''; unit.hidden = !price || !unit.textContent; }
+  const availability = detail.querySelector<HTMLElement>('[data-product-availability]');
+  if (availability) { availability.textContent = formatAvailability(product.availability); availability.hidden = !availability.textContent; }
+  const variants = detail.querySelector<HTMLSelectElement>('[data-product-variant]');
+  if (variants) {
+    const selected = variants.dataset.productId === product.id ? variants.value : '';
+    variants.dataset.productId = product.id;
+    const options = [new Option('Presentación principal', ''), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];
+    variants.replaceChildren(...options);
+    variants.value = (product.variants || []).some(item => item.id === selected) ? selected : '';
+    variants.closest<HTMLElement>('[data-product-variants]')!.hidden = !product.variants?.length;
+    const selectVariant = () => {
+      const variant = product.variants?.find(item => item.id === variants.value);
+      const selectedPrice = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
+      if (priceNode) { priceNode.textContent = selectedPrice; priceNode.hidden = !selectedPrice; }
+      if (unit) unit.hidden = !selectedPrice || !unit.textContent;
+      if (availability) { availability.textContent = formatAvailability(variant?.availability || product.availability); availability.hidden = !availability.textContent; }
+      if (contact) detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
+        const message = `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}${variant ? `, presentación ${variant.name}` : ''}. Me gustaría recibir una cotización. ${new URL(route(product), location.origin).href}`;
+        anchor.href = contactUrl(contact, message);
+      });
+    };
+    variants.onchange = selectVariant; selectVariant();
+  }
+  const charges = detail.querySelector<HTMLElement>('[data-product-charges]');
+  if (charges) {
+    charges.replaceChildren(...(product.additionalCharges || []).map(charge => {
+      const item = document.createElement('li');
+      const chargePrice = formatProductPrice({ price: charge.price, currency: product.currency, showPrice: product.showPrice });
+      item.textContent = `${charge.name}${chargePrice ? `: ${chargePrice}` : ''}`; return item;
+    }));
+    charges.closest<HTMLElement>('[data-product-additional]')!.hidden = !charges.childElementCount;
+  }
   const technicalSheet = detail.querySelector<HTMLAnchorElement>('[data-product-technical-sheet]');
   if (technicalSheet) {
     technicalSheet.hidden = !product.technicalSheet;
     if (product.technicalSheet) technicalSheet.href = withBase(product.technicalSheet);
     else technicalSheet.removeAttribute('href');
   }
-  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet;
+  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length;
   const relatedProducts = visibleCmsProducts(data).filter(item => item.category === product.category && item.id !== product.id).slice(0, 3);
   if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts); }
   document.title = `${product.name} | ${data.settings.empresa}`;
@@ -126,17 +165,25 @@ function updateDetail(data: CmsData) {
 
 function updateContacts(data: CmsData) {
   const primary = resolveContact(data, data.settings.contacto_principal);
-  document.querySelectorAll<HTMLElement>('[data-business]').forEach(element => { const key = element.dataset.business || ''; if (Object.hasOwn(data.settings, key)) element.textContent = data.settings[key]; });
+  document.querySelectorAll<HTMLElement>('[data-business]').forEach(element => {
+    const key = element.dataset.business || '';
+    if (key.startsWith('hero_') || key === 'home_text') {
+      const custom = data.settings[key];
+      if (custom) { element.textContent = custom; element.style.whiteSpace = 'pre-line'; }
+      else { const original = defaultHero.find(item => item.element === element); if (original) element.replaceChildren(...original.children.map(child => child.cloneNode(true))); element.style.removeProperty('white-space'); }
+    } else if (Object.hasOwn(data.settings, key)) { element.textContent = data.settings[key]; if (element.hasAttribute('data-hide-empty')) element.hidden = !data.settings[key]; }
+  });
   document.querySelectorAll<HTMLElement>('[data-cms-phone]').forEach(element => { element.textContent = primary?.phone || 'Consulta disponibilidad de contacto'; });
+  document.querySelectorAll<HTMLElement>('[data-business-container]').forEach(element => { element.hidden = !data.settings[element.dataset.businessContainer || '']; });
   document.querySelectorAll<HTMLAnchorElement>('[data-cms-email]').forEach(element => { element.textContent = primary?.email || ''; if (primary?.email) { element.href = `mailto:${primary.email}`; element.hidden = false; } else { element.removeAttribute('href'); element.hidden = true; } });
-  document.querySelectorAll<HTMLAnchorElement>('[data-cms-facebook]').forEach(element => { const url = data.settings.facebook; element.hidden = !url; if (url) element.href = url; else element.removeAttribute('href'); });
+  document.querySelectorAll<HTMLAnchorElement>('[data-cms-facebook], [data-cms-social]').forEach(element => { const url = data.settings[element.dataset.cmsSocial || 'facebook']; element.hidden = !url; if (url) element.href = url; else element.removeAttribute('href'); });
   document.querySelectorAll<HTMLAnchorElement>('[data-cms-map]').forEach(element => {
     const address = data.settings.direccion;
     element.hidden = !address;
     if (address) element.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     else element.removeAttribute('href');
   });
-  document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me/"],a[data-cms-whatsapp]').forEach(anchor => {
+  document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me/"],a[data-cms-whatsapp],a[data-contact-setting]').forEach(anchor => {
     if (anchor.hasAttribute('data-product-quote') || anchor.id === 'quote-fallback') return;
     anchor.dataset.cmsWhatsapp = 'true';
     const role = anchor.dataset.contactSetting;
@@ -162,37 +209,54 @@ function updateContacts(data: CmsData) {
   }
 }
 function apply(data: CmsData) {
+  const serialized = JSON.stringify(data);
+  if (serialized === lastApplied) return;
   const visible = visibleCmsProducts(data);
   document.querySelectorAll('[data-cms-products]').forEach(container => { const kind = container.getAttribute('data-cms-products'); fillCards(container, kind === 'featured' ? visible.filter(product => product.featured) : visible); });
   updateContacts(data); updateDetail(data);
-  current = data;
+  lastApplied = serialized;
   document.dispatchEvent(new CustomEvent('inox:catalog-updated', { detail: { count: visible.length } }));
 }
 
-async function fetchCsv(url: string, signal: AbortSignal) {
-  const response = await fetch(url, { signal, cache: 'no-store', credentials: 'omit', redirect: 'follow' });
-  if (!response.ok) throw new Error(`CMS HTTP ${response.status}`);
-  const value = await response.text();
-  if (/^\s*(?:<!doctype|<html)/i.test(value)) throw new Error('CMS URL returned HTML');
-  return value;
+let inFlight: AbortController | undefined;
+let revision = 0;
+let successful = false;
+function showStatus(message = '') {
+  const status = document.querySelector<HTMLElement>('[data-cms-status]');
+  if (status) { status.textContent = message; status.hidden = !message; }
 }
-async function start() {
-  if (!payload || !current) return;
-  if (payload.snapshot) { apply(current); document.documentElement.dataset.cmsState = 'published'; return; }
-  // Generic product routes have no build-time data; known IDs can still use the bundled fallback.
-  if (document.querySelector('[data-product-detail=""]')) updateDetail(current);
-  const rawUrls = [payload.config.catalogUrl, payload.config.contactsUrl, payload.config.settingsUrl];
-  if (rawUrls.every(url => !url)) { document.documentElement.dataset.cmsState = 'unconfigured'; return; }
-  const urls = rawUrls.map(validatePublishedUrl);
-  if (urls.some(url => !url)) { document.documentElement.dataset.cmsState = 'fallback'; console.warn('INOX CMS: configure all three published Google Sheets CSV URLs. Static content retained.'); return; }
-  const controller = new AbortController(); const timeout = window.setTimeout(() => controller.abort(), 12000);
+async function refresh() {
+  if (document.hidden || inFlight || payload?.preview) return;
+  const controller = new AbortController(); inFlight = controller;
+  const request = ++revision;
+  const timeout = window.setTimeout(() => controller.abort(), 12000);
   try {
-    const [catalogCsv, contactsCsv, settingsCsv] = await Promise.all(urls.map(url => fetchCsv(withBase(url), controller.signal)));
-    const data = parseCms(catalogCsv, contactsCsv, settingsCsv);
-    apply(data); document.documentElement.dataset.cmsState = 'live';
-  } catch (error) {
-    document.documentElement.dataset.cmsState = 'fallback';
-    console.warn('INOX CMS: current static content retained because live data was unavailable or invalid.', error);
-  } finally { window.clearTimeout(timeout); }
+    // The public feed is same-origin and cannot redirect a visitor to another service.
+    const response = await fetch('/api/catalog/', { signal: controller.signal, cache: 'no-store', credentials: 'same-origin', redirect: 'error', headers: { Accept: 'application/json' } });
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Catalog unavailable');
+    const body = await response.text();
+    if (body.length > 5_000_000) throw new Error('Catalog too large');
+    const data = parsePublicCatalog(JSON.parse(body));
+    if (request !== revision || controller.signal.aborted) return;
+    apply(data); successful = true; showStatus(); document.documentElement.dataset.cmsState = 'live';
+  } catch {
+    if (request !== revision) return;
+    document.documentElement.dataset.cmsState = successful ? 'stale' : 'unavailable';
+    showStatus(successful ? 'No se pudo actualizar. Mostramos la última información disponible.' : 'El catálogo no está disponible en este momento. Volveremos a intentar en unos segundos.');
+  } finally { window.clearTimeout(timeout); if (inFlight === controller) inFlight = undefined; }
 }
-void start();
+function start() {
+  if (!apiMode) { if (payload?.data) { apply(payload.data); document.documentElement.dataset.cmsState = 'static'; } return; }
+  try { if (payload?.data) { const data = parsePublicCatalog(payload.data, { preview: payload.preview === true }); apply(data); successful = Boolean(data.products.length || data.contacts.length); } else apply(emptyCmsData()); }
+  catch { apply(emptyCmsData()); }
+  if (payload?.preview) { document.documentElement.dataset.cmsState = 'preview'; showStatus('Vista previa privada. Los cambios sin publicar solo son visibles aquí.'); return; }
+  void refresh();
+  window.setInterval(() => { void refresh(); }, 30000);
+  window.addEventListener('focus', () => { void refresh(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { revision++; inFlight?.abort(); inFlight = undefined; }
+    else void refresh();
+  });
+  window.addEventListener('pagehide', () => { revision++; inFlight?.abort(); inFlight = undefined; });
+}
+start();

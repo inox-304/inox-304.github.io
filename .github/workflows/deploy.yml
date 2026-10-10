@@ -4,8 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: '17,47 * * * *'
 
 permissions:
   contents: read
@@ -16,15 +14,11 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name != 'schedule' || vars.CMS_EXPORT_URL != ''
     runs-on: ubuntu-latest
     env:
-      CMS_EXPORT_URL: ${{ vars.CMS_EXPORT_URL }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || format('https://{0}.github.io', github.repository_owner) }}
       PUBLIC_SITE_BASE_PATH: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}/', github.event.repository.name) }}
-      PUBLIC_CMS_CATALOG_URL: ${{ vars.PUBLIC_CMS_CATALOG_URL }}
-      PUBLIC_CMS_CONTACTS_URL: ${{ vars.PUBLIC_CMS_CONTACTS_URL }}
-      PUBLIC_CMS_SETTINGS_URL: ${{ vars.PUBLIC_CMS_SETTINGS_URL }}
+      PUBLIC_CMS_MODE: static
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -33,7 +27,7 @@ jobs:
         with:
           node-version: 24
           package-manager: npm
-          build-cmd: node scripts/sync-cms.mjs && node scripts/configure-domain.mjs && npm run build && npm test && npm run check:models && node scripts/test-cms.mjs && node scripts/test-paths.mjs && node scripts/test-product-stage.mjs && node scripts/test-cms-import.mjs && node scripts/test-model-budget.mjs
+          build-cmd: node scripts/configure-domain.mjs && npm run build && npm test && npm run check:models && node scripts/test-cms.mjs && node scripts/test-paths.mjs && node scripts/test-product-stage.mjs && node scripts/test-model-budget.mjs
 
   deploy:
     needs: build

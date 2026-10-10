@@ -1,4 +1,6 @@
-# INOX 304 · Sitio web
+# INOX 304 · Web y administración privada
+
+La nueva administración reemplaza Google Sheets: **Django + base de datos + /admin con contraseña y TOTP**, manteniendo el diseño público de Astro. Consulta [la guía del panel](docs/PANEL-ADMINISTRACION.md). `npm run build:server` genera la interfaz para el servidor; `npm run server:test` comprueba seguridad, datos y conexión. Los cambios comerciales se leen en tiempo de ejecución, sin publicar código. GitHub Pages conserva la versión estática hasta disponer de un servidor para la nueva versión.
 
 Sitio estático en Astro y TypeScript para presentar el equipamiento comercial e industrial de INOX 304. Incluye portada animada, catálogo por categorías, fichas de productos, instalaciones y contacto para cotización por WhatsApp. La estructura de tarjetas parte de ScrewFast; su licencia se conserva en `LICENSE-SCREWFAST`.
 
@@ -58,15 +60,9 @@ Los nombres, modelos, características y datos comerciales proceden de los PDF e
 
 ## Contacto y cotizaciones
 
-El administrador se organiza en tres pestañas privadas de Google Sheets: **Catalogo**, **Contactos** y **Ajustes**. Permite editar productos, precios, fotos, galerías, fichas PDF, modelos GLB y WhatsApp, con casillas para publicar o dejar borradores. La integración está preparada; **falta autorizar la cuenta de INOX y configurar `CMS_EXPORT_URL`**.
+El panel privado administra productos, variantes, precios, costos internos, archivos y contactos. Los costos y notas internas están separados de la proyección pública. Las plantillas CSV se conservan únicamente para la importación inicial, que nunca sobrescribe registros existentes. El flujo automático de Sheets está retirado.
 
-El flujo recomendado es **Sheets + Drive → Apps Script → GitHub Actions → web estática**. Solo se exportan filas publicadas y contactos activos. GitHub descarga los recursos referenciados, optimiza las imágenes y genera todas las rutas de producto. Un producto despublicado desaparece de la siguiente compilación. Las actualizaciones se pueden ejecutar manualmente; una vez configurada la URL también se revisan aproximadamente cada 30 minutos, sujeto a la cola de GitHub. La web y la sincronización no dependen de que esta PC esté encendida.
-
-Lee [la puesta en marcha](docs/publicacion-sheets.md), [las columnas del panel](docs/cms.md) y [el prompt para ChatGPT o Gemini](docs/PROMPT-ADMINISTRAR-INOX304.md). Las plantillas iniciales contienen los 32 equipos actuales. El modo CSV público anterior se conserva por compatibilidad; no ofrece la misma retirada de rutas y no es la opción recomendada.
-
-Para comprobar los datos y la importación, ejecuta `node scripts/test-cms.mjs` y `node scripts/test-cms-import.mjs`.
-
-El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto prepara un mensaje con la consulta y abre WhatsApp hacia el número configurado en `src/data/site.ts`; el visitante revisa y envía ese mensaje desde WhatsApp. Abrir el enlace no confirma que la empresa haya recibido la consulta.
+La versión con panel no procesa pagos ni almacena consultas de los visitantes. El contacto prepara un mensaje y abre WhatsApp hacia el número configurado en el panel; el visitante revisa y envía ese mensaje desde WhatsApp. Abrir el enlace no confirma que la empresa haya recibido la consulta. La compilación estática conserva los datos iniciales hasta migrar el alojamiento.
 
 ## Material pendiente
 
@@ -80,7 +76,7 @@ El sitio no tiene backend, pagos ni almacenamiento de formularios. El contacto p
 
 La dirección de la web es **https://inox-304.github.io/** y su repositorio es **https://github.com/inox-304/inox-304.github.io**. El despliegue está configurado en `.github/workflows/deploy.yml`: cada push a `main` compila y verifica la web antes de publicar; también puede ejecutarse desde Actions. El propietario ya activó **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
-El flujo calcula `PUBLIC_SITE_URL` a partir del usuario propietario y `PUBLIC_SITE_BASE_PATH` a partir del nombre del repositorio. Un repositorio llamado exactamente `<usuario>.github.io` usa `/`; los demás usan `/<repositorio>/`. Así, la publicación se adapta al renombrar la cuenta y el repositorio. En desarrollo, la base predeterminada sigue siendo `/`. Los enlaces, archivos multimedia, rutas de productos y datos de Sheets respetan esa base. `robots.txt`, el sitemap y los enlaces canónicos se generan con la dirección configurada.
+El flujo calcula `PUBLIC_SITE_URL` a partir del usuario propietario y `PUBLIC_SITE_BASE_PATH` a partir del nombre del repositorio. Un repositorio llamado exactamente `<usuario>.github.io` usa `/`; los demás usan `/<repositorio>/`. Así, la publicación estática se adapta al renombrar la cuenta y el repositorio. Los enlaces y archivos multimedia respetan esa base. La versión con panel se sirve desde la raíz del dominio y genera el sitemap con los productos publicados en la base de datos.
 
 Para comprobar localmente la compilación de GitHub Pages desde PowerShell:
 
@@ -95,7 +91,7 @@ Remove-Item Env:PUBLIC_SITE_BASE_PATH
 Remove-Item Env:PUBLIC_SITE_URL
 ```
 
-Cuando se active Google Sheets, configura `CMS_EXPORT_URL` en las variables de GitHub Actions según `docs/publicacion-sheets.md`. El exportador es público solo para los datos comerciales marcados para publicar; la hoja maestra conserva sus permisos privados. Tras cambiar esa variable, ejecuta el flujo de despliegue. La cuenta propietaria puede configurar un dominio propio más adelante; GitHub usa `github.io`, no `github.com`, para las direcciones gratuitas de Pages.
+El flujo de GitHub Pages solo publica la versión estática. El panel privado requiere un servidor con Python, PostgreSQL persistente y HTTPS. `deploy/compose.yml` y `Dockerfile` preparan esa infraestructura; no se ha contratado ningún servicio. No se puede ejecutar este backend dentro de un dominio github.io.
 
 El 19 de septiembre de 2026 la cuenta pasó de `inoxweb304-creator` a `inoxweb304` y finalmente a `inox-304`. El repositorio usa `inox-304.github.io` para publicar en la raíz del dominio, como Arenas. El remoto local y la dirección predeterminada de desarrollo usan los nombres actuales. GitHub redirige los enlaces antiguos del repositorio, pero no los del sitio de Pages: comparte la dirección nueva.
 
@@ -103,6 +99,6 @@ Se conserva el identificador de la copia anterior en Sites en `.openai/hosting.j
 
 ## Portabilidad, dominio propio y 360°
 
-[LEEME-PRIMERO.md](LEEME-PRIMERO.md) explica cómo llevar esta carpeta en un pendrive, arrancar en otra PC y migrar a un dominio propio. `INICIAR-WEB.cmd` instala dependencias si faltan y abre el servidor; `ACTUALIZAR-Y-COMPILAR.cmd` sincroniza y compila sin publicar por su cuenta.
+[LEEME-PRIMERO.md](LEEME-PRIMERO.md) explica cómo llevar esta carpeta en un pendrive, arrancar en otra PC y migrar a un dominio propio. `INICIAR-WEB.cmd` instala dependencias si faltan y abre el servidor; `ACTUALIZAR-Y-COMPILAR.cmd` compila la versión estática sin publicar por su cuenta. Para el nuevo panel usa `PREPARAR-PANEL.cmd` y `INICIAR-PANEL.cmd`.
 
 El visor de [modelos 3D](docs/modelos-3d.md) se carga solo al pulsar Ver 360°; cada equipo puede tener su propio GLB y galería. No se ha incorporado ningún modelo de muestra al catálogo público. Usa `npm run check:models` para validar archivos antes de publicar.

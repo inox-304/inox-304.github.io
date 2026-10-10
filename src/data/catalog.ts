@@ -1,8 +1,9 @@
 import { products, type Product, type ProductCategory } from './products.ts';
 import { buildCmsData } from './cms-build.ts';
+import { apiMode } from './cms-mode.ts';
 
 // P01 now has an owner-supplied clean image without its old promotional price.
-export const visibleProducts: Product[] = buildCmsData
+export const visibleProducts: Product[] = apiMode ? [] : buildCmsData
   ? buildCmsData.products.filter(product => product.visible).map(product => ({ ...product, category: product.category as ProductCategory }))
   : products;
 export const featuredProducts = buildCmsData ? visibleProducts.filter(product => product.featured) : ['P01', 'P16', 'P24', 'P03', 'P09', 'P21']
