@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inox
+      POSTGRES_USER: inox
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the server environment}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inox -d inox"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  web:
+    build:
+      context: ..
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_ENV: production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set a long random DJANGO_SECRET_KEY}
+      DATABASE_URL: postgresql://inox:${POSTGRES_PASSWORD}@db:5432/inox
+      DATABASE_SSLMODE: disable
+      DJANGO_ALLOWED_HOSTS: ${INOX_DOMAIN:?Set your domain}
+      PUBLIC_SITE_URL: https://${INOX_DOMAIN}
+      TRUST_REVERSE_PROXY: "1"
+    volumes:
+      - media:/data
+    expose:
+      - "8000"
+  https:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      INOX_DOMAIN: ${INOX_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+volumes:
+  database:
+  media:
+  certificates:
+  caddy_config:

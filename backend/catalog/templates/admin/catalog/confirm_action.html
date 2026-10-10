@@ -1,0 +1,10 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Esta acción cambia la visibilidad pública de los siguientes productos. Los datos se conservarán.</p>
+<ul>{% for product in queryset %}<li>{{ product }}</li>{% endfor %}</ul>
+<form method="post">{% csrf_token %}
+{% for product in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ product.pk }}">{% endfor %}
+<input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="confirm" value="yes">
+<input type="submit" value="Confirmar"><a href="../">Cancelar</a>
+</form>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'security/base.html' %}
+{% block title %}Iniciar sesión{% endblock %}
+{% block content %}
+<p class="eyebrow">PASO 1 DE 2 · IDENTIFICACIÓN</p>
+<h1>Tu espacio de trabajo</h1>
+<p class="intro">Ingresa con tu correo autorizado. Después confirmaremos tu identidad con un código de seguridad.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Continuar <span aria-hidden="true">→</span></button></form>
+<div class="note"><strong>Protegido con verificación en dos pasos</strong><p>Si necesitas activar o recuperar tu acceso, contacta al responsable del sistema.</p></div>
+{% endblock %}

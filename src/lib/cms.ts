@@ -2,7 +2,9 @@ import { withBase } from './paths.ts';
 import { categories, normalizeCategory } from '../data/categories.ts';
 
 export type CmsContact = { id: string; name: string; whatsapp: string; phone: string; email: string; message: string; active: boolean };
-export type CmsProduct = { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; gallery: string[] };
+export type CmsVariant = { id: string; name: string; price?: number; availability: string };
+export type CmsAdditionalCharge = { id: string; name: string; price?: number };
+export type CmsProduct = { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; gallery: string[]; chargeUnit?: string; unitLabel?: string; availability?: string; variants?: CmsVariant[]; additionalCharges?: CmsAdditionalCharge[] };
 export type CmsData = { products: CmsProduct[]; contacts: CmsContact[]; settings: Record<string, string> };
 export const categoryNames: Record<string, string> = Object.fromEntries(categories.map(category => [category.id, category.name]));
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -59,8 +61,12 @@ export function safeHttps(value: string): string {
   try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''; } catch { return ''; }
 }
 export function safeImage(value: string): string {
-  if (/^\/images\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes('..') && !value.includes('//')) return value;
+  if (/^\/(?:images|media)\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes('..') && !value.includes('//')) return value;
   return safePublicAsset(value);
+}
+export function safePreviewAsset(value: string, validate: (value: string) => string, preview = false): string {
+  if (preview && /^\/admin\/catalog\/mediaasset\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/file\/$/i.test(value)) return value;
+  return validate(value);
 }
 function safePublicAsset(value: string): string {
   const safe = safeHttps(value);
@@ -70,13 +76,18 @@ function safePublicAsset(value: string): string {
 }
 function safeFile(value: string, directory: string, extension: string): string {
   if (!value) return '';
-  if (new RegExp(`^/${directory}/[a-zA-Z0-9_./-]+\\.${extension}$`, 'i').test(value) && !value.includes('..') && !value.includes('//')) return value;
+  // Database-backed assets use an opaque ID; the server enforces the file kind.
+  if (/^\/media\/(?:\d+|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/$/i.test(value)) return value;
+  if (new RegExp(`^/(?:${directory}|media)/[a-zA-Z0-9_./-]+\\.${extension}$`, 'i').test(value) && !value.includes('..') && !value.includes('//')) return value;
   const safe = safePublicAsset(value);
   return safe && new RegExp(`\\.${extension}$`, 'i').test(new URL(safe).pathname) ? safe : '';
 }
 export function safeTechnicalSheet(value: string): string { return safeFile(value, 'documents', 'pdf'); }
 export function safeModel(value: string): string { return safeFile(value, 'models', 'glb'); }
 export const validateModelUrl = safeModel;
+export function formatAvailability(value = ''): string {
+  return ({ available: 'Disponible', made_to_order: 'A pedido', unavailable: 'No disponible' } as Record<string, string>)[value] || value;
+}
 export function formatProductPrice(product: { price?: number; currency?: string; showPrice?: boolean }): string {
   if (!product.showPrice || !Number.isFinite(product.price) || (product.price ?? -1) < 0) return '';
   const currency = product.currency === 'USD' ? 'USD' : 'PEN';

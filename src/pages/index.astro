@@ -19,8 +19,8 @@ import { whatsappUrl } from '../data/site';
     <div class="hero-inner shell">
       <div class="hero-copy">
         <span class="eyebrow hero-eyebrow"><span class="tiny-line"></span> EQUIPAMIENTO QUE TRANSFORMA</span>
-        <h1 id="hero-heading">Acero que<br/>impulsa<br/>tu <em>negocio.</em></h1>
-        <p>Diseño preciso. Fabricación a medida.<br/>Equipos preparados para tu siguiente gran idea.</p>
+        <h1 id="hero-heading" data-business="hero_title">Acero que<br/>impulsa<br/>tu <em>negocio.</em></h1>
+        <p data-business="hero_description">Diseño preciso. Fabricación a medida.<br/>Equipos preparados para tu siguiente gran idea.</p>
         <div class="hero-actions"><a class="button button-light" href={withBase('/catalogo/')}>Explora el catálogo <Icon name="diagonal"/></a><a class="text-link" href="#a-medida">Hagámoslo a tu medida <Icon size={17}/></a></div>
       </div>
       <div class="hero-foot"><a class="scroll-cue" href="#coleccion"><span>↓</span> DESCUBRE INOX 304</a><div class="hero-foot-note"><span class="live-dot"></span> DISEÑADO PARA EXIGIRLE MÁS</div><button class="video-toggle" aria-label="Reproducir video de presentación" aria-pressed="false"><span data-video-icon>▶</span><span data-video-label>Reproducir</span></button></div>
@@ -47,7 +47,7 @@ import { whatsappUrl } from '../data/site';
   <Services/>
 
   <section id="nosotros" class="section section-light about-section"><div class="shell">
-    <div class="section-heading"><div><span class="eyebrow">04 / DE PRINCIPIO A FIN</span><h2>Más que equipos.<br/><span class="soft-text">Un proyecto contigo.</span></h2></div><p class="about-intro">En INOX 304 unimos diseño, fabricación e instalación de equipamiento gastronómico. Acompañamos a restaurantes, hoteles, cafeterías y negocios que quieren dar el siguiente paso.</p></div>
+    <div class="section-heading"><div><span class="eyebrow">04 / DE PRINCIPIO A FIN</span><h2>Más que equipos.<br/><span class="soft-text">Un proyecto contigo.</span></h2></div><p class="about-intro" data-business="home_text">En INOX 304 unimos diseño, fabricación e instalación de equipamiento gastronómico. Acompañamos a restaurantes, hoteles, cafeterías y negocios que quieren dar el siguiente paso.</p></div>
     <div class="process-grid">{[{n:'01',title:'Lo imaginamos',text:'Escuchamos tu idea, conocemos tu espacio y definimos contigo lo que necesitas.'},{n:'02',title:'Lo fabricamos',text:'Damos forma a tu proyecto en acero inoxidable, con medidas y acabados para tu operación.'},{n:'03',title:'Lo implementamos',text:'Instalamos tus equipos y coordinamos las pruebas para poner tu proyecto en marcha.'}].map(item => <article class="process-card"><div><span>{item.n}</span><Icon name="plus" size={18}/></div><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
     <div class="sector-line"><span class="eyebrow">UN EQUIPO PARA CADA NEGOCIO</span><p>Restaurantes <span>·</span> Hoteles <span>·</span> Cafeterías <span>·</span> Panaderías <span>·</span> Pollerías</p></div>
   </div></section>

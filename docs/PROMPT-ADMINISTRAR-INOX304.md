@@ -1,3 +1,5 @@
+> **DOCUMENTACIÓN ANTERIOR — Sheets fue sustituido por el panel privado.** Consulta [PANEL-ADMINISTRACION.md](PANEL-ADMINISTRACION.md). Este flujo ya no se ejecuta al publicar.
+
 # Prompt para preparar el panel de INOX 304
 
 Pega este texto en ChatGPT o Gemini con acceso autorizado a Google Drive y Google Sheets. Adjunta las tres plantillas CSV de `public/cms/plantillas` y los archivos de `integration/google-apps-script`; comparte también `docs/publicacion-sheets.md`. Si las herramientas de tu cuenta no permiten escribir en Sheets, el asistente debe decírtelo y guiarte con los archivos, sin fingir que creó la hoja.

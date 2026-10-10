@@ -1,0 +1,9 @@
+{% extends 'security/base.html' %}
+{% block title %}Códigos de recuperación{% endblock %}
+{% block content %}
+<p class="eyebrow">SEGURIDAD DE TU CUENTA</p><h1>Códigos de recuperación</h1>
+<p class="intro">Tienes <strong>{{ remaining }}</strong> códigos disponibles. Para generar otros 10, confirma un código nuevo de tu aplicación de autenticación.</p>
+<form method="post" action="{% url 'security:regenerate_codes' %}">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Generar códigos nuevos</button></form>
+<div class="note"><p>Al generar nuevos códigos, se invalidan los anteriores y se cierran tus otras sesiones. Si perdiste tu autenticador, pide al responsable del servidor que restablezca la inscripción.</p></div>
+<a class="secondary" href="{% url 'admin:index' %}">Volver al panel</a>
+{% endblock %}

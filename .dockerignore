@@ -1,0 +1,15 @@
+.git
+node_modules
+dist
+dist-server
+.astro
+.generated
+work
+.env
+.env.*
+backend/.env
+backend/data
+backend/.venv
+**/__pycache__
+*.log
+backups

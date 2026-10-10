@@ -13,13 +13,11 @@ El código, las fotos de la web, videos, iconos, fuentes, decodificadores 3D y d
 
 ## Administrar productos
 
-Lee `docs/publicacion-sheets.md` para activar **Sheets privado → Drive → GitHub**. El archivo `docs/PROMPT-ADMINISTRAR-INOX304.md` tiene el prompt de configuración y el prompt de uso diario. Las plantillas para importar están en `public/cms/plantillas/` y contienen los 32 productos actuales.
+**Sheets fue reemplazado por un panel privado.** Lee `docs/PANEL-ADMINISTRACION.md`. Ejecuta `PREPARAR-PANEL.cmd` una sola vez e `INICIAR-PANEL.cmd` para abrir la web local con su administración. El código del panel está en `backend/`, la base de desarrollo y los archivos en la carpeta privada `backend/data/`.
 
-No hay una hoja de INOX conectada todavía. El diseño está publicado y la integración está preparada; la autorización de Google y la URL del exportador se configuran una sola vez desde la cuenta de INOX.
+No confundas llevar el código con llevar los datos. Para cambiar de PC conserva un respaldo comercial y los archivos, o copia `backend/data/` con el servidor apagado y protege esa copia. Las dependencias se reinstalan. La guía explica cómo autorizar al propietario y activar la aplicación autenticadora.
 
-Para actualizar desde Sheets en esta PC, copia `.env.example` como `.env`, configura `CMS_EXPORT_URL` y ejecuta `npm run build:published`. La configuración de GitHub se guarda por separado en el repositorio y funciona aunque la laptop esté apagada. No copies contraseñas ni tokens al proyecto o al pendrive.
-
-Si el proyecto contiene `.generated/` e imágenes importadas, conserva esas carpetas al trasladarlo: son la última copia publicada. Una clonación nueva puede reconstruirlas desde Sheets. Si aún no se activó Sheets, se usan los datos originales del catálogo.
+El nuevo panel no está alojado en GitHub Pages: necesita un servidor con Python, PostgreSQL y HTTPS. La versión pública estática continúa funcionando hasta preparar esa migración. No se contrató ningún servicio.
 
 ## Modelos 3D
 
@@ -27,7 +25,9 @@ Lee `docs/modelos-3d.md`. Se admiten archivos `.glb` preparados para web. Cada p
 
 ## Cambiar a dominio .com
 
-No necesitas rehacer la web ni cambiar las filas de Sheets. Cuando el dominio sea tuyo:
+Para utilizar el panel, apunta el dominio al servidor que ejecutará la web y la base de datos. No necesitas rehacer el diseño ni volver a cargar los productos. La configuración completa está en `docs/PANEL-ADMINISTRACION.md`.
+
+Si primero quieres cambiar solo el dominio de la versión estática actual:
 
 1. En GitHub Pages configura el dominio personalizado y sus DNS según el proveedor.
 2. Establece la variable del repositorio `PUBLIC_SITE_URL` como `https://tudominio.com`.

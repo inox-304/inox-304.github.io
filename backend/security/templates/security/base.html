@@ -1,0 +1,18 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Acceso seguro{% endblock %} · INOX 304</title>
+  <link rel="stylesheet" href="{% static 'security/auth.css' %}">
+</head>
+<body>
+  <div class="auth-shell">
+    <header class="brand"><a href="/" aria-label="INOX 304, volver al sitio">INOX<span>304</span><small>EQUIPAMIENTO PROFESIONAL</small></a><span class="private-label">ADMINISTRACIÓN</span></header>
+    <main class="auth-card" id="main-content">{% block content %}{% endblock %}</main>
+    <footer class="auth-footer"><a href="/">Volver al sitio</a><span>Acceso exclusivo para personal autorizado</span></footer>
+  </div>
+</body>
+</html>
