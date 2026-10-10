@@ -11,7 +11,7 @@ RUN npm run build:server
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS application
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-COPY backend/pyproject.toml backend/uv.lock ./backend/
+COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./backend/
 RUN uv sync --project backend --locked --no-dev
 COPY backend ./backend
 COPY --from=frontend /app/dist-server ./dist-server

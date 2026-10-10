@@ -112,7 +112,7 @@ class CatalogTests(TestCase):
         self.product.save()
         response = self.client.get(asset.public_url)
         self.assertEqual(response.status_code, 200)
-        response.close()
+        self.assertEqual(b"".join(response.streaming_content), Path(asset.file.path).read_bytes())
         self.product.is_published = False
         self.product.save()
         self.assertEqual(self.client.get(asset.public_url).status_code, 404)
@@ -293,7 +293,7 @@ class CatalogTests(TestCase):
         self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")
         file_response = self.client.get(file_url)
         self.assertEqual(file_response.status_code, 200)
-        file_response.close()
+        self.assertEqual(b"".join(file_response.streaming_content), Path(asset.file.path).read_bytes())
         csrf_client = Client(enforce_csrf_checks=True)
         csrf_client.cookies = self.client.cookies
         log = AuditLog.objects.filter(entity="catalog.product", object_id=str(self.product.pk), operation="update").latest("pk")
