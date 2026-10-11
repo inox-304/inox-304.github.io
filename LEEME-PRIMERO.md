@@ -15,7 +15,7 @@ El código, las fotos de la web, videos, iconos, fuentes, decodificadores 3D y d
 
 **Sheets fue reemplazado por un panel privado.** Lee `docs/PANEL-ADMINISTRACION.md`. Ejecuta `PREPARAR-PANEL.cmd` una sola vez e `INICIAR-PANEL.cmd` para abrir la web local con su administración. El código del panel está en `backend/`, la base de desarrollo y los archivos en la carpeta privada `backend/data/`.
 
-No confundas llevar el código con llevar los datos. Para cambiar de PC conserva un respaldo comercial y los archivos, o copia `backend/data/` con el servidor apagado y protege esa copia. Las dependencias se reinstalan. La guía explica cómo autorizar al propietario y activar la aplicación autenticadora.
+No confundas llevar el código con llevar los datos. Para cambiar de PC conserva un respaldo comercial y los archivos, o copia `backend/data/` con el servidor apagado y protege esa copia. Conserva también `backend/.env` de forma privada o configura de nuevo Gmail con `CONFIGURAR-CORREO.cmd`. Las dependencias se reinstalan. La guía explica cómo autorizar al propietario y activar los códigos por correo o una aplicación autenticadora.
 
 El nuevo panel no está alojado en GitHub Pages: necesita un servidor con Python, PostgreSQL y HTTPS. La versión pública estática continúa funcionando hasta preparar esa migración. No se contrató ningún servicio.
 

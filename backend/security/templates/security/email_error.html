@@ -1,0 +1,11 @@
+{% extends 'security/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<p class="eyebrow">ACCESO SEGURO</p><h1>{{ title }}</h1><p class="intro">{{ message }}</p>
+{% if retry_login %}
+{% if has_code %}<a class="primary" href="{% url 'security:email_verify' %}">Ingresar el código recibido</a>{% endif %}
+<form class="secondary-form" action="{% url 'security:email_resend' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Volver a intentar el envío</button></form>
+{% else %}<a class="secondary" href="{% url 'security:recovery_codes' %}">Volver a seguridad de la cuenta</a>{% endif %}
+{% if can_recover %}<a class="secondary" href="{% url 'security:otp' %}">Usar un código de recuperación</a>{% endif %}
+<form class="secondary-form" action="{% url 'security:logout' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Cerrar y volver al acceso</button></form>
+{% endblock %}

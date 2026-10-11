@@ -2,8 +2,14 @@
 {% block title %}Códigos de recuperación{% endblock %}
 {% block content %}
 <p class="eyebrow">SEGURIDAD DE TU CUENTA</p><h1>Códigos de recuperación</h1>
+{% if email_mode %}
+<p class="intro">Tienes <strong>{{ remaining }}</strong> códigos disponibles. Para generar otros 10, confirma un nuevo código enviado al correo autorizado de tu cuenta.</p>
+<form class="secondary-form" method="post" action="{% url 'security:email_regenerate_send' %}">{% csrf_token %}<button class="{% if email_challenge_pending %}text-button{% else %}primary{% endif %}" type="submit">{% if email_challenge_pending %}Reenviar código (después de 60 segundos){% else %}Enviar código de confirmación{% endif %}</button></form>
+{% if email_challenge_pending %}<form method="post" action="{% url 'security:email_regenerate_verify' %}">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Confirmar y generar códigos nuevos</button></form>{% endif %}
+{% else %}
 <p class="intro">Tienes <strong>{{ remaining }}</strong> códigos disponibles. Para generar otros 10, confirma un código nuevo de tu aplicación de autenticación.</p>
 <form method="post" action="{% url 'security:regenerate_codes' %}">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Generar códigos nuevos</button></form>
-<div class="note"><p>Al generar nuevos códigos, se invalidan los anteriores y se cierran tus otras sesiones. Si perdiste tu autenticador, pide al responsable del servidor que restablezca la inscripción.</p></div>
+{% endif %}
+<div class="note"><p>Al generar nuevos códigos, se invalidan los anteriores y se cierran tus otras sesiones. Si perdiste acceso a tu segundo factor, pide al responsable del servidor que restablezca la activación.</p></div>
 <a class="secondary" href="{% url 'admin:index' %}">Volver al panel</a>
 {% endblock %}
