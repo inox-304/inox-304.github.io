@@ -2,7 +2,7 @@
 {% block title %}Verificar identidad{% endblock %}
 {% block content %}
 <p class="eyebrow">PASO 2 DE 2 · VERIFICACIÓN</p><h1>Confirma que eres tú</h1>
-<p class="intro">Abre tu aplicación de autenticación y escribe el código actual. También puedes usar uno de tus códigos de recuperación.</p>
+<p class="intro">{% if email_mode %}Escribe uno de los códigos de recuperación que guardaste. Cada código funciona una sola vez y cerrará tus otras sesiones.{% else %}Abre tu aplicación de autenticación y escribe el código actual. También puedes usar uno de tus códigos de recuperación.{% endif %}</p>
 <form method="post">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Entrar al panel <span aria-hidden="true">→</span></button></form>
 <p class="hint">Este paso caduca 5 minutos después de verificar tu contraseña.</p>
 <form class="secondary-form" action="{% url 'security:logout' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Cancelar y volver</button></form>

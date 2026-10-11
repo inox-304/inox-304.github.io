@@ -11,10 +11,23 @@ Requisitos: Node.js 24, Python 3.13 y `uv`. Las dependencias están fijadas en `
 1. Abre **`PREPARAR-PANEL.cmd`**. Compila la web para el servidor, instala el backend, aplica migraciones e importa los 32 equipos iniciales. La importación solo añade códigos que no existen: no reemplaza los productos, contactos ni ajustes que ya editaste.
 2. Al crear el propietario, escribe el correo autorizado y una contraseña propia de al menos 12 caracteres. No envíes la contraseña por chat.
 3. Abre **`INICIAR-PANEL.cmd`** y entra en `http://127.0.0.1:8000/admin/`.
-4. Introduce correo y contraseña. En el primer acceso autorizado, registra el QR en una aplicación autenticadora y confirma su código. Hasta completar este paso no hay acceso administrativo.
+4. Introduce correo y contraseña. Si la cuenta está configurada para correo, recibe y confirma el código de seis dígitos. Si usa aplicación autenticadora, registra el QR en el primer acceso autorizado y confirma su código. Hasta completar el segundo paso no hay acceso administrativo.
 5. Guarda los códigos de recuperación en un gestor de contraseñas. Cada uno funciona una vez y solo se muestran al generarlos.
 
 El comando de preparación es una herramienta local; no crea ni paga un servidor. La web local funciona mientras el proceso está abierto. El sitio publicado en Internet seguirá usando su alojamiento actual hasta migrarlo.
+
+## Activar los códigos por correo
+
+El servidor envía el código **después de comprobar la contraseña**, exclusivamente al correo guardado de esa cuenta autorizada. No se envía a todas las cuentas ni a una dirección elegida desde el navegador. No hay registro público.
+
+1. En la cuenta Gmail que enviará los códigos, activa la verificación en dos pasos y crea una [contraseña de aplicación de Google](https://myaccount.google.com/apppasswords). Es diferente de la contraseña del panel y de tu contraseña habitual de Gmail. Consulta la [ayuda oficial](https://support.google.com/accounts/answer/185833?hl=es) si no aparece esa opción.
+2. Abre **`CONFIGURAR-CORREO.cmd`** en la carpeta que ejecuta el panel. Introduce el Gmail remitente y esa contraseña de aplicación en la entrada oculta. El configurador comprueba la conexión cifrada con Gmail antes de guardar; no envía un mensaje de prueba. Si falla, conserva la configuración anterior.
+3. Reinicia **`INICIAR-PANEL.cmd`**. Los secretos quedan en el archivo privado `backend/.env`, excluido de Git. No los pegues en el chat ni los subas al repositorio.
+4. Un operador autoriza cada cuenta con `create_owner --email CORREO --mfa email`. La primera verificación debe completarse en 24 horas. Para una cuenta existente o una activación vencida utiliza `configure_mfa --email CORREO --method email`; este cambio revoca las sesiones y los dispositivos anteriores y abre otras 24 horas de activación. Una vez confirmada, la cuenta conserva su acceso sin ese plazo de activación.
+
+Sin un remitente configurado, el acceso por correo se detiene con un mensaje claro: no se finge que el código fue enviado ni se concede acceso. Una aceptación SMTP confirma el envío al proveedor, no la recepción en la bandeja; revisa Spam si no aparece. Si usas otro proveedor, configura las variables `EMAIL_*` del ejemplo en el archivo privado en vez de utilizar el configurador de Gmail.
+
+Los códigos duran **5 minutos**, se usan una sola vez y admiten un máximo de **5 intentos**, además del límite compartido por cuenta y red. Reenviar exige esperar **60 segundos** e invalida el código anterior; no prolonga indefinidamente la etapa pendiente. Están vinculados a la cuenta, la sesión, el propósito y la versión de seguridad. La base conserva una huella protegida, nunca el código en texto claro. El primer acceso verificado genera los códigos de recuperación de un solo uso. Regenerarlos exige otra verificación reciente.
 
 ## Uso diario
 
@@ -31,12 +44,12 @@ El panel avisa de cambios sin guardar. Los formularios validan en el servidor y 
 ## Cuentas y duración de sesiones
 
 - No existe registro público. Solo un operador con acceso al servidor puede autorizar propietarios mediante `create_owner`.
-- Primero correo y contraseña; después TOTP o un código de recuperación. La etapa pendiente dura **5 minutos**.
+- Primero correo y contraseña; después código de correo o TOTP según la cuenta. También se admite un código de recuperación previamente generado. La etapa pendiente dura **5 minutos**.
 - Una sesión completa dura como máximo **8 horas**, con vencimiento tras **30 minutos sin actividad**. No se amplía el máximo absoluto navegando.
 - Cerrar sesión revoca la sesión en el servidor. Una pestaña o cookie antigua no concede acceso de nuevo.
-- Los intentos se limitan por cuenta y dirección de red durante ventanas de 15 minutos. Los códigos TOTP ya utilizados no se aceptan de nuevo.
+- Los intentos se limitan por cuenta y dirección de red durante ventanas de 15 minutos. Los códigos usados, vencidos o reemplazados no se aceptan de nuevo.
 - Las contraseñas y códigos de recuperación se almacenan con hashes Argon2. Las claves TOTP y sesiones están en la base de datos privada, nunca en el repositorio ni en la página pública.
-- El panel no permite desactivar la verificación en dos pasos. Si pierdes el autenticador y todos los códigos, un operador debe autorizar un nuevo registro con `authorize_enrollment --email CORREO`; esto revoca las sesiones anteriores.
+- El panel no permite desactivar la verificación en dos pasos. Si pierdes el autenticador y todos los códigos, un operador debe autorizar un nuevo registro con `authorize_enrollment --email CORREO`; esto revoca las sesiones anteriores. Cambiar de método se hace exclusivamente desde el servidor mediante `configure_mfa`.
 
 ## Datos que deben conservarse
 
@@ -44,7 +57,7 @@ En desarrollo, `backend/data/` contiene la base SQLite, archivos subidos y una c
 
 No borres la base de datos al instalar una nueva versión. Las modificaciones de estructura se hacen con migraciones. El servidor de producción no reimporta el catálogo inicial al arrancar. Actualizar el código y ejecutar `migrate` conserva el contenido comercial.
 
-Para llevar el proyecto a otra PC, copia el código y un respaldo comercial; o copia `backend/data/` con el servidor apagado y guarda la carpeta de manera privada. No necesitas copiar `.venv` ni `node_modules`: se reconstruyen desde los archivos de versiones. Las cuentas y el autenticador no viajan en un respaldo solo comercial; se preparan de nuevo en el servidor de destino.
+Para llevar el proyecto a otra PC, copia el código y un respaldo comercial; o copia `backend/data/` con el servidor apagado y guarda la carpeta de manera privada. Conserva también `backend/.env` de forma privada, o vuelve a configurar el correo en destino. No necesitas copiar `.venv` ni `node_modules`: se reconstruyen desde los archivos de versiones. Las cuentas y el autenticador no viajan en un respaldo solo comercial; se preparan de nuevo en el servidor de destino.
 
 ## Respaldos e historial
 
@@ -67,6 +80,8 @@ Para producción, programa un respaldo diario y una copia cifrada fuera del serv
 Los archivos `Dockerfile`, `deploy/compose.yml` y `deploy/Caddyfile` preparan una instalación con Django, PostgreSQL y HTTPS. Necesitas un servidor con Docker y un dominio apuntando a su IP. Antes de contratar cualquier servicio se debe elegir proveedor y costo con el propietario.
 
 Configura **fuera del repositorio** `INOX_DOMAIN`, `POSTGRES_PASSWORD` y `DJANGO_SECRET_KEY`. Genera ambos secretos aleatorios; usa una contraseña de PostgreSQL sin caracteres reservados de URL, por ejemplo 32 bytes hexadecimales. Ejecuta desde `deploy/`:
+
+Para cuentas con verificación por correo configura también `SECURITY_EMAIL_ENABLED=1`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS` o `EMAIL_USE_SSL`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` y `DEFAULT_FROM_EMAIL` en el entorno privado de Compose. El archivo local `backend/.env` no se copia a la imagen de producción. Usa `create_owner --mfa email` para esos propietarios.
 
 ```sh
 docker compose up -d --build

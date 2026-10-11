@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from security.models import EnrollmentPermission, RecoveryDevice
+from security.models import EmailDevice, EnrollmentPermission, RecoveryDevice
 from security.services import audit, revoke_sessions
 
 
@@ -25,6 +25,7 @@ class Command(BaseCommand):
             revoke_sessions(user)
             TOTPDevice.objects.filter(user=user).delete()
             RecoveryDevice.objects.filter(user=user).delete()
+            EmailDevice.objects.filter(user=user).delete()
             EnrollmentPermission.objects.update_or_create(user=user, defaults={"created_at": timezone.now(), "expires_at": timezone.now() + timedelta(hours=24), "used_at": None})
             audit("enrollment_reset_by_cli", user=user)
-        self.stdout.write(self.style.SUCCESS("Sesiones y códigos anteriores revocados. La cuenta puede inscribir un nuevo autenticador durante 24 horas al ingresar con su contraseña."))
+        self.stdout.write(self.style.SUCCESS("Sesiones y códigos anteriores revocados. La cuenta puede confirmar su segundo factor durante 24 horas al ingresar con su contraseña."))

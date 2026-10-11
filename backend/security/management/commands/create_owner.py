@@ -14,10 +14,11 @@ from security.services import audit
 
 
 class Command(BaseCommand):
-    help = "Crea un propietario autorizado y habilita su primera inscripción TOTP durante 24 horas."
+    help = "Crea un propietario autorizado y habilita la primera verificación MFA durante 24 horas."
 
     def add_arguments(self, parser):
         parser.add_argument("--email", help="Correo del propietario; la contraseña siempre se solicita de forma oculta.")
+        parser.add_argument("--mfa", choices=["totp", "email"], default="totp", help="Método de segundo factor.")
 
     def handle(self, *args, **options):
         email = (options.get("email") or input("Correo del propietario: ")).strip().lower()
@@ -42,7 +43,8 @@ class Command(BaseCommand):
         with transaction.atomic():
             user.set_password(password)
             user.save()
-            SecurityState.objects.create(user=user)
+            SecurityState.objects.create(user=user, mfa_method=options["mfa"])
             EnrollmentPermission.objects.create(user=user, expires_at=timezone.now() + timedelta(hours=24))
             audit("owner_created", user=user)
-        self.stdout.write(self.style.SUCCESS("Propietario creado. Abre /admin/, ingresa correo y contraseña y configura tu aplicación de autenticación. La inscripción vence en 24 horas."))
+        method = "confirma el código enviado a tu correo" if options["mfa"] == "email" else "configura tu aplicación de autenticación"
+        self.stdout.write(self.style.SUCCESS(f"Propietario creado. Abre /admin/, ingresa correo y contraseña y {method}. La activación vence en 24 horas."))

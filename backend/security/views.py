@@ -16,8 +16,8 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from .forms import LoginForm, OTPForm, TOTPForm
-from .models import EnrollmentPermission, RecoveryCode, SecurityState
+from .forms import EmailCodeForm, LoginForm, OTPForm, TOTPForm
+from .models import EmailDevice, EnrollmentPermission, RecoveryCode, SecurityState
 from .services import (PENDING_KEY, VERSION, allow_attempt, audit, complete_login,
                        enrollment_allowed, generate_recovery_codes,
                        is_admin_authenticated, pending_user, revoke_sessions,
@@ -51,6 +51,15 @@ def login_view(request):
         if form.is_valid():
             user = authenticate(request, username=form.cleaned_data["email"], password=form.cleaned_data["password"])
             if user and user.is_active and user.is_staff:
+                if state_for(user).mfa_method == "email":
+                    has_device = EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists()
+                    if has_device or enrollment_allowed(user):
+                        from .email_views import send_login_code
+                        start_pending(request, user, "email")
+                        audit("password_verified", request, user)
+                        return send_login_code(request, user)
+                    form.add_error(None, "La activación de tu cuenta requiere autorización del responsable del sistema.")
+                    return render(request, "security/login.html", {"form": form})
                 has_device = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
                 if has_device or enrollment_allowed(user):
                     start_pending(request, user, "otp" if has_device else "setup")
@@ -66,10 +75,18 @@ def login_view(request):
 @never_cache
 @require_http_methods(["GET", "POST"])
 def otp_view(request):
-    user = pending_user(request, "otp")
+    user = pending_user(request)
     if user is None:
         return redirect("security:login")
-    form = OTPForm(request.POST or None, initial={"method": "totp"})
+    mode = request.session[PENDING_KEY].get("mode")
+    if mode not in ("otp", "email"):
+        return redirect("security:login")
+    email_mode = mode == "email"
+    if email_mode and not EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists():
+        return redirect("security:email_verify")
+    form = OTPForm(request.POST or None, initial={"method": "recovery" if email_mode else "totp"})
+    if email_mode:
+        form.fields["method"].choices = [("recovery", "Código de recuperación")]
     if request.method == "POST":
         if not allow_attempt(request, "otp", str(user.pk)):
             return limited(request, user)
@@ -90,7 +107,7 @@ def otp_view(request):
                     return redirect("admin:index")
             audit("otp_rejected", request, user)
             form.add_error("token", "El código no es válido, ya se utilizó o caducó. Espera al siguiente código e inténtalo de nuevo.")
-    return render(request, "security/otp.html", {"form": form})
+    return render(request, "security/otp.html", {"form": form, "email_mode": email_mode})
 
 
 def setup_device(request, user):
@@ -169,7 +186,9 @@ def recovery_codes(request):
     if not is_admin_authenticated(request):
         return redirect("security:login")
     remaining = RecoveryCode.objects.filter(device__user=request.user, used_at__isnull=True).count()
-    return render(request, "security/recovery.html", {"form": TOTPForm(), "remaining": remaining})
+    from .email_auth import EMAIL_REGENERATE_KEY
+    email_mode = state_for(request.user).mfa_method == "email"
+    return render(request, "security/recovery.html", {"form": EmailCodeForm() if email_mode else TOTPForm(), "remaining": remaining, "email_mode": email_mode, "email_challenge_pending": bool(request.session.get(EMAIL_REGENERATE_KEY))})
 
 
 @sensitive_post_parameters("token")
@@ -179,6 +198,8 @@ def recovery_codes(request):
 def regenerate_codes(request):
     if not is_admin_authenticated(request):
         return redirect("security:login")
+    if state_for(request.user).mfa_method == "email":
+        return redirect("security:recovery_codes")
     if not allow_attempt(request, "otp", str(request.user.pk)):
         return limited(request, request.user)
     form = TOTPForm(request.POST)

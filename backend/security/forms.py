@@ -16,3 +16,9 @@ class OTPForm(forms.Form):
 
 class TOTPForm(forms.Form):
     token = forms.RegexField(label="Código de 6 dígitos", regex=r"^[0-9]{6}$", max_length=6, min_length=6, widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "inputmode": "numeric", "pattern": "[0-9]{6}", "autofocus": True}), error_messages={"invalid": "Escribe los 6 dígitos de tu aplicación."})
+
+
+class EmailCodeForm(TOTPForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["token"].error_messages["invalid"] = "Escribe los 6 dígitos enviados a tu correo."

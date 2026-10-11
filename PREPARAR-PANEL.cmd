@@ -18,7 +18,8 @@ if errorlevel 1 goto failed
 echo.
 echo Prepara el propietario. Usa tu correo y una contrasena nueva de al menos 12 caracteres.
 echo Si ya creaste la cuenta, cancela este paso y abre INICIAR-PANEL.cmd.
-uv run --project backend python backend/manage.py create_owner
+echo El acceso por correo requiere CONFIGURAR-CORREO.cmd antes de iniciar sesion.
+uv run --project backend python backend/manage.py create_owner --mfa email
 pause
 exit /b
 :missing

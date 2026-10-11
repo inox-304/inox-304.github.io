@@ -133,4 +133,23 @@ FRONTEND_DIST = Path(os.getenv('FRONTEND_DIST', PROJECT_DIR / 'dist-server')).re
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000
-EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+# Email MFA is disabled until an operator configures a real mail transport.
+SECURITY_EMAIL_ENABLED = os.getenv('SECURITY_EMAIL_ENABLED') == '1'
+SECURITY_EMAIL_RESEND_SECONDS = 60
+SECURITY_EMAIL_CODE_SECONDS = 5 * 60
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '1') == '1'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '0') == '1'
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured('Choose either EMAIL_USE_TLS or EMAIL_USE_SSL.')
+if ENVIRONMENT == 'production' and SECURITY_EMAIL_ENABLED:
+    if EMAIL_BACKEND != 'django.core.mail.backends.smtp.EmailBackend' or not EMAIL_HOST or not DEFAULT_FROM_EMAIL:
+        raise ImproperlyConfigured('Email verification requires a configured SMTP transport.')
+    if not (EMAIL_USE_TLS or EMAIL_USE_SSL):
+        raise ImproperlyConfigured('Production SMTP must use TLS.')

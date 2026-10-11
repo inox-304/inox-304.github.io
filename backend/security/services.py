@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from .models import EnrollmentPermission, LoginThrottle, RecoveryCode, RecoveryDevice, SecurityEvent, SecurityState
+from .models import EmailDevice, EnrollmentPermission, LoginThrottle, RecoveryCode, RecoveryDevice, SecurityEvent, SecurityState
 
 PENDING_KEY = "security_pending"
 AUTH_AT = "security_authenticated_at"
@@ -112,6 +112,21 @@ def is_admin_authenticated(request):
     device = user.otp_device
     if not device.confirmed or device.user_id != user.pk:
         return False
+    state = state_for(user)
+    if state.mfa_method == "email":
+        if isinstance(device, EmailDevice):
+            if not device.email or device.email != user.email:
+                return False
+        elif isinstance(device, RecoveryDevice):
+            if not EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists():
+                return False
+        else:
+            return False
+    elif state.mfa_method == "totp":
+        if not isinstance(device, (TOTPDevice, RecoveryDevice)):
+            return False
+    else:
+        return False
     now = time.time()
     authenticated_at = request.session.get(AUTH_AT, 0)
     last_seen = request.session.get(LAST_SEEN, 0)
@@ -119,7 +134,7 @@ def is_admin_authenticated(request):
         return False
     if not last_seen or now >= last_seen + seconds("SECURITY_IDLE_SECONDS", 1800):
         return False
-    return request.session.get(VERSION) == state_for(user).session_version
+    return request.session.get(VERSION) == state.session_version
 
 
 def complete_login(request, user, device, version=None):
@@ -131,7 +146,8 @@ def complete_login(request, user, device, version=None):
     request.session[LAST_SEEN] = now
     request.session[VERSION] = version if version is not None else state_for(user).session_version
     request.session.set_expiry(seconds("SECURITY_SESSION_SECONDS", 28800))
-    audit("login_success", request, user, "recovery" if isinstance(device, RecoveryDevice) else "totp")
+    method = "recovery" if isinstance(device, RecoveryDevice) else "email" if isinstance(device, EmailDevice) else "totp"
+    audit("login_success", request, user, method)
 
 
 def revoke_sessions(user):
@@ -157,6 +173,11 @@ def generate_recovery_codes(user):
 
 def verify_device(user, method, token):
     """Verify and consume the token under a database row lock."""
+    if method not in ("totp", "recovery"):
+        return None
+    if state_for(user).mfa_method == "email":
+        if method != "recovery" or not EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists():
+            return None
     model = RecoveryDevice if method == "recovery" else TOTPDevice
     device = model.objects.select_for_update().filter(user=user, confirmed=True).first()
     if device is None:

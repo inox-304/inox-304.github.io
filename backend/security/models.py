@@ -1,4 +1,5 @@
 import re
+import uuid
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
@@ -10,6 +11,36 @@ from django_otp.models import Device, TimestampMixin
 class SecurityState(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     session_version = models.PositiveIntegerField(default=0)
+    mfa_method = models.CharField(max_length=10, choices=[("totp", "Aplicación de autenticación"), ("email", "Código por correo")], default="totp")
+
+
+class EmailDevice(TimestampMixin, Device):
+    email = models.EmailField(blank=True, default="")
+    confirmed = models.BooleanField(default=False)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(Device.Meta):
+        constraints = [models.UniqueConstraint(fields=["user"], name="one_email_device_per_user")]
+
+    def verify_token(self, token):
+        # Email OTPs require purpose and session binding; generic OTP APIs cannot verify them.
+        return False
+
+
+class EmailChallenge(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    device = models.ForeignKey(EmailDevice, related_name="challenges", on_delete=models.CASCADE)
+    purpose = models.CharField(max_length=16, choices=[("login", "Inicio de sesión"), ("regenerate", "Códigos de recuperación")])
+    recipient = models.EmailField()
+    token_hash = models.CharField(max_length=64)
+    session_digest = models.CharField(max_length=64)
+    auth_hash = models.CharField(max_length=128)
+    session_version = models.PositiveIntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    invalidated_at = models.DateTimeField(null=True, blank=True)
 
 
 class EnrollmentPermission(models.Model):

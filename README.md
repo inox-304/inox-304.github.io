@@ -1,6 +1,6 @@
 # INOX 304 · Web y administración privada
 
-La nueva administración reemplaza Google Sheets: **Django + base de datos + /admin con contraseña y TOTP**, manteniendo el diseño público de Astro. Consulta [la guía del panel](docs/PANEL-ADMINISTRACION.md). `npm run build:server` genera la interfaz para el servidor; `npm run server:test` comprueba seguridad, datos y conexión. Los cambios comerciales se leen en tiempo de ejecución, sin publicar código. GitHub Pages conserva la versión estática hasta disponer de un servidor para la nueva versión.
+La nueva administración reemplaza Google Sheets: **Django + base de datos + /admin con contraseña y código por correo o TOTP**, manteniendo el diseño público de Astro. Consulta [la guía del panel](docs/PANEL-ADMINISTRACION.md). `CONFIGURAR-CORREO.cmd` conecta Gmail de forma privada. `npm run build:server` genera la interfaz para el servidor; `npm run server:test` comprueba seguridad, datos y conexión. Los cambios comerciales se leen en tiempo de ejecución, sin publicar código. GitHub Pages conserva la versión estática hasta disponer de un servidor para la nueva versión.
 
 Sitio estático en Astro y TypeScript para presentar el equipamiento comercial e industrial de INOX 304. Incluye portada animada, catálogo por categorías, fichas de productos, instalaciones y contacto para cotización por WhatsApp. La estructura de tarjetas parte de ScrewFast; su licencia se conserva en `LICENSE-SCREWFAST`.
 
