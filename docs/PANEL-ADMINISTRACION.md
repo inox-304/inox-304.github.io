@@ -31,6 +31,18 @@ Los códigos duran **5 minutos**, se usan una sola vez y admiten un máximo de *
 
 ## Uso diario
 
+### Crear un equipo, aunque sus archivos todavía no estén listos
+
+1. En **Productos**, pulsa **Nuevo equipo**. El editor se organiza en **Datos del equipo**, **Fotos y archivos**, **Variaciones**, **Precio** y **Revisar y guardar**. Puedes recorrerlos con Anterior/Siguiente, saltar a un paso o mostrar todo el formulario.
+2. Escribe el nombre y elige **Línea caliente**, **Línea fría** o **Línea neutra**. No tienes que inventar un código ni escribir una dirección: se generan al guardar y permanecen fijos al editar. Los productos antiguos de Mobiliario se conservan para reclasificarlos después.
+3. En **Fotos y archivos**, cada botón recibe su archivo directamente: foto principal, ficha técnica PDF, modelo 3D GLB y portada opcional del 3D. Puedes dejarlos pendientes; seleccionar un archivo todavía no lo guarda. El límite es de 8 MB por archivo; el GLB debe incluir sus texturas. La galería permite hasta ocho fotos adicionales.
+4. Añade **Variaciones** si ya las tienes definidas y configura **Precio**. Ambos pasos se pueden completar después; deja desmarcado Mostrar precio si todavía cotizas por consulta. El recargo fijo actual no es una biblioteca de adicionales seleccionables.
+5. En **Revisar y guardar**, deja desmarcado **Publicado en la web** y pulsa **Guardar y volver al catálogo** o **Guardar y seguir editando**. El equipo queda como borrador privado, incluso sin fotos, PDF o 3D.
+6. Cuando tengas los archivos definitivos, abre ese mismo equipo, entra a **Fotos y archivos**, selecciónalos y guarda. Verás el estado actual y podrás abrir los archivos guardados. Subir uno nuevo reemplaza su asociación en este producto; no elimina el archivo anterior de otros productos.
+7. Revisa el equipo mediante **Abrir vista previa privada** y activa su publicación cuando corresponda. Solo un equipo activo y publicado aparece en la web servida por Django. Las animaciones y reglas de ubicación de adicionales se definirán con los diseños que entregues; cargar un GLB no las crea automáticamente.
+
+Si el servidor indica un error después de enviar el formulario, corrige el paso marcado y vuelve a seleccionar los archivos nuevos antes de guardar: el navegador no permite conservar una subida pendiente después de recargar. Los archivos que ya estaban guardados permanecen asociados.
+
 En **Productos**, busca por código o nombre y filtra por categoría, publicación y disponibilidad. Puedes crear un equipo, duplicar uno como borrador, cambiar su orden y editar sus variantes. Ocultar desmarca la publicación y conserva los datos. El campo activo permite retirar temporalmente un equipo de toda la oferta.
 
 Cada producto separa **precio de venta**, **costo interno** y **notas internas**. Los dos últimos nunca se incluyen en la API ni en el HTML públicos. El servidor calcula descuentos y adicionales con decimales; no confía en un total enviado desde el navegador. La unidad de cobro puede ser unidad, metro lineal, metro cuadrado u otra etiqueta. La vista previa permite revisar un borrador desde la sesión privada.

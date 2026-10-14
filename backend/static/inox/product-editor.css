@@ -1,0 +1,66 @@
+#product_form [hidden] { display: none !important; }
+.inox-catalog-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; margin-bottom: 28px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--body-bg); }
+.inox-catalog-intro h2 { font-size: 22px; margin: 4px 0 10px; color: var(--body-loud-color); }
+.inox-catalog-intro p:last-child { max-width: 740px; color: var(--body-quiet-color); font-size: 14px; margin: 0; }
+.inox-catalog-intro > .button { flex-shrink: 0; display: inline-flex; align-items: center; padding: 12px 18px; }
+@media (max-width: 600px) { .inox-catalog-intro { flex-direction: column; align-items: flex-start; padding: 18px; } }
+#product_form { --inox-surface: var(--body-bg); --inox-soft: var(--darkened-bg); --inox-edge: var(--border-color); }
+.inox-editor-intro { margin-bottom: 24px; max-width: 780px; }
+.inox-editor-eyebrow { color: var(--body-quiet-color); font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; margin: 0 0 8px; }
+.inox-editor-intro h2 { font-size: 25px; line-height: 1.2; letter-spacing: -.5px; margin: 0 0 12px; color: var(--body-loud-color); }
+.inox-editor-intro p:last-child { font-size: 14px; line-height: 1.7; color: var(--body-quiet-color); margin: 0; }
+.inox-editor-nav { display: flex; gap: 14px; align-items: center; border: 1px solid var(--inox-edge); border-radius: 12px; padding: 8px; background: var(--inox-surface); }
+.inox-editor-nav ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); flex: 1; list-style: none; padding: 0; margin: 0; gap: 5px; }
+.inox-editor-nav li { list-style: none; padding: 0; margin: 0; }
+.inox-editor-nav button { font: inherit; cursor: pointer; border: 1px solid transparent; color: var(--body-quiet-color); background: transparent; text-align: left; border-radius: 8px; padding: 12px 9px; font-size: 12px; line-height: 1.3; min-height: 50px; width: 100%; display: flex; gap: 7px; align-items: center; }
+.inox-editor-nav button span { border: 1px solid var(--inox-edge); border-radius: 50%; display: grid; place-items: center; height: 23px; width: 23px; flex: 0 0 23px; font-size: 11px; }
+.inox-editor-nav button[aria-current="step"] { background: var(--button-bg); color: var(--primary-fg); font-weight: 650; }
+.inox-editor-nav button[aria-current="step"] span { border-color: currentColor; }
+.inox-editor-nav button:hover { border-color: var(--link-fg); }
+.inox-editor-nav button:focus-visible, .inox-step-actions button:focus-visible { outline: 3px solid var(--link-fg); outline-offset: 3px; }
+.inox-editor-nav #inox-show-all { width: auto; flex-shrink: 0; border-left: 1px solid var(--inox-edge); border-radius: 0; text-decoration: underline; font-size: 12px; }
+.inox-editor-nav .inox-step-has-errors { box-shadow: inset 0 -3px 0 var(--error-fg); }
+.inox-step-heading { display: flex; justify-content: space-between; align-items: start; gap: 24px; padding: 26px 2px 18px; }
+.inox-step-heading h2 { font-size: 19px; margin: 0 0 6px; background: none; color: var(--body-loud-color); padding: 0; font-weight: 650; }
+.inox-step-heading h2:focus { outline: none; }
+.inox-step-heading p { font-size: 13px; line-height: 1.6; margin: 0; color: var(--body-quiet-color); }
+#inox-step-progress { white-space: nowrap; font-size: 12px; padding-top: 3px; }
+.inox-editor-notice { padding: 14px 18px; background: var(--inox-soft); border-radius: 8px; }
+.inox-editor-enhanced .module { margin-bottom: 20px; }
+.inox-editor-enhanced .inox-upload-card { margin: 14px; padding: 18px; background: var(--inox-surface); border: 1px dashed var(--inox-edge); border-radius: 10px; }
+.inox-upload-card[data-upload-state="selected"] { border-style: solid; border-color: var(--link-fg); }
+.inox-upload-card input[type="file"] { display: block; width: min(100%, 600px); margin-top: 5px; padding: 7px !important; }
+.inox-upload-card input[type="file"]::file-selector-button { background: var(--button-bg); color: var(--primary-fg); border: 0; border-radius: 6px; padding: 9px 13px; margin-right: 12px; cursor: pointer; font: inherit; }
+.inox-upload-status { color: var(--body-quiet-color); font-size: 12px; font-weight: 600; margin: 10px 0 0; overflow-wrap: anywhere; }
+[data-upload-state="selected"] .inox-upload-status { color: var(--link-fg); }
+.inox-upload-preview { object-fit: contain; max-width: 240px; max-height: 160px; display: block; border: 1px solid var(--inox-edge); border-radius: 7px; margin: 16px 0 0; background: #fff; }
+.inox-review-list { padding: 6px 22px; margin: 0; }
+.inox-review-list > div { display: grid; grid-template-columns: minmax(140px, 1fr) 2fr; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--hairline-color); }
+.inox-review-list > div:last-child { border-bottom: 0; }
+.inox-review-list dt { color: var(--body-quiet-color); font-size: 13px; }
+.inox-review-list dd { margin: 0; font-size: 13px; color: var(--body-loud-color); font-weight: 600; overflow-wrap: anywhere; }
+.inox-review-note { margin: 0; padding: 16px 22px; border-top: 1px solid var(--hairline-color); font-size: 12px; line-height: 1.7; color: var(--body-quiet-color); }
+.inox-step-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 20px 0; padding: 8px 0; }
+.inox-step-actions p { flex: 1; text-align: center; font-size: 12px; color: var(--body-quiet-color); margin: 0; }
+.inox-step-actions button { font: inherit; font-size: 13px; padding: 11px 20px; border: 1px solid var(--button-bg); }
+#inox-step-previous { background: transparent; color: var(--link-fg); }
+@media (max-width: 1100px) {
+  .inox-editor-nav { display: block; }
+  .inox-editor-nav #inox-show-all { margin: 5px 0 0 auto; border-left: 0; min-height: 32px; padding: 5px 10px; }
+  .inox-editor-nav button { flex-direction: column; align-items: start; gap: 6px; }
+}
+@media (max-width: 600px) {
+  .inox-editor-nav ol { display: flex; overflow-x: auto; padding-bottom: 5px; scroll-snap-type: x proximity; }
+  .inox-editor-nav li { flex: 0 0 111px; scroll-snap-align: start; }
+  .inox-editor-nav button { min-height: 78px; font-size: 12px; }
+  .inox-step-heading { gap: 12px; }
+  .inox-step-heading h2 { font-size: 18px; }
+  #inox-step-progress { font-size: 11px; }
+  .inox-editor-enhanced .inox-upload-card { margin: 10px; padding: 12px; }
+  .inox-upload-card .flex-container { display: block; }
+  .inox-review-list { padding: 4px 16px; }
+  .inox-review-list > div { grid-template-columns: 1fr; gap: 5px; padding: 12px 0; }
+  .inox-step-actions { flex-wrap: wrap; }
+  .inox-step-actions p { flex-basis: 100%; order: 2; text-align: left; }
+  .inox-editor-intro h2 { font-size: 22px; }
+}
