@@ -185,7 +185,7 @@ class ProductEditorAdminTests(TestCase):
             self.assertEqual(public_client.get(asset.public_url).status_code, 404)
             private_response = self.client.get(reverse("admin:catalog_media_download", args=(asset.pk,)))
             self.assertEqual(private_response.status_code, 200)
-            private_response.close()
+            self.assertTrue(b"".join(private_response.streaming_content))
         self.assertEqual(public_client.get("/api/catalog/").json()["products"], [])
         response = self.client.post(change_url, admin_data(
             code=product.code, slug=product.slug, is_published="on",
@@ -197,7 +197,7 @@ class ProductEditorAdminTests(TestCase):
             self.assertEqual(item[field], asset.public_url)
             file_response = public_client.get(asset.public_url)
             self.assertEqual(file_response.status_code, 200)
-            file_response.close()
+            self.assertTrue(b"".join(file_response.streaming_content))
         self.assertEqual(MediaAsset.objects.count(), 3)
 
     def test_invalid_upload_preserves_the_existing_draft_and_writes_no_assets(self):
