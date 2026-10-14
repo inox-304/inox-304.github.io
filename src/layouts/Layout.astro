@@ -5,6 +5,7 @@ import Footer from '../components/Footer.astro';
 import CmsBridge from '../components/CmsBridge.astro';
 import '../styles/global.css';
 import '../styles/motion.css';
+import '../styles/commerce.css';
 import { site } from '../data/site';
 interface Props { title?: string; description?: string; image?: string; home?: boolean; noindex?: boolean }
 const { title = 'Acero que impulsa tu negocio', description = site.description, image = '/images/hero-studio.webp', home = false, noindex = false } = Astro.props;

@@ -32,6 +32,8 @@ class ProductAdminForm(forms.ModelForm):
             categories.append((Product.Category.FURNITURE, "Mobiliario (catálogo anterior)"))
         self.fields["category"].choices = [("", "Elige una línea"), *categories]
         self.fields["is_published"].help_text = "Déjalo desmarcado para guardar un borrador privado. Puedes completar archivos y publicarlo después."
+        self.fields["price"].help_text = "Opcional. Déjalo vacío y desmarca Mostrar precio para ofrecer el botón Cotizar. No es necesario escribir 0."
+        self.fields["show_price"].help_text = "Desmarcado: se muestra Cotizar y el importe queda privado. Puedes publicar el equipo sin precio."
         self.fields["additional_flat"].label = "Recargo fijo incluido"
         self.fields["additional_flat"].help_text = "Opcional. Se suma al precio después del descuento; no es un adicional que el cliente elige."
 
