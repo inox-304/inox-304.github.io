@@ -1,0 +1,68 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=1">
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script defer src="{% static 'inox/product-editor.js' %}?v=1"></script>
+{% endblock %}
+
+{% block form_top %}
+  {{ block.super }}
+  <section class="inox-editor-intro" aria-labelledby="inox-editor-title">
+    <p class="inox-editor-eyebrow">Catálogo INOX 304</p>
+    <h2 id="inox-editor-title">{% if add %}Nuevo equipo, paso a paso{% else %}Edita tu equipo{% endif %}</h2>
+    <p>Empieza por sus datos. Puedes guardar un borrador y añadir las fotos, la ficha técnica y el modelo 3D cuando estén listos.</p>
+  </section>
+  {% if errors %}
+    <p class="inox-editor-notice" role="alert">Corrige los datos señalados. Si seleccionaste archivos nuevos, vuelve a elegirlos antes de guardar; los archivos que ya estaban guardados se conservan.</p>
+  {% endif %}
+  <div id="inox-product-flow" hidden>
+    <nav aria-label="Pasos para editar el equipo" class="inox-editor-nav">
+      <ol>
+        <li><button type="button" data-inox-go-step="details"><span aria-hidden="true">1</span>Datos del equipo</button></li>
+        <li><button type="button" data-inox-go-step="media"><span aria-hidden="true">2</span>Fotos y archivos</button></li>
+        <li><button type="button" data-inox-go-step="variants"><span aria-hidden="true">3</span>Variaciones</button></li>
+        <li><button type="button" data-inox-go-step="pricing"><span aria-hidden="true">4</span>Precio</button></li>
+        <li><button type="button" data-inox-go-step="review"><span aria-hidden="true">5</span>Revisar y guardar</button></li>
+      </ol>
+      <button type="button" id="inox-show-all" aria-pressed="false">Ver todo</button>
+    </nav>
+    <div class="inox-step-heading">
+      <div>
+        <h2 id="inox-current-step" tabindex="-1">Datos del equipo</h2>
+        <p id="inox-step-description"></p>
+      </div>
+      <p id="inox-step-progress" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+  <noscript><p class="inox-editor-notice">Todos los apartados se muestran a continuación. Los botones de guardar funcionan sin JavaScript.</p></noscript>
+{% endblock %}
+
+{% block after_related_objects %}
+  {{ block.super }}
+  <section id="inox-product-review" class="module inox-step inox-step-review" aria-labelledby="inox-review-heading" hidden>
+    <h2 id="inox-review-heading">Comprueba tu equipo</h2>
+    <dl class="inox-review-list">
+      <div><dt>Equipo</dt><dd data-inox-summary="name">Sin nombre</dd></div>
+      <div><dt>Línea del equipo</dt><dd data-inox-summary="category">Por elegir</dd></div>
+      <div><dt>Imagen principal</dt><dd data-inox-summary="image">Pendiente</dd></div>
+      <div><dt>Ficha técnica PDF</dt><dd data-inox-summary="technical">Pendiente</dd></div>
+      <div><dt>Modelo 3D</dt><dd data-inox-summary="model">Pendiente</dd></div>
+      <div><dt>Vista previa del modelo</dt><dd data-inox-summary="poster">Pendiente</dd></div>
+      <div><dt>Fotos adicionales</dt><dd data-inox-summary="gallery">Sin fotos adicionales</dd></div>
+      <div><dt>Variaciones</dt><dd data-inox-summary="variants">Sin variaciones</dd></div>
+      <div><dt>Publicación</dt><dd data-inox-summary="publication">Borrador</dd></div>
+    </dl>
+    <p class="inox-review-note">Los archivos pendientes no impiden guardar un borrador. Revisa la visibilidad y pulsa Guardar para conservar los cambios. Los archivos elegidos se enviarán al guardar.</p>
+  </section>
+  <div id="inox-step-actions" class="inox-step-actions" hidden>
+    <button type="button" id="inox-step-previous" class="button">Anterior</button>
+    <p>No perderás lo escrito al cambiar de paso.</p>
+    <button type="button" id="inox-step-next" class="button">Siguiente</button>
+  </div>
+{% endblock %}

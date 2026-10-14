@@ -45,6 +45,9 @@ class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
     extra = 0
     fields = ("name", "price", "cost", "availability", "is_active", "order")
+    classes = ("inox-step", "inox-step-variants")
+    verbose_name = "variación"
+    verbose_name_plural = "Variaciones (opcional)"
 
 
 class ProductImageInline(admin.StackedInline):
@@ -55,31 +58,66 @@ class ProductImageInline(admin.StackedInline):
     max_num = 8
     fields = ("upload", "asset", "url", "caption", "order")
     autocomplete_fields = ("asset",)
+    classes = ("inox-step", "inox-step-media")
+    verbose_name = "foto adicional"
+    verbose_name_plural = "Galería de fotos (opcional)"
 
 
 @admin.register(Product)
 class ProductAdmin(AuditedAdmin):
     form = ProductAdminForm
+    change_form_template = "admin/catalog/product/change_form.html"
+    change_list_template = "admin/catalog/product/change_list.html"
     inlines = (ProductVariantInline, ProductImageInline)
     list_display = ("code", "name", "category", "is_published", "is_active", "featured", "order", "availability", "public_price", "preview_link")
     list_editable = ("is_published", "is_active", "featured", "order", "availability")
     list_filter = ("category", "is_published", "is_active", "featured", "availability", "charge_unit")
     search_fields = ("code", "name", "description")
-    prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ("contact", "image_asset", "technical_asset", "model_asset", "poster_asset")
-    readonly_fields = ("public_price", "created_at", "updated_at", "preview_link")
-    save_on_top = True
+    readonly_fields = ("public_price", "created_at", "updated_at", "preview_link", "image_current", "technical_current", "model_current", "poster_current")
+    save_on_top = False
     list_per_page = 40
     actions = ("duplicate_products", "hide_products", "publish_products")
     fieldsets = (
-        ("Producto", {"fields": ("code", "name", "slug", "category", "description", "characteristics")}),
-        ("Visibilidad y orden", {"fields": ("is_active", "is_published", "featured", "order", "availability", "contact", "preview_link")}),
-        ("Precio público", {"description": "Precio final = precio base × (1 − descuento / 100) + adicional fijo. Los cálculos se realizan en el servidor y se redondean a dos decimales.", "fields": ("price", "currency", "show_price", "charge_unit", "custom_unit", "discount_percent", "additional_flat", "public_price")}),
-        ("Información privada", {"fields": ("cost", "internal_notes"), "classes": ("collapse",)}),
-        ("Imagen principal", {"fields": ("image_upload", "image_asset", "image")}),
-        ("Ficha y modelo 3D", {"fields": ("technical_upload", "technical_asset", "technical_sheet", "model_upload", "model_asset", "model_3d", "poster_upload", "poster_asset", "model_poster"), "classes": ("collapse",)}),
-        ("Fechas", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+        ("Datos del equipo", {"description": "Empieza por el nombre y la línea. Los archivos y las variaciones pueden completarse después.", "fields": ("name", "category", "description", "characteristics"), "classes": ("inox-step", "inox-step-details")}),
+        ("Identificadores", {"description": "Se crean automáticamente en un equipo nuevo y se conservan al editarlo.", "fields": ("code", "slug"), "classes": ("collapse", "inox-step", "inox-step-details")}),
+        ("Foto principal", {"fields": ("image_upload", "image_current"), "classes": ("inox-step", "inox-step-media")}),
+        ("Ficha técnica", {"fields": ("technical_upload", "technical_current"), "classes": ("inox-step", "inox-step-media")}),
+        ("Modelo 3D", {"description": "El archivo se asocia a este equipo para su visor 360°. Las animaciones y los adicionales se definirán cuando estén listos tus diseños.", "fields": ("model_upload", "model_current", "poster_upload", "poster_current"), "classes": ("inox-step", "inox-step-media")}),
+        ("Reutilizar archivos o enlaces existentes", {"description": "Opcional. Para añadir un archivo nuevo usa los botones de arriba. Un archivo subido tiene prioridad sobre su enlace.", "fields": ("image_asset", "image", "technical_asset", "technical_sheet", "model_asset", "model_3d", "poster_asset", "model_poster"), "classes": ("collapse", "inox-step", "inox-step-media")}),
+        ("Precio público", {"description": "Puedes dejar el precio vacío para cotizar por consulta. La tarifa final se calcula en el servidor.", "fields": ("price", "currency", "show_price", "charge_unit", "custom_unit", "discount_percent", "additional_flat", "public_price"), "classes": ("inox-step", "inox-step-pricing")}),
+        ("Información privada", {"fields": ("cost", "internal_notes"), "classes": ("collapse", "inox-step", "inox-step-pricing")}),
+        ("Revisar y guardar", {"description": "Guardar conserva tus cambios. Solo se muestra en la web del servidor cuando está activo y publicado. Los archivos pendientes no impiden guardar un borrador.", "fields": ("is_published", "is_active", "featured", "order", "availability", "contact", "preview_link"), "classes": ("inox-step", "inox-step-review")}),
+        ("Fechas", {"fields": ("created_at", "updated_at"), "classes": ("collapse", "inox-step", "inox-step-review")}),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields + (("code", "slug") if obj else ())
+
+    def _current_file(self, obj, asset_field, url_field, kind):
+        asset = getattr(obj, asset_field, None)
+        url = reverse("admin:catalog_media_download", args=(asset.pk,)) if asset else getattr(obj, url_field, "")
+        if not url:
+            return format_html('<span class="inox-file-current" data-inox-saved="false">{}</span>', "Pendiente · puedes añadirlo después.")
+        if kind == "image":
+            return format_html('<span class="inox-file-current" data-inox-saved="true"><a href="{}" target="_blank" rel="noopener"><img src="{}" alt="Imagen guardada del equipo" loading="lazy" style="max-width:160px;max-height:120px;object-fit:contain;display:block">Abrir imagen guardada</a></span>', url, url)
+        return format_html('<span class="inox-file-current" data-inox-saved="true"><a href="{}" target="_blank" rel="noopener">{}</a></span>', url, "Abrir ficha guardada" if kind == "pdf" else "Abrir archivo 3D guardado")
+
+    @admin.display(description="Foto actual")
+    def image_current(self, obj):
+        return self._current_file(obj, "image_asset", "image", "image")
+
+    @admin.display(description="Ficha actual")
+    def technical_current(self, obj):
+        return self._current_file(obj, "technical_asset", "technical_sheet", "pdf")
+
+    @admin.display(description="Modelo actual")
+    def model_current(self, obj):
+        return self._current_file(obj, "model_asset", "model_3d", "glb")
+
+    @admin.display(description="Portada actual")
+    def poster_current(self, obj):
+        return self._current_file(obj, "poster_asset", "model_poster", "image")
 
     @admin.display(description="Precio final")
     def public_price(self, obj):

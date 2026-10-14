@@ -1,6 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
+from django.utils.text import slugify
+from uuid import uuid4
 
 from .models import MediaAsset, Product, ProductImage
 from .validators import clean_upload
@@ -10,17 +12,41 @@ UPLOAD_FIELDS = {"image_upload": ("image_asset", "image"), "technical_upload": (
 
 
 class ProductAdminForm(forms.ModelForm):
-    image_upload = forms.FileField(label="Subir imagen principal", required=False, help_text="JPG, PNG, WebP o AVIF. Máximo 8 MB; se optimiza automáticamente.")
-    technical_upload = forms.FileField(label="Subir ficha técnica PDF", required=False, help_text="Máximo 8 MB.")
-    model_upload = forms.FileField(label="Subir modelo GLB", required=False, help_text="GLB 2.0 con recursos incrustados. Máximo 8 MB.")
-    poster_upload = forms.FileField(label="Subir poster del modelo 3D", required=False)
+    image_upload = forms.FileField(label="Elegir foto principal", required=False, widget=forms.FileInput(attrs={"accept": ".jpg,.jpeg,.png,.webp,.avif"}), help_text="JPG, PNG, WebP o AVIF · hasta 8 MB. Puedes añadirla más adelante. Al guardar reemplaza la foto actual.")
+    technical_upload = forms.FileField(label="Elegir ficha técnica", required=False, widget=forms.FileInput(attrs={"accept": ".pdf"}), help_text="PDF · hasta 8 MB. Opcional: súbelo cuando esté listo. Al guardar reemplaza la ficha actual.")
+    model_upload = forms.FileField(label="Elegir modelo 3D", required=False, widget=forms.FileInput(attrs={"accept": ".glb"}), help_text="GLB 2.0 · hasta 8 MB, con texturas incluidas. Opcional: puedes guardar el equipo sin modelo y subirlo después.")
+    poster_upload = forms.FileField(label="Elegir portada del 3D", required=False, widget=forms.FileInput(attrs={"accept": ".jpg,.jpeg,.png,.webp,.avif"}), help_text="Imagen opcional mientras carga el 3D · hasta 8 MB. No es necesario tenerla para guardar.")
 
     class Meta:
         model = Product
         fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("code", "slug"):
+            if name in self.fields:
+                self.fields[name].required = False
+                self.fields[name].help_text = "Se genera al guardar. Déjalo vacío si no utilizas un identificador propio."
+        categories = [(value, label) for value, label in Product.Category.choices if value != Product.Category.FURNITURE]
+        if self.instance.pk and self.instance.category == Product.Category.FURNITURE:
+            categories.append((Product.Category.FURNITURE, "Mobiliario (catálogo anterior)"))
+        self.fields["category"].choices = [("", "Elige una línea"), *categories]
+        self.fields["is_published"].help_text = "Déjalo desmarcado para guardar un borrador privado. Puedes completar archivos y publicarlo después."
+        self.fields["additional_flat"].label = "Recargo fijo incluido"
+        self.fields["additional_flat"].help_text = "Opcional. Se suma al precio después del descuento; no es un adicional que el cliente elige."
+
+    def _new_identifier(self, field, prefix):
+        while True:
+            candidate = f"{prefix}-{uuid4().hex[:8]}"
+            if not Product.objects.filter(**{field: candidate}).exists():
+                return candidate
+
     def clean(self):
         data = super().clean()
+        if "code" in self.fields and "code" not in self.errors and not data.get("code"):
+            data["code"] = self.instance.code or self._new_identifier("code", "EQ")
+        if "slug" in self.fields and "slug" not in self.errors and not data.get("slug"):
+            data["slug"] = self.instance.slug or self._new_identifier("slug", slugify(data.get("name", ""))[:140] or "equipo")
         self.instance._prepared_uploads = {}
         for field, (target, kind) in UPLOAD_FIELDS.items():
             if data.get(field):
