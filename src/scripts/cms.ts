@@ -9,15 +9,15 @@ let payload: Bootstrap | null = null;
 try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { /* An invalid bootstrap is replaced by a fresh public request. */ }
 const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
 let lastApplied = '';
-const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLAnchorElement>('.product-card') || document.querySelector<HTMLAnchorElement>('.product-card');
+const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLElement>('.product-card') || document.querySelector<HTMLElement>('.product-card');
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
 const defaultHero = [...document.querySelectorAll<HTMLElement>('[data-business="hero_title"], [data-business="hero_description"], [data-business="home_text"]')].map(element => ({ element, children: [...element.childNodes].map(child => child.cloneNode(true)) }));
 
 function route(product: CmsProduct) { return apiMode ? apiProductRoute(product) : cmsProductRoute(product, payload?.routes || {}); }
 function category(product: CmsProduct) { return categoryNames[product.category] || product.category; }
 function setText(selector: string, value: string, root: ParentNode = document) { root.querySelectorAll(selector).forEach(element => { element.textContent = value; }); }
-function createCard(product: CmsProduct, index: number): HTMLAnchorElement {
-  const card = cardTemplate?.cloneNode(true) as HTMLAnchorElement || document.createElement('a');
+function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElement {
+  const card = cardTemplate?.cloneNode(true) as HTMLElement || document.createElement('article');
   if (!cardTemplate) {
     card.className = 'product-card';
     const photo = document.createElement('div'); photo.className = 'product-card-image';
@@ -27,10 +27,16 @@ function createCard(product: CmsProduct, index: number): HTMLAnchorElement {
     const copy = document.createElement('div'); copy.className = 'product-card-info';
     const label = document.createElement('p'); label.className = 'eyebrow';
     const name = document.createElement('h3'); const link = document.createElement('span'); link.className = 'card-link'; link.textContent = 'Explorar equipo ↗';
-    copy.append(label, name, link); card.append(photo, copy);
+    copy.append(label, name, link);
+    const main = document.createElement('a'); main.className = 'product-card-main'; main.append(photo, copy);
+    const commerce = document.createElement('div'); commerce.className = 'product-card-commerce';
+    const price = document.createElement('p'); price.className = 'product-card-price'; price.dataset.cardPrice = '';
+    const quote = document.createElement('a'); quote.className = 'button button-chrome product-card-quote'; quote.dataset.cardQuote = ''; quote.textContent = 'Cotizar ↗'; quote.target = '_blank'; quote.rel = 'noopener noreferrer';
+    commerce.append(price, quote); card.append(main, commerce);
   }
   card.hidden = false;
-  card.href = route(product); card.dataset.productId = product.id;
+  const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) main.href = route(product);
+  card.dataset.productId = product.id;
   card.dataset.category = product.category; card.dataset.name = `${product.name} ${product.summary} ${category(product)}`;
   card.classList.toggle('product-cutout', getProductStage(product.image).isCutout);
   card.removeAttribute('data-reveal'); card.removeAttribute('style');
@@ -38,10 +44,20 @@ function createCard(product: CmsProduct, index: number): HTMLAnchorElement {
   setText('.product-card-info .eyebrow', category(product), card);
   setText('.product-card-info h3', product.name, card);
   const image = card.querySelector('img'); if (image) { image.src = withBase(product.image); image.alt = product.name; image.removeAttribute('srcset'); }
+  const price = formatProductPrice(product);
+  const priceNode = card.querySelector<HTMLElement>('[data-card-price]'); if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
+  const quote = card.querySelector<HTMLAnchorElement>('[data-card-quote]');
+  if (quote) {
+    const contact = resolveContact(data, product.contactId);
+    quote.hidden = !!price;
+    quote.setAttribute('aria-label', `Cotizar ${product.name}`);
+    quote.href = contact ? contactUrl(contact, `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}. Me gustaría recibir una cotización. ${new URL(route(product), location.origin).href}`) : withBase('/contacto/');
+    if (contact) quote.target = '_blank'; else quote.removeAttribute('target');
+  }
   return card;
 }
-function fillCards(container: Element, products: CmsProduct[]) {
-  const fragment = document.createDocumentFragment(); products.forEach((product, index) => fragment.append(createCard(product, index)));
+function fillCards(container: Element, products: CmsProduct[], data: CmsData) {
+  const fragment = document.createDocumentFragment(); products.forEach((product, index) => fragment.append(createCard(product, index, data)));
   container.replaceChildren(fragment);
 }
 
@@ -112,6 +128,11 @@ function updateDetail(data: CmsData) {
   });
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? 'Consulta medidas, disponibilidad y opciones para tu negocio.' : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);
+  const styleQuote = (amount: string) => detail.querySelectorAll<HTMLElement>('[data-product-quote]').forEach(anchor => {
+    anchor.classList.toggle('button-chrome', !amount);
+    anchor.classList.toggle('button-dark', !!amount);
+  });
+  styleQuote(price);
   const priceNode = detail.querySelector<HTMLElement>('[data-product-price]');
   if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
   const unit = detail.querySelector<HTMLElement>('[data-product-unit]');
@@ -130,6 +151,7 @@ function updateDetail(data: CmsData) {
       const variant = product.variants?.find(item => item.id === variants.value);
       const selectedPrice = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
       if (priceNode) { priceNode.textContent = selectedPrice; priceNode.hidden = !selectedPrice; }
+      styleQuote(selectedPrice);
       if (unit) unit.hidden = !selectedPrice || !unit.textContent;
       if (availability) { availability.textContent = formatAvailability(variant?.availability || product.availability); availability.hidden = !availability.textContent; }
       if (contact) detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
@@ -156,7 +178,7 @@ function updateDetail(data: CmsData) {
   }
   const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length;
   const relatedProducts = visibleCmsProducts(data).filter(item => item.category === product.category && item.id !== product.id).slice(0, 3);
-  if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts); }
+  if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts, data); }
   document.title = `${product.name} | ${data.settings.empresa}`;
   const description = document.querySelector<HTMLMetaElement>('meta[name="description"]'); if (description) description.content = product.summary;
   detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', JSON.stringify(product));
@@ -184,7 +206,7 @@ function updateContacts(data: CmsData) {
     else element.removeAttribute('href');
   });
   document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me/"],a[data-cms-whatsapp],a[data-contact-setting]').forEach(anchor => {
-    if (anchor.hasAttribute('data-product-quote') || anchor.id === 'quote-fallback') return;
+    if (anchor.hasAttribute('data-product-quote') || anchor.hasAttribute('data-card-quote') || anchor.id === 'quote-fallback') return;
     anchor.dataset.cmsWhatsapp = 'true';
     const role = anchor.dataset.contactSetting;
     const requested = role ? data.settings[role] : anchor.dataset.contact === 'instalaciones' ? data.settings.contacto_instalaciones : anchor.dataset.contact;
@@ -212,7 +234,7 @@ function apply(data: CmsData) {
   const serialized = JSON.stringify(data);
   if (serialized === lastApplied) return;
   const visible = visibleCmsProducts(data);
-  document.querySelectorAll('[data-cms-products]').forEach(container => { const kind = container.getAttribute('data-cms-products'); fillCards(container, kind === 'featured' ? visible.filter(product => product.featured) : visible); });
+  document.querySelectorAll('[data-cms-products]').forEach(container => { const kind = container.getAttribute('data-cms-products'); fillCards(container, kind === 'featured' ? visible.filter(product => product.featured) : visible, data); });
   updateContacts(data); updateDetail(data);
   lastApplied = serialized;
   document.dispatchEvent(new CustomEvent('inox:catalog-updated', { detail: { count: visible.length } }));

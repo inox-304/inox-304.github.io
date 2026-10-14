@@ -65,6 +65,16 @@ test('optional commercial fields remain hidden until explicitly enabled and pres
   assert.throws(() => parseCms(extendedCatalog({moneda:'UNKNOWN'}), contacts, settings));
 });
 
+test('quote-only presentation treats missing and hidden prices differently from an explicit public zero', () => {
+  const missing = parseCms(extendedCatalog({ mostrar_precio:'FALSE' }), contacts, settings).products[0];
+  assert.equal(missing.price, undefined);
+  assert.equal(formatProductPrice(missing), '');
+  assert.equal(formatProductPrice({ price: 950, showPrice: false }), '');
+  assert.equal(formatProductPrice({ price: undefined, showPrice: true }), '');
+  assert.equal(formatProductPrice({ price: 0, showPrice: false }), '');
+  assert.match(formatProductPrice({ price: 0, showPrice: true, currency: 'PEN' }), /0\.00/);
+});
+
 test('PDF and GLB links use expected media types; Drive sharing pages require importing first', () => {
   assert.equal(safeTechnicalSheet('/documents/spec.pdf'), '/documents/spec.pdf');
   assert.equal(safeModel('https://cdn.example.com/model.glb?v=1'), 'https://cdn.example.com/model.glb?v=1');

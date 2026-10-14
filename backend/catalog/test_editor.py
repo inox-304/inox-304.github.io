@@ -19,6 +19,7 @@ from security.models import SecurityState
 
 from .forms import ProductAdminForm
 from .models import MediaAsset, Product
+from .serializers import public_catalog_data
 
 
 def product_data(**changes):
@@ -86,6 +87,26 @@ def model_upload():
 
 
 class ProductEditorFormTests(TestCase):
+    def test_equipment_can_be_published_without_price_and_keeps_hidden_price_private(self):
+        form = ProductAdminForm(data=product_data(is_published="on"))
+        self.assertTrue(form.is_valid(), form.errors)
+        product = form.save()
+        self.assertTrue(product.is_published)
+        self.assertIsNone(product.price)
+        self.assertFalse(product.show_price)
+        item = public_catalog_data()["products"][0]
+        self.assertIsNone(item["price"])
+        self.assertFalse(item["showPrice"])
+        # A private amount may be kept without publishing it or quoting zero.
+        form = ProductAdminForm(instance=product, data=product_data(is_published="on", price="950.00"))
+        self.assertTrue(form.is_valid(), form.errors)
+        product = form.save()
+        self.assertEqual(str(product.price), "950.00")
+        self.assertIsNone(public_catalog_data()["products"][0]["price"])
+        form = ProductAdminForm(instance=product, data=product_data(is_published="on", show_price="on"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("price", form.errors)
+
     def test_new_equipment_gets_unique_identifiers_without_assets(self):
         products = []
         for _ in range(2):
