@@ -9,12 +9,31 @@ La nueva versión tiene una base de datos y un panel en **`/admin/`**, dentro de
 Requisitos: Node.js 24, Python 3.13 y `uv`. Las dependencias están fijadas en `package-lock.json` y `backend/uv.lock`.
 
 1. Abre **`PREPARAR-PANEL.cmd`**. Compila la web para el servidor, instala el backend, aplica migraciones e importa los 32 equipos iniciales. La importación solo añade códigos que no existen: no reemplaza los productos, contactos ni ajustes que ya editaste.
-2. Al crear el propietario, escribe el correo autorizado y una contraseña propia de al menos 12 caracteres. No envíes la contraseña por chat.
+2. El configurador de acceso muestra las cuentas existentes. Elige la tuya para conservar su contraseña o cambiarla en una entrada oculta. Si no hay cuenta, elige **N · Crear otro propietario** e introduce el correo y una contraseña propia de al menos 12 caracteres. No envíes la contraseña por chat. Para usar correo, configura primero **`CONFIGURAR-CORREO.cmd`** y vuelve a **`CONFIGURAR-ACCESO.cmd`**; también puedes elegir aplicación autenticadora al crear una cuenta.
 3. Abre **`INICIAR-PANEL.cmd`** y entra en `http://127.0.0.1:8000/admin/`.
 4. Introduce correo y contraseña. Si la cuenta está configurada para correo, recibe y confirma el código de seis dígitos. Si usa aplicación autenticadora, registra el QR en el primer acceso autorizado y confirma su código. Hasta completar el segundo paso no hay acceso administrativo.
 5. Guarda los códigos de recuperación en un gestor de contraseñas. Cada uno funciona una vez y solo se muestran al generarlos.
 
 El comando de preparación es una herramienta local; no crea ni paga un servidor. La web local funciona mientras el proceso está abierto. El sitio publicado en Internet seguirá usando su alojamiento actual hasta migrarlo.
+
+## Si ya hay cuenta pero todavía no puedes entrar
+
+Abre **`CONFIGURAR-ACCESO.cmd`** desde la misma carpeta que usas para iniciar el panel. Muestra las cuentas de esa instalación, si tienen contraseña, si ya verificaron el segundo paso y si su primera activación sigue vigente. No muestra contraseñas ni claves, no envía mensajes y no cambia permisos de una cuenta existente.
+
+1. Elige tu cuenta. Responde **N** a cambiar contraseña si recuerdas la actual; responde **S** solo si quieres establecer una nueva, escrita dos veces de forma oculta. Cambiarla cierra las sesiones anteriores, sin borrar el segundo factor.
+2. Si indica que falta el correo, ejecuta **`CONFIGURAR-CORREO.cmd`**. Después vuelve a **`CONFIGURAR-ACCESO.cmd`**. La primera activación no se abre mientras falte esa configuración, para que sus 24 horas no transcurran antes de poder recibir códigos.
+3. Para una cuenta que nunca terminó su primer segundo paso, confirma **S** cuando pregunte si habilitas la primera verificación durante 24 horas. Conserva la contraseña y los dispositivos pendientes. Si ya hay un segundo factor confirmado, lo conserva y no pide volver a inscribirlo. Una cuenta que completó su activación anteriormente y perdió sus dispositivos necesita recuperación del operador.
+4. Abre **`INICIAR-PANEL.cmd`** y entra en `http://127.0.0.1:8000/admin/`, o toca seis veces seguidas el logo del pie de la web local. Introduce correo, contraseña y después el código del método configurado.
+
+En la web pública, tocar seis veces el logo lleva a la guía de acceso: **no es un inicio de sesión remoto mientras el servidor no esté publicado**. No introduzcas credenciales del panel en GitHub ni en la guía estática. El atajo solo abre la dirección del panel; la contraseña y el segundo paso siguen siendo obligatorios.
+
+Para revisar el estado sin preguntas ni cambios desde una terminal:
+
+```powershell
+uv run --project backend python backend/manage.py setup_access --status
+```
+
+“Correo configurado” significa que las variables necesarias están presentes; no comprueba la conexión ni confirma entrega. La contraseña elegida para AlRazz no se copia automáticamente a INOX. Las contraseñas guardadas en INOX no se pueden consultar en texto claro.
 
 ## Activar los códigos por correo
 
@@ -23,7 +42,7 @@ El servidor envía el código **después de comprobar la contraseña**, exclusiv
 1. En la cuenta Gmail que enviará los códigos, activa la verificación en dos pasos y crea una [contraseña de aplicación de Google](https://myaccount.google.com/apppasswords). Es diferente de la contraseña del panel y de tu contraseña habitual de Gmail. Consulta la [ayuda oficial](https://support.google.com/accounts/answer/185833?hl=es) si no aparece esa opción.
 2. Abre **`CONFIGURAR-CORREO.cmd`** en la carpeta que ejecuta el panel. Introduce el Gmail remitente y esa contraseña de aplicación en la entrada oculta. El configurador comprueba la conexión cifrada con Gmail antes de guardar; no envía un mensaje de prueba. Si falla, conserva la configuración anterior.
 3. Reinicia **`INICIAR-PANEL.cmd`**. Los secretos quedan en el archivo privado `backend/.env`, excluido de Git. No los pegues en el chat ni los subas al repositorio.
-4. Un operador autoriza cada cuenta con `create_owner --email CORREO --mfa email`. La primera verificación debe completarse en 24 horas. Para una cuenta existente o una activación vencida utiliza `configure_mfa --email CORREO --method email`; este cambio revoca las sesiones y los dispositivos anteriores y abre otras 24 horas de activación. Una vez confirmada, la cuenta conserva su acceso sin ese plazo de activación.
+4. Abre **`CONFIGURAR-ACCESO.cmd`**, selecciona la cuenta y habilita su primera activación si está pendiente o vencida. La primera verificación debe completarse en 24 horas. Una vez confirmada, la cuenta conserva su acceso sin ese plazo de activación. Para cambiar de método en una cuenta ya activada, un operador utiliza `configure_mfa --email CORREO --method email`; ese comando de recuperación revoca las sesiones y los dispositivos anteriores, por lo que no debe usarse solo para renovar una primera activación.
 
 Sin un remitente configurado, el acceso por correo se detiene con un mensaje claro: no se finge que el código fue enviado ni se concede acceso. Una aceptación SMTP confirma el envío al proveedor, no la recepción en la bandeja; revisa Spam si no aparece. Si usas otro proveedor, configura las variables `EMAIL_*` del ejemplo en el archivo privado en vez de utilizar el configurador de Gmail.
 

@@ -16,10 +16,10 @@ if errorlevel 1 goto failed
 uv run --project backend python backend/manage.py seed_catalog
 if errorlevel 1 goto failed
 echo.
-echo Prepara el propietario. Usa tu correo y una contrasena nueva de al menos 12 caracteres.
-echo Si ya creaste la cuenta, cancela este paso y abre INICIAR-PANEL.cmd.
-echo El acceso por correo requiere CONFIGURAR-CORREO.cmd antes de iniciar sesion.
-uv run --project backend python backend/manage.py create_owner --mfa email
+echo Elige una cuenta existente o crea otro propietario.
+echo Puedes conservar tu contrasena. El acceso por correo requiere CONFIGURAR-CORREO.cmd.
+uv run --project backend python backend/manage.py setup_access
+if errorlevel 1 goto failed
 pause
 exit /b
 :missing
