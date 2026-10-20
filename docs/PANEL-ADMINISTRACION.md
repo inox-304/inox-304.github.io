@@ -46,6 +46,8 @@ El servidor envía el código **después de comprobar la contraseña**, exclusiv
 
 Sin un remitente configurado, el acceso por correo se detiene con un mensaje claro: no se finge que el código fue enviado ni se concede acceso. Una aceptación SMTP confirma el envío al proveedor, no la recepción en la bandeja; revisa Spam si no aparece. Si usas otro proveedor, configura las variables `EMAIL_*` del ejemplo en el archivo privado en vez de utilizar el configurador de Gmail.
 
+El transporte recomendado es `EMAIL_BACKEND=security.smtp_backend.EmailBackend`. Conserva la conexión SMTP cifrada de Django y deja que Python elija un nombre válido para presentarse ante el servidor de correo. Esto evita que Gmail rechace nombres de equipos Windows sin dominio, aunque la contraseña de aplicación sea correcta. Si actualizas una instalación que guardó `django.core.mail.backends.smtp.EmailBackend`, cambia solo esa variable privada al transporte recomendado y reinicia el panel; conserva las credenciales existentes.
+
 Los códigos duran **5 minutos**, se usan una sola vez y admiten un máximo de **5 intentos**, además del límite compartido por cuenta y red. Reenviar exige esperar **60 segundos** e invalida el código anterior; no prolonga indefinidamente la etapa pendiente. Están vinculados a la cuenta, la sesión, el propósito y la versión de seguridad. La base conserva una huella protegida, nunca el código en texto claro. El primer acceso verificado genera los códigos de recuperación de un solo uso. Regenerarlos exige otra verificación reciente.
 
 ## Uso diario

@@ -131,6 +131,21 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
                 self.assertFalse(EmailChallenge.objects.exists())
                 self.assert_anonymous()
 
+    @override_settings(EMAIL_BACKEND="security.smtp_backend.EmailBackend", EMAIL_HOST="smtp.example.test",
+                       EMAIL_PORT=587, EMAIL_USE_TLS=True, EMAIL_USE_SSL=False,
+                       EMAIL_HOST_USER="sender@example.test", EMAIL_HOST_PASSWORD="synthetic-secret")
+    def test_smtp_backend_delivers_only_to_account_and_still_requires_email_verification(self):
+        with patch("smtplib.SMTP") as transport:
+            transport.return_value.sendmail.return_value = {}
+            response = self.password_step(recipient="attacker@example.test")
+        self.assertRedirects(response, reverse("security:email_verify"), fetch_redirect_response=False)
+        sender, recipients, message = transport.return_value.sendmail.call_args.args
+        self.assertEqual(sender, "access@example.com")
+        self.assertEqual(recipients, [self.user.email])
+        self.assertNotIn(b"attacker@example.test", message)
+        self.assertEqual(EmailChallenge.objects.filter(invalidated_at__isnull=True).count(), 1)
+        self.assert_anonymous()
+
     def test_delivery_uses_account_address_and_ignores_posted_recipients(self):
         response = self.password_step(
             recipient="attacker@example.com", to="attacker@example.com",

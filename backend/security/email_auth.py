@@ -15,6 +15,7 @@ from django.utils.crypto import constant_time_compare, salted_hmac
 from django.views.decorators.debug import sensitive_variables
 
 from .models import EmailChallenge, EmailDevice, EnrollmentPermission, SecurityState
+from .smtp_backend import SUPPORTED_SMTP_BACKENDS
 from .services import PENDING_KEY, VERSION, audit, seconds
 
 EMAIL_REGENERATE_KEY = "security_email_regenerate"
@@ -73,7 +74,7 @@ def issue_email_challenge(request, user, purpose):
         raise EmailDeliveryError()
     backend = settings.EMAIL_BACKEND
     test_backend = backend == "django.core.mail.backends.locmem.EmailBackend" and getattr(settings, "ENVIRONMENT", "") == "test"
-    smtp_backend = backend == "django.core.mail.backends.smtp.EmailBackend" and bool(settings.EMAIL_HOST) and bool(settings.DEFAULT_FROM_EMAIL)
+    smtp_backend = backend in SUPPORTED_SMTP_BACKENDS and bool(settings.EMAIL_HOST) and bool(settings.DEFAULT_FROM_EMAIL)
     if not (smtp_backend or test_backend):
         raise EmailDeliveryError()
     failed = False

@@ -4,6 +4,7 @@ import secrets
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
+from security.smtp_backend import SUPPORTED_SMTP_BACKENDS
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
@@ -137,7 +138,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000
 SECURITY_EMAIL_ENABLED = os.getenv('SECURITY_EMAIL_ENABLED') == '1'
 SECURITY_EMAIL_RESEND_SECONDS = 60
 SECURITY_EMAIL_CODE_SECONDS = 5 * 60
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'security.smtp_backend.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
@@ -149,7 +150,7 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured('Choose either EMAIL_USE_TLS or EMAIL_USE_SSL.')
 if ENVIRONMENT == 'production' and SECURITY_EMAIL_ENABLED:
-    if EMAIL_BACKEND != 'django.core.mail.backends.smtp.EmailBackend' or not EMAIL_HOST or not DEFAULT_FROM_EMAIL:
+    if EMAIL_BACKEND not in SUPPORTED_SMTP_BACKENDS or not EMAIL_HOST or not DEFAULT_FROM_EMAIL:
         raise ImproperlyConfigured('Email verification requires a configured SMTP transport.')
     if not (EMAIL_USE_TLS or EMAIL_USE_SSL):
         raise ImproperlyConfigured('Production SMTP must use TLS.')

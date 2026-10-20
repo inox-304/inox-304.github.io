@@ -47,6 +47,7 @@ class MailSetupTests(SimpleTestCase):
         saved = self.module.ENV_FILE.read_text(encoding='utf-8')
         self.assertIn('CUSTOM=preserve-me', saved)
         self.assertIn('SECURITY_EMAIL_ENABLED=1', saved)
+        self.assertIn('EMAIL_BACKEND=security.smtp_backend.EmailBackend', saved)
         self.assertEqual(saved.count('EMAIL_HOST='), 1)
         self.assertEqual(list(Path(self.directory.name).iterdir()), [self.module.ENV_FILE])
 

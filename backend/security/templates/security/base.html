@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}Acceso seguro{% endblock %} · INOX 304</title>
-  <link rel="stylesheet" href="{% static 'security/auth.css' %}">
+  <link rel="stylesheet" href="{% static 'security/auth.css' %}?v=2">
 </head>
 <body>
   <div class="auth-shell">
-    <header class="brand"><a href="/" aria-label="INOX 304, volver al sitio">INOX<span>304</span><small>EQUIPAMIENTO PROFESIONAL</small></a><span class="private-label">ADMINISTRACIÓN</span></header>
+    <header class="brand"><a href="/" aria-label="INOX 304, volver al sitio"><img class="brand-logo" src="/images/brand/inox304-correct-colors.webp" alt="INOX 304 · Alta calidad" width="1400" height="560"></a><span class="private-label">ADMINISTRACIÓN</span></header>
     <main class="auth-card" id="main-content">{% block content %}{% endblock %}</main>
     <footer class="auth-footer"><a href="/">Volver al sitio</a><span>Acceso exclusivo para personal autorizado</span></footer>
   </div>
