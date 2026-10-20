@@ -1,8 +1,8 @@
 {% extends "admin/base.html" %}
 {% load static %}
 {% block title %}{{ title }} · INOX 304{% endblock %}
-{% block branding %}<div class="inox-admin-brand"><span class="inox-admin-mark">304</span><div><a href="{% url 'admin:index' %}">INOX <strong>304</strong></a><small>Administración del negocio</small></div></div>{% endblock %}
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/admin.css' %}?v=1">{% endblock %}
+{% block branding %}<div class="inox-admin-brand"><a href="{% url 'admin:index' %}" aria-label="INOX 304, inicio del panel"><img src="/images/brand/inox304-correct-colors.webp" alt="INOX 304 · Alta calidad" width="1400" height="560"></a><small>Administración del negocio</small></div>{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/admin.css' %}?v=2">{% endblock %}
 {% block extrahead %}{{ block.super }}<script defer src="{% static 'inox/admin.js' %}?v=1"></script>{% endblock %}
 {% block nav-global %}<span class="inox-private-label">Panel privado · Verificación en dos pasos</span>{% endblock %}
 {% block userlinks %}<a href="{% url 'security:recovery_codes' %}">Recuperación de acceso</a> / {{ block.super }}{% endblock %}

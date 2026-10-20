@@ -62,7 +62,7 @@ def main():
         return 1
     save_settings(ENV_FILE, {
         'SECURITY_EMAIL_ENABLED': '1',
-        'EMAIL_BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+        'EMAIL_BACKEND': 'security.smtp_backend.EmailBackend',
         'EMAIL_HOST': 'smtp.gmail.com', 'EMAIL_PORT': '587',
         'EMAIL_USE_TLS': '1', 'EMAIL_USE_SSL': '0',
         'EMAIL_HOST_USER': address, 'EMAIL_HOST_PASSWORD': password,
