@@ -12,8 +12,14 @@ const technicalSheet = safeTechnicalSheet(product.technicalSheet || '');
   <p class="product-price" data-product-price hidden={!price}>{price}</p>
   <span data-product-unit hidden></span>
   <p class="product-availability" data-product-availability hidden></p>
-  <label class="product-variants" data-product-variants hidden>Presentación<select data-product-variant aria-label="Presentación del equipo"></select></label>
-  <div class="product-additional" data-product-additional hidden><p>Servicios adicionales</p><ul data-product-charges></ul></div>
+  <label class="product-variants" data-product-variants hidden>Variación<select data-product-variant aria-label="Variación del equipo"></select></label>
+  <div class="product-additional" data-product-additional hidden><p>Cargos ya incluidos en el precio</p><ul data-product-charges></ul></div>
+  <fieldset class="product-extras" data-product-extras hidden aria-describedby="product-extras-hint">
+    <legend>Adicionales <span>Opcionales</span></legend>
+    <p id="product-extras-hint">Elige lo que necesitas para tu equipo. Confirmaremos cantidades y medidas al cotizar.</p>
+    <div class="product-extra-options" data-product-extra-options></div>
+    <p class="product-extra-summary" data-product-extra-summary aria-live="polite"></p>
+  </fieldset>
   <a class="technical-sheet-link" data-product-technical-sheet href={technicalSheet ? withBase(technicalSheet) : undefined} target="_blank" rel="noopener noreferrer" hidden={!technicalSheet}>
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v5h4M9 13h6M9 17h6"/></svg>
     Ver ficha técnica PDF <span aria-hidden="true">↗</span>
@@ -27,5 +33,21 @@ const technicalSheet = safeTechnicalSheet(product.technicalSheet || '');
   .product-availability, .product-variants, .product-additional { flex-basis: 100%; font-size: .85rem; margin: 0; }
   .product-variants select { display: block; width: 100%; margin-top: 8px; padding: 12px; border: 1px solid #ced9e5; background: #f5f8fb; color: inherit; font: inherit; border-radius: 3px; }
   .product-additional ul { padding-left: 20px; }
+  .product-extras { flex-basis: 100%; min-width: 0; border: 0; padding: 20px 0 0; margin: 0; border-top: 1px solid #d9e0e7; }
+  .product-extras legend { padding: 0 10px 0 0; color: var(--ink, #142335); font-size: 1rem; font-weight: 600; }
+  .product-extras legend span { margin-left: 10px; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: #526574; font-weight: 500; }
+  .product-extras > p { margin: 0 0 14px; font-size: .8rem; color: #526574; line-height: 1.6; }
+  .product-extra-options { display: grid; gap: 8px; }
+  .product-extra-options :global(.product-extra-option) { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #d9e0e7; border-radius: 6px; background: linear-gradient(135deg, #fff, #f5f7f9); cursor: pointer; transition: border-color .18s ease, background-color .18s ease; }
+  .product-extra-options :global(.product-extra-option:hover) { border-color: #788b9b; }
+  .product-extra-options :global(.product-extra-option:has(input:checked)) { border-color: #284b4a; background: #eef4f2; box-shadow: inset 3px 0 #284b4a; }
+  .product-extra-options :global(.product-extra-option:has(input:focus-visible)) { outline: 2px solid #284b4a; outline-offset: 3px; }
+  .product-extra-options :global(input) { width: 18px; height: 18px; flex-shrink: 0; margin: 2px 0 0; accent-color: #284b4a; }
+  .product-extra-options :global(.product-extra-copy) { display: grid; gap: 4px; min-width: 0; font-size: .85rem; overflow-wrap: anywhere; }
+  .product-extra-options :global(.product-extra-copy strong) { color: var(--ink, #142335); font-weight: 600; }
+  .product-extra-options :global(.product-extra-description), .product-extra-options :global(.product-extra-unit) { color: #526574; font-size: .76rem; line-height: 1.5; }
+  .product-extra-options :global(.product-extra-rate) { color: #284b4a; font-size: .8rem; font-weight: 600; }
+  .product-extras > .product-extra-summary { margin: 12px 0 0; font-size: .75rem; }
+  @media (prefers-reduced-motion: reduce) { .product-extra-options :global(.product-extra-option) { transition: none; } }
   .product-commerce[hidden], .product-commerce [hidden] { display: none; }
 </style>

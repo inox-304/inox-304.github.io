@@ -203,6 +203,42 @@ class ProductVariant(ValidatedModel):
         return self.name
 
 
+class ProductAdditional(ValidatedModel):
+    product = models.ForeignKey(Product, related_name="additionals", on_delete=models.CASCADE)
+    name = models.CharField("nombre del adicional", max_length=180)
+    description = models.TextField("descripción", blank=True, max_length=1500)
+    price = models.DecimalField("tarifa", max_digits=11, decimal_places=2, blank=True, null=True, validators=MONEY_VALIDATORS)
+    cost = models.DecimalField("costo interno (privado)", max_digits=11, decimal_places=2, blank=True, null=True, validators=MONEY_VALIDATORS)
+    show_price = models.BooleanField("mostrar tarifa", default=False)
+    charge_unit = models.CharField("cobro por", max_length=10, choices=Product.ChargeUnit, default=Product.ChargeUnit.UNIT)
+    custom_unit = models.CharField("unidad personalizada", max_length=60, blank=True)
+    is_active = models.BooleanField("activo", default=True)
+    order = models.PositiveIntegerField("orden", default=0)
+
+    class Meta:
+        ordering = ("order", "pk")
+        verbose_name = "adicional"
+        verbose_name_plural = "adicionales opcionales"
+        constraints = [models.UniqueConstraint(fields=("product", "name"), name="catalog_additional_unique_name")]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.charge_unit == Product.ChargeUnit.CUSTOM and not self.custom_unit.strip():
+            errors["custom_unit"] = "Indique la unidad de cobro."
+        if self.show_price and self.price is None:
+            errors["price"] = "Ingrese una tarifa para mostrarla en la web."
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def unit_label(self):
+        return self.custom_unit if self.charge_unit == Product.ChargeUnit.CUSTOM else {"unit": "unidad", "m": "metro lineal", "m2": "m²"}[self.charge_unit]
+
+    def __str__(self):
+        return self.name
+
+
 class ProductImage(ValidatedModel):
     product = models.ForeignKey(Product, related_name="gallery_images", on_delete=models.CASCADE)
     asset = models.ForeignKey(MediaAsset, related_name="gallery_items", on_delete=models.PROTECT, null=True, blank=True, verbose_name="imagen subida", limit_choices_to={"kind": "image"})
@@ -222,7 +258,7 @@ class ProductImage(ValidatedModel):
             raise ValidationError("Suba una imagen o indique una URL.")
         if self.asset_id and self.asset.kind != "image":
             raise ValidationError({"asset": "Seleccione una imagen."})
-        if self.product_id and ProductImage.objects.filter(product_id=self.product_id).exclude(pk=self.pk).count() >= 8:
+        if self.product_id and not getattr(self, "_defer_gallery_count", False) and ProductImage.objects.filter(product_id=self.product_id).exclude(pk=self.pk).count() >= 8:
             raise ValidationError("Se permiten hasta 8 imágenes adicionales.")
 
     @property

@@ -16,9 +16,9 @@ from django.core.management.color import no_style
 from django.db import connection, transaction
 
 from .audit import audit_context
-from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductImage, ProductVariant
+from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 
-BACKUP_MODELS = (Contact, MediaAsset, Product, ProductVariant, ProductImage, BusinessSettings)
+BACKUP_MODELS = (Contact, MediaAsset, Product, ProductVariant, ProductAdditional, ProductImage, BusinessSettings)
 MAX_ARCHIVE_SIZE = 512 * 1024 * 1024
 MAX_DATABASE_SIZE = 32 * 1024 * 1024
 

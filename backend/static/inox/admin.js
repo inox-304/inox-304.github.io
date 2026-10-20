@@ -11,7 +11,7 @@
   };
   form.addEventListener('input', changed); form.addEventListener('change', changed);
   form.addEventListener('submit', event => {
-    if (form.querySelector('input[name$="-DELETE"]:checked') && !window.confirm('¿Eliminar las variantes o imágenes marcadas? El cambio quedará registrado en el historial.')) {
+    if (form.querySelector('input[name$="-DELETE"]:checked') && !window.confirm('¿Eliminar las variaciones, los adicionales o las imágenes marcadas? El cambio quedará registrado en el historial.')) {
       event.preventDefault();
       return;
     }

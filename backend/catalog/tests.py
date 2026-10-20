@@ -24,7 +24,7 @@ from .admin import ProductAdmin
 from .audit import audit_context
 from .backups import canonical, create_backup, inspect_backup, restore_backup, signing_key
 from .forms import ProductAdminForm, ProductImageForm, persist_uploads
-from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductImage, ProductVariant, final_price
+from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant, final_price
 from .serializers import public_catalog_data
 from .validators import clean_upload, validate_glb, validate_public_url
 
@@ -97,7 +97,7 @@ class CatalogTests(TestCase):
         for index in range(5):
             product = Product.objects.create(code=f"P{index+2}", slug=f"p{index}", name="Producto", category="linea-fria", is_published=True)
             ProductVariant.objects.create(product=product, name="Variante")
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             data = public_catalog_data()
         self.assertEqual(data["settings"]["empresa"], "INOX 304")
 
@@ -139,6 +139,7 @@ class CatalogTests(TestCase):
 
     def test_duplicate_preserves_children_and_creates_private_draft(self):
         ProductVariant.objects.create(product=self.product, name="Grande", price=200, cost=100)
+        ProductAdditional.objects.create(product=self.product, name="Ruedas", price=50, cost=20, show_price=False, charge_unit="custom", custom_unit="juego", is_active=False)
         ProductImage.objects.create(product=self.product, url="/images/segunda.webp")
         request = RequestFactory().post("/admin/")
         request.user = get_user_model().objects.create_user(username="duplicator")
@@ -150,6 +151,14 @@ class CatalogTests(TestCase):
         self.assertEqual(duplicate.cost, self.product.cost)
         self.assertEqual(duplicate.variants.count(), 1)
         self.assertEqual(duplicate.gallery_images.count(), 1)
+        copied_extra = duplicate.additionals.get()
+        self.assertEqual(copied_extra.name, "Ruedas")
+        self.assertEqual(copied_extra.price, 50)
+        self.assertEqual(copied_extra.cost, 20)
+        self.assertFalse(copied_extra.show_price)
+        self.assertFalse(copied_extra.is_active)
+        self.assertEqual(copied_extra.unit_label, "juego")
+        self.assertNotEqual(copied_extra.pk, self.product.additionals.get().pk)
         self.assertNotEqual(duplicate.slug, self.product.slug)
 
     def test_upload_and_url_rejections(self):

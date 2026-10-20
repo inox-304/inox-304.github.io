@@ -2,6 +2,7 @@ import { categoryNames, cmsProductRoute, contactUrl, formatAvailability, formatP
 import { apiProductRoute, catalogSlug, emptyCmsData, parsePublicCatalog } from '../lib/cms-api';
 import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
+import { additionalsQuoteSummary, createAdditionalOption, reconcileAdditionalSelection, type AdditionalSelection } from '../lib/product-additionals';
 
 type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
@@ -9,6 +10,7 @@ let payload: Bootstrap | null = null;
 try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { /* An invalid bootstrap is replaced by a fresh public request. */ }
 const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
 let lastApplied = '';
+let additionalSelection: AdditionalSelection = { productId: '', ids: [] };
 const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLElement>('.product-card') || document.querySelector<HTMLElement>('.product-card');
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
 const defaultHero = [...document.querySelectorAll<HTMLElement>('[data-business="hero_title"], [data-business="hero_description"], [data-business="home_text"]')].map(element => ({ element, children: [...element.childNodes].map(child => child.cloneNode(true)) }));
@@ -70,6 +72,7 @@ function updateDetail(data: CmsData) {
   const grid = detail.querySelector<HTMLElement>('.product-detail-grid');
   const related = detail.querySelector<HTMLElement>('.related-products');
   if (!product) {
+    additionalSelection = { productId: '', ids: [] };
     const image = detail.querySelector<HTMLImageElement>('.equipment-image'); if (image) image.onload = null;
     if (unavailable) unavailable.hidden = false;
     if (grid) grid.hidden = true;
@@ -119,13 +122,17 @@ function updateDetail(data: CmsData) {
   }
   detail.querySelectorAll<HTMLAnchorElement>('[data-product-category-link]').forEach(anchor => { anchor.href = withBase(`/catalogo/?categoria=${encodeURIComponent(product.category)}`); });
   const contact = resolveContact(data, product.contactId);
-  detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
-    anchor.hidden = !contact;
-    if (contact) {
-      const message = `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}. Me gustaría conocer las opciones y recibir una cotización. ${new URL(route(product), location.origin).href}`;
-      anchor.href = contactUrl(contact, message); anchor.dataset.contact = contact.id;
-    } else anchor.removeAttribute('href');
-  });
+  additionalSelection = reconcileAdditionalSelection(product, additionalSelection);
+  const variants = detail.querySelector<HTMLSelectElement>('[data-product-variant]');
+  const updateQuote = () => {
+    const variant = product.variants?.find(item => item.id === variants?.value);
+    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}${variant ? `, variación ${variant.name}` : ''}. Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}\n${new URL(route(product), location.origin).href}`;
+    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
+      anchor.hidden = !contact;
+      if (contact) { anchor.href = contactUrl(contact, message); anchor.dataset.contact = contact.id; }
+      else anchor.removeAttribute('href');
+    });
+  };
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? 'Consulta medidas, disponibilidad y opciones para tu negocio.' : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);
   const styleQuote = (amount: string) => detail.querySelectorAll<HTMLElement>('[data-product-quote]').forEach(anchor => {
@@ -139,11 +146,10 @@ function updateDetail(data: CmsData) {
   if (unit) { unit.textContent = product.unitLabel || product.chargeUnit || ''; unit.hidden = !price || !unit.textContent; }
   const availability = detail.querySelector<HTMLElement>('[data-product-availability]');
   if (availability) { availability.textContent = formatAvailability(product.availability); availability.hidden = !availability.textContent; }
-  const variants = detail.querySelector<HTMLSelectElement>('[data-product-variant]');
   if (variants) {
     const selected = variants.dataset.productId === product.id ? variants.value : '';
     variants.dataset.productId = product.id;
-    const options = [new Option('Presentación principal', ''), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];
+    const options = [new Option('Configuración principal', ''), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];
     variants.replaceChildren(...options);
     variants.value = (product.variants || []).some(item => item.id === selected) ? selected : '';
     variants.closest<HTMLElement>('[data-product-variants]')!.hidden = !product.variants?.length;
@@ -154,13 +160,27 @@ function updateDetail(data: CmsData) {
       styleQuote(selectedPrice);
       if (unit) unit.hidden = !selectedPrice || !unit.textContent;
       if (availability) { availability.textContent = formatAvailability(variant?.availability || product.availability); availability.hidden = !availability.textContent; }
-      if (contact) detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
-        const message = `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}${variant ? `, presentación ${variant.name}` : ''}. Me gustaría recibir una cotización. ${new URL(route(product), location.origin).href}`;
-        anchor.href = contactUrl(contact, message);
-      });
+      updateQuote();
     };
     variants.onchange = selectVariant; selectVariant();
   }
+  const extras = detail.querySelector<HTMLElement>('[data-product-extras]');
+  const extraOptions = detail.querySelector<HTMLElement>('[data-product-extra-options]');
+  const extraSummary = detail.querySelector<HTMLElement>('[data-product-extra-summary]');
+  const updateExtraSummary = () => {
+    if (!extraSummary) return;
+    const count = additionalSelection.ids.length;
+    extraSummary.textContent = count ? `${count} ${count === 1 ? 'adicional seleccionado' : 'adicionales seleccionados'}. Se incluirán en tu solicitud de cotización.` : 'Puedes cotizar el equipo con o sin adicionales.';
+  };
+  if (extras && extraOptions) {
+    extras.hidden = !product.additionals?.length;
+    extraOptions.replaceChildren(...(product.additionals || []).map(additional => createAdditionalOption(document, additional, product.currency, additionalSelection.ids.includes(additional.id))));
+    extraOptions.onchange = () => {
+      additionalSelection = reconcileAdditionalSelection(product, { productId: product.id, ids: [...extraOptions.querySelectorAll<HTMLInputElement>('input[data-product-extra]:checked')].map(input => input.value) });
+      updateExtraSummary(); updateQuote();
+    };
+  }
+  updateExtraSummary(); updateQuote();
   const charges = detail.querySelector<HTMLElement>('[data-product-charges]');
   if (charges) {
     charges.replaceChildren(...(product.additionalCharges || []).map(charge => {
@@ -176,7 +196,7 @@ function updateDetail(data: CmsData) {
     if (product.technicalSheet) technicalSheet.href = withBase(product.technicalSheet);
     else technicalSheet.removeAttribute('href');
   }
-  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length;
+  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;
   const relatedProducts = visibleCmsProducts(data).filter(item => item.category === product.category && item.id !== product.id).slice(0, 3);
   if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts, data); }
   document.title = `${product.name} | ${data.settings.empresa}`;

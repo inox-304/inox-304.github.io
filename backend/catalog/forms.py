@@ -4,7 +4,7 @@ from django.forms.models import BaseInlineFormSet
 from django.utils.text import slugify
 from uuid import uuid4
 
-from .models import MediaAsset, Product, ProductImage
+from .models import MediaAsset, Product, ProductAdditional, ProductImage
 from .validators import clean_upload
 
 
@@ -60,12 +60,36 @@ class ProductAdminForm(forms.ModelForm):
         return data
 
 
+class ProductAdditionalForm(forms.ModelForm):
+    class Meta:
+        model = ProductAdditional
+        fields = "__all__"
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+        help_texts = {
+            "price": "Opcional. Sin tarifa pública, el cliente verá A cotizar. La moneda es la del equipo.",
+            "show_price": "Publica la tarifa de este adicional, independientemente del precio del equipo. Requiere un importe.",
+            "custom_unit": "Solo para cobro personalizado: por ejemplo, juego o instalación.",
+            "is_active": "Desmárcalo para retirar la opción de la web conservando sus datos.",
+        }
+
+
 class ProductImageForm(forms.ModelForm):
     upload = forms.FileField(label="Subir imagen", required=False)
 
     class Meta:
         model = ProductImage
         fields = "__all__"
+
+    def _post_clean(self):
+        # The inline validates the final selection, including pending deletions.
+        # The model checks the database again on save, after deletions are applied.
+        if not getattr(self, "_gallery_inline_validation", False):
+            return super()._post_clean()
+        self.instance._defer_gallery_count = True
+        try:
+            return super()._post_clean()
+        finally:
+            del self.instance._defer_gallery_count
 
     def clean(self):
         data = super().clean()
@@ -88,6 +112,11 @@ def persist_uploads(instance):
 
 
 class GalleryInlineFormSet(BaseInlineFormSet):
+    def _construct_form(self, i, **kwargs):
+        form = super()._construct_form(i, **kwargs)
+        form._gallery_inline_validation = True
+        return form
+
     def clean(self):
         super().clean()
         if any(self.errors):
