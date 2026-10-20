@@ -10,7 +10,7 @@
 .inox-editor-intro h2 { font-size: 25px; line-height: 1.2; letter-spacing: -.5px; margin: 0 0 12px; color: var(--body-loud-color); }
 .inox-editor-intro p:last-child { font-size: 14px; line-height: 1.7; color: var(--body-quiet-color); margin: 0; }
 .inox-editor-nav { display: flex; gap: 14px; align-items: center; border: 1px solid var(--inox-edge); border-radius: 12px; padding: 8px; background: var(--inox-surface); }
-.inox-editor-nav ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); flex: 1; list-style: none; padding: 0; margin: 0; gap: 5px; }
+.inox-editor-nav ol { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); flex: 1; list-style: none; padding: 0; margin: 0; gap: 5px; }
 .inox-editor-nav li { list-style: none; padding: 0; margin: 0; }
 .inox-editor-nav button { font: inherit; cursor: pointer; border: 1px solid transparent; color: var(--body-quiet-color); background: transparent; text-align: left; border-radius: 8px; padding: 12px 9px; font-size: 12px; line-height: 1.3; min-height: 50px; width: 100%; display: flex; gap: 7px; align-items: center; }
 .inox-editor-nav button span { border: 1px solid var(--inox-edge); border-radius: 50%; display: grid; place-items: center; height: 23px; width: 23px; flex: 0 0 23px; font-size: 11px; }

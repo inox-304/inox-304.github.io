@@ -3,12 +3,12 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=2">
 {% endblock %}
 
 {% block extrahead %}
   {{ block.super }}
-  <script defer src="{% static 'inox/product-editor.js' %}?v=1"></script>
+  <script defer src="{% static 'inox/product-editor.js' %}?v=2"></script>
 {% endblock %}
 
 {% block form_top %}
@@ -27,8 +27,9 @@
         <li><button type="button" data-inox-go-step="details"><span aria-hidden="true">1</span>Datos del equipo</button></li>
         <li><button type="button" data-inox-go-step="media"><span aria-hidden="true">2</span>Fotos y archivos</button></li>
         <li><button type="button" data-inox-go-step="variants"><span aria-hidden="true">3</span>Variaciones</button></li>
-        <li><button type="button" data-inox-go-step="pricing"><span aria-hidden="true">4</span>Precio</button></li>
-        <li><button type="button" data-inox-go-step="review"><span aria-hidden="true">5</span>Revisar y guardar</button></li>
+        <li><button type="button" data-inox-go-step="additionals"><span aria-hidden="true">4</span>Adicionales</button></li>
+        <li><button type="button" data-inox-go-step="pricing"><span aria-hidden="true">5</span>Precio</button></li>
+        <li><button type="button" data-inox-go-step="review"><span aria-hidden="true">6</span>Revisar y guardar</button></li>
       </ol>
       <button type="button" id="inox-show-all" aria-pressed="false">Ver todo</button>
     </nav>
@@ -56,6 +57,7 @@
       <div><dt>Vista previa del modelo</dt><dd data-inox-summary="poster">Pendiente</dd></div>
       <div><dt>Fotos adicionales</dt><dd data-inox-summary="gallery">Sin fotos adicionales</dd></div>
       <div><dt>Variaciones</dt><dd data-inox-summary="variants">Sin variaciones</dd></div>
+      <div><dt>Adicionales</dt><dd data-inox-summary="additionals">Sin adicionales</dd></div>
       <div><dt>Publicación</dt><dd data-inox-summary="publication">Borrador</dd></div>
     </dl>
     <p class="inox-review-note">Los archivos pendientes no impiden guardar un borrador. Revisa la visibilidad y pulsa Guardar para conservar los cambios. Los archivos elegidos se enviarán al guardar.</p>

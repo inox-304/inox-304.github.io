@@ -35,7 +35,7 @@ jobs:
       - run: npm run build:server
       - name: Frontend integration and media budgets
         run: |
-          node --test src/lib/cms-api.test.ts
+          node --test src/lib/cms-api.test.ts src/lib/product-additionals.test.ts
           node scripts/test-product-stage.mjs
           node scripts/test-model-budget.mjs
       - run: uv sync --project backend --locked

@@ -11,8 +11,8 @@ from django.utils.html import format_html
 from django.views.decorators.http import require_safe
 
 from .audit import TRACKED_MODELS, audit_context
-from .forms import GalleryInlineFormSet, ProductAdminForm, ProductImageForm, persist_uploads
-from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductImage, ProductVariant
+from .forms import GalleryInlineFormSet, ProductAdminForm, ProductAdditionalForm, ProductImageForm, persist_uploads
+from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 from .serializers import catalog_product_queryset, public_catalog_data, public_product
 
 
@@ -63,12 +63,22 @@ class ProductImageInline(admin.StackedInline):
     verbose_name_plural = "Galería de fotos (opcional)"
 
 
+class ProductAdditionalInline(admin.StackedInline):
+    model = ProductAdditional
+    form = ProductAdditionalForm
+    extra = 0
+    fields = ("name", "description", ("price", "show_price"), ("charge_unit", "custom_unit"), "cost", ("is_active", "order"))
+    classes = ("inox-step", "inox-step-additionals")
+    verbose_name = "opción"
+    verbose_name_plural = "Adicionales del equipo (opcional)"
+
+
 @admin.register(Product)
 class ProductAdmin(AuditedAdmin):
     form = ProductAdminForm
     change_form_template = "admin/catalog/product/change_form.html"
     change_list_template = "admin/catalog/product/change_list.html"
-    inlines = (ProductVariantInline, ProductImageInline)
+    inlines = (ProductVariantInline, ProductAdditionalInline, ProductImageInline)
     list_display = ("code", "name", "category", "is_published", "is_active", "featured", "order", "availability", "public_price", "preview_link")
     list_editable = ("is_published", "is_active", "featured", "order", "availability")
     list_filter = ("category", "is_published", "is_active", "featured", "availability", "charge_unit")
@@ -158,7 +168,7 @@ class ProductAdmin(AuditedAdmin):
                 values = {field.attname: getattr(source, field.attname) for field in source._meta.concrete_fields if not field.primary_key and field.name not in ("created_at", "updated_at")}
                 values.update(code=f"{source.code[:53]}-C-{token}", slug=f"{source.slug[:134]}-copia-{token}", name=f"{source.name[:242]} (copia)", is_published=False)
                 copy = Product.objects.create(**values)
-                for model, items in ((ProductVariant, source.variants.all()), (ProductImage, source.gallery_images.all())):
+                for model, items in ((ProductVariant, source.variants.all()), (ProductAdditional, source.additionals.all()), (ProductImage, source.gallery_images.all())):
                     for item in items:
                         values = {field.attname: getattr(item, field.attname) for field in item._meta.concrete_fields if not field.primary_key and field.name != "product"}
                         model.objects.create(product=copy, **values)
@@ -291,5 +301,7 @@ class AuditLogAdmin(admin.ModelAdmin):
                 self.message_user(request, "No se pudo restaurar: " + "; ".join(exc.messages), messages.ERROR)
             else:
                 self.message_user(request, "Versión anterior restaurada; la operación quedó registrada en el historial.")
+                if model in (ProductVariant, ProductAdditional, ProductImage):
+                    return HttpResponseRedirect(reverse("admin:catalog_product_change", args=(obj.product_id,)))
                 return HttpResponseRedirect(reverse(f"admin:catalog_{model._meta.model_name}_change", args=(obj.pk,)))
         return TemplateResponse(request, "admin/catalog/restore.html", {**self.admin_site.each_context(request), "title": "Restaurar versión anterior", "log": log, "opts": self.model._meta})

@@ -1,4 +1,4 @@
-import { categoryNames, normalizeWhatsapp, safeHttps, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet, type CmsData, type CmsProduct } from './cms.ts';
+import { categoryNames, normalizeWhatsapp, safeHttps, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet, type CmsAdditional, type CmsData, type CmsProduct } from './cms.ts';
 
 const settingKeys = ['empresa', 'direccion', 'referencia_direccion', 'facebook', 'instagram', 'tiktok', 'horarios', 'contacto_principal', 'contacto_instalaciones', 'contacto_medida', 'contacto_formulario', 'hero_title', 'hero_description', 'home_text'];
 export function emptyCmsData(): CmsData {
@@ -63,7 +63,15 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
       const charge = record(value);
       return { id: identifier(charge.id), name: string(charge.name, 250), price: amount(charge.price) };
     });
-    unique(variants.map(item => item.id)); unique(additionalCharges.map(item => item.id));
+    const additionals = list(item.additionals ?? [], 100).map((value): CmsAdditional => {
+      const additional = record(value);
+      const chargeUnit = string(additional.chargeUnit, 80);
+      const unitLabel = string(additional.unitLabel ?? '', 120).trim();
+      const name = string(additional.name, 250).trim();
+      if (!name || !['unit', 'm', 'm2', 'custom'].includes(chargeUnit) || (chargeUnit === 'custom' && !unitLabel)) throw new Error('Invalid catalog additional');
+      return { id: identifier(additional.id), name, description: string(additional.description ?? '', 2000), price: amount(additional.price) ?? null, chargeUnit: chargeUnit as CmsAdditional['chargeUnit'], unitLabel };
+    });
+    unique(variants.map(item => item.id)); unique(additionalCharges.map(item => item.id)); unique(additionals.map(item => item.id));
     return {
       id: identifier(item.id), slug, name: string(item.name, 250), category, summary: string(item.summary, 10000),
       features: list(item.features, 50).map(value => string(value)), image: asset(item.image, imageUrl, true),
@@ -73,7 +81,7 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
       model3d: asset(item.model3d, modelUrl), modelPoster: asset(item.modelPoster, imageUrl),
       gallery: list(item.gallery ?? [], 8).map(value => asset(value, imageUrl, true)),
       chargeUnit: string(item.chargeUnit ?? '', 80), unitLabel: string(item.unitLabel ?? '', 120),
-      availability: string(item.availability ?? '', 250), variants, additionalCharges,
+      availability: string(item.availability ?? '', 250), variants, additionalCharges, additionals,
     };
   });
   unique(products.map(item => item.id)); unique(products.map(item => item.slug));

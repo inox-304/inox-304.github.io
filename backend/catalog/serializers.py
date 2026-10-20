@@ -1,10 +1,10 @@
 from django.db.models import Prefetch
 
-from .models import BusinessSettings, Contact, Product, ProductImage, ProductVariant
+from .models import BusinessSettings, Contact, Product, ProductAdditional, ProductImage, ProductVariant
 
 
 def catalog_product_queryset():
-    return Product.objects.select_related("contact", "image_asset", "technical_asset", "model_asset", "poster_asset").prefetch_related(Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True)), Prefetch("gallery_images", queryset=ProductImage.objects.select_related("asset")))
+    return Product.objects.select_related("contact", "image_asset", "technical_asset", "model_asset", "poster_asset").prefetch_related(Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True)), Prefetch("additionals", queryset=ProductAdditional.objects.filter(is_active=True)), Prefetch("gallery_images", queryset=ProductImage.objects.select_related("asset")))
 
 
 def public_product_queryset():
@@ -31,6 +31,7 @@ def public_product(product):
         "gallery": [item.public_url for item in product.gallery_images.all()],
         "chargeUnit": product.charge_unit, "unitLabel": product.unit_label, "availability": product.availability,
         "variants": [{"id": str(variant.pk), "name": variant.name, "price": _amount(variant.computed_price) if product.show_price else None, "availability": variant.availability} for variant in product.variants.all()],
+        "additionals": [{"id": str(item.pk), "name": item.name, "description": item.description, "price": _amount(item.price) if item.show_price else None, "chargeUnit": item.charge_unit, "unitLabel": item.unit_label} for item in product.additionals.all() if item.is_active],
         "additionalCharges": [{"id": "included", "name": "Adicional incluido", "price": _amount(product.additional_flat)}] if product.show_price and product.additional_flat else [],
     }
 

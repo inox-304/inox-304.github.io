@@ -6,11 +6,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductImage, ProductVariant
+from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 
 _actor = ContextVar("catalog_audit_actor", default=None)
 _operation = ContextVar("catalog_audit_operation", default=None)
-TRACKED_MODELS = (Contact, MediaAsset, Product, ProductVariant, ProductImage, BusinessSettings)
+TRACKED_MODELS = (Contact, MediaAsset, Product, ProductVariant, ProductAdditional, ProductImage, BusinessSettings)
 
 
 @contextmanager

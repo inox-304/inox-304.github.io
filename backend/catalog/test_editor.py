@@ -18,7 +18,7 @@ from PIL import Image
 from security.models import SecurityState
 
 from .forms import ProductAdminForm
-from .models import MediaAsset, Product
+from .models import AuditLog, MediaAsset, Product, ProductAdditional
 from .serializers import public_catalog_data
 
 
@@ -45,6 +45,10 @@ def admin_data(**changes):
             "variants-INITIAL_FORMS": "0",
             "variants-MIN_NUM_FORMS": "0",
             "variants-MAX_NUM_FORMS": "1000",
+            "additionals-TOTAL_FORMS": "0",
+            "additionals-INITIAL_FORMS": "0",
+            "additionals-MIN_NUM_FORMS": "0",
+            "additionals-MAX_NUM_FORMS": "1000",
             "gallery_images-TOTAL_FORMS": "0",
             "gallery_images-INITIAL_FORMS": "0",
             "gallery_images-MIN_NUM_FORMS": "0",
@@ -186,6 +190,59 @@ class ProductEditorAdminTests(TestCase):
         self.assertFalse(MediaAsset.objects.exists())
         self.assertEqual(Client().get("/api/catalog/").json()["products"], [])
         self.assertRedirects(response, reverse("admin:catalog_product_change", args=(product.pk,)))
+
+    def test_create_equipment_with_variation_and_optional_additionals(self):
+        response = self.client.post(self.add_url, admin_data(**{
+            "variants-TOTAL_FORMS": "1", "variants-0-name": "Dos puertas",
+            "variants-0-is_active": "on", "variants-0-order": "0", "variants-0-availability": "made_to_order",
+            "additionals-TOTAL_FORMS": "2", "additionals-0-name": "Baranda",
+            "additionals-0-description": "Medida a confirmar", "additionals-0-price": "125.50",
+            "additionals-0-cost": "45.55", "additionals-0-show_price": "on",
+            "additionals-0-charge_unit": "m", "additionals-0-is_active": "on", "additionals-0-order": "0",
+            "additionals-1-name": "Ruedas", "additionals-1-charge_unit": "unit",
+            "additionals-1-is_active": "on", "additionals-1-order": "1", "is_published": "on",
+        }))
+        self.assert_saved(response)
+        product = Product.objects.get()
+        self.assertEqual(product.variants.count(), 1)
+        self.assertEqual(product.additionals.count(), 2)
+        item = Client().get("/api/catalog/").json()["products"][0]
+        self.assertIsNone(item["price"])
+        self.assertEqual([extra["price"] for extra in item["additionals"]], [125.5, None])
+        self.assertNotIn("cost", str(item))
+        self.assertNotIn("45.55", str(item))
+        log = AuditLog.objects.filter(entity="catalog.productadditional").first()
+        self.assertEqual(log.actor.email, "equipment-editor@example.test")
+
+    def test_invalid_additional_preserves_product_and_existing_additionals(self):
+        self.assert_saved(self.client.post(self.add_url, admin_data()))
+        product = Product.objects.get()
+        response = self.client.post(reverse("admin:catalog_product_change", args=(product.pk,)), admin_data(**{
+            "name": "Nombre sin guardar", "image_upload": photo_upload(),
+            "additionals-TOTAL_FORMS": "1", "additionals-0-name": "Baranda",
+            "additionals-0-show_price": "on", "additionals-0-charge_unit": "custom",
+            "additionals-0-is_active": "on", "additionals-0-order": "0",
+        }))
+        self.assertEqual(response.status_code, 200)
+        inline = next(item for item in response.context["inline_admin_formsets"] if item.formset.prefix == "additionals")
+        self.assertIn("price", inline.formset.forms[0].errors)
+        self.assertIn("custom_unit", inline.formset.forms[0].errors)
+        product.refresh_from_db()
+        self.assertEqual(product.name, "Mesa de preparación")
+        self.assertFalse(product.additionals.exists())
+        self.assertFalse(MediaAsset.objects.exists())
+
+    def test_restore_additional_history_returns_to_its_product_editor(self):
+        self.assert_saved(self.client.post(self.add_url, admin_data()))
+        product = Product.objects.get()
+        extra = ProductAdditional.objects.create(product=product, name="Ruedas")
+        extra.name = "Ruedas grandes"
+        extra.save()
+        log = AuditLog.objects.filter(entity="catalog.productadditional", operation="update").get()
+        response = self.client.post(reverse("admin:catalog_audit_restore", args=(log.pk,)))
+        self.assertRedirects(response, reverse("admin:catalog_product_change", args=(product.pk,)))
+        extra.refresh_from_db()
+        self.assertEqual(extra.name, "Ruedas")
 
     def test_assets_can_be_uploaded_later_and_remain_private_until_publication(self):
         self.assert_saved(self.client.post(self.add_url, admin_data()))

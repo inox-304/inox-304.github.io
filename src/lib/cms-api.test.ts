@@ -97,3 +97,38 @@ test('ignores private properties even if a server accidentally adds them', () =>
   assert.equal(Object.hasOwn(result.products[0], 'internal_notes'), false);
   assert.equal(Object.hasOwn(result.settings, 'private_token'), false);
 });
+
+test('accepts independent optional additional rates and quote-only options with their billing units', () => {
+  const input = catalog();
+  input.products[0].showPrice = false;
+  Object.assign(input.products[0], { additionals: [
+    { id: '1', name: 'Puerta <especial>', description: 'Marco & vidrio', price: null, chargeUnit: 'unit', unitLabel: 'por unidad', cost: 120 },
+    { id: '2', name: 'Repisas', description: '', price: 0, chargeUnit: 'm', unitLabel: 'por metro lineal' },
+    { id: '3', name: 'Protección', description: '', price: 45.5, chargeUnit: 'm2', unitLabel: '' },
+    { id: '4', name: 'Instalación', description: '', price: 90, chargeUnit: 'custom', unitLabel: 'por visita' },
+  ] });
+  const parsed = parsePublicCatalog(input).products[0];
+  assert.deepEqual(parsed.additionals?.map(item => item.price), [null, 0, 45.5, 90]);
+  assert.equal(parsed.additionals?.[0].name, 'Puerta <especial>');
+  assert.equal(parsed.additionals?.[3].unitLabel, 'por visita');
+  assert.equal(Object.hasOwn(parsed.additionals![0], 'cost'), false);
+  assert.equal(parsed.additionalCharges?.[0].price, 30);
+  assert.deepEqual(parsePublicCatalog(catalog()).products[0].additionals, []);
+});
+
+test('rejects malformed optional additionals and duplicate IDs before exposing catalog data', () => {
+  const valid = { id: 'extra-1', name: 'Puerta', description: '', price: 10, chargeUnit: 'unit', unitLabel: '' };
+  for (const replacement of [
+    { id: '<script>' }, { name: '' }, { description: 'x'.repeat(2001) },
+    { chargeUnit: 'hours' }, { chargeUnit: 'custom', unitLabel: '  ' },
+    { price: -1 }, { price: '10' }, { price: Infinity }, { price: Number.NaN },
+  ]) {
+    const input = catalog();
+    Object.assign(input.products[0], { additionals: [{ ...valid, ...replacement }] });
+    assert.throws(() => parsePublicCatalog(input));
+  }
+  for (const additionals of [[valid, valid], Array.from({ length: 101 }, (_, index) => ({ ...valid, id: String(index) })), 'not a list']) {
+    const input = catalog(); Object.assign(input.products[0], { additionals });
+    assert.throws(() => parsePublicCatalog(input));
+  }
+});

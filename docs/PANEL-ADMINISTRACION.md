@@ -52,15 +52,25 @@ Los códigos duran **5 minutos**, se usan una sola vez y admiten un máximo de *
 
 ### Crear un equipo, aunque sus archivos todavía no estén listos
 
-1. En **Productos**, pulsa **Nuevo equipo**. El editor se organiza en **Datos del equipo**, **Fotos y archivos**, **Variaciones**, **Precio** y **Revisar y guardar**. Puedes recorrerlos con Anterior/Siguiente, saltar a un paso o mostrar todo el formulario.
+1. En **Productos**, pulsa **Nuevo equipo**. El editor se organiza en **Datos del equipo**, **Fotos y archivos**, **Variaciones**, **Adicionales**, **Precio** y **Revisar y guardar**. Puedes recorrerlos con Anterior/Siguiente, saltar a un paso o mostrar todo el formulario.
 2. Escribe el nombre y elige **Línea caliente**, **Línea fría** o **Línea neutra**. No tienes que inventar un código ni escribir una dirección: se generan al guardar y permanecen fijos al editar. Los productos antiguos de Mobiliario se conservan para reclasificarlos después.
 3. En **Fotos y archivos**, cada botón recibe su archivo directamente: foto principal, ficha técnica PDF, modelo 3D GLB y portada opcional del 3D. Puedes dejarlos pendientes; seleccionar un archivo todavía no lo guarda. El límite es de 8 MB por archivo; el GLB debe incluir sus texturas. La galería permite hasta ocho fotos adicionales.
-4. Añade **Variaciones** si ya las tienes definidas y configura **Precio**. Ambos pasos se pueden completar después; deja desmarcado Mostrar precio si todavía cotizas por consulta. El recargo fijo actual no es una biblioteca de adicionales seleccionables.
+4. Añade **Variaciones** y **Adicionales** si ya los tienes definidos y configura **Precio**. Puedes completar los tres pasos después; deja desmarcado Mostrar precio si todavía cotizas por consulta. En Adicionales, pulsa **Agregar opción adicional** para preparar las opciones de ese equipo.
 5. En **Revisar y guardar**, deja desmarcado **Publicado en la web** y pulsa **Guardar y volver al catálogo** o **Guardar y seguir editando**. El equipo queda como borrador privado, incluso sin fotos, PDF o 3D.
 6. Cuando tengas los archivos definitivos, abre ese mismo equipo, entra a **Fotos y archivos**, selecciónalos y guarda. Verás el estado actual y podrás abrir los archivos guardados. Subir uno nuevo reemplaza su asociación en este producto; no elimina el archivo anterior de otros productos.
 7. Revisa el equipo mediante **Abrir vista previa privada** y activa su publicación cuando corresponda. Solo un equipo activo y publicado aparece en la web servida por Django. Las animaciones y reglas de ubicación de adicionales se definirán con los diseños que entregues; cargar un GLB no las crea automáticamente.
 
 Si el servidor indica un error después de enviar el formulario, corrige el paso marcado y vuelve a seleccionar los archivos nuevos antes de guardar: el navegador no permite conservar una subida pendiente después de recargar. Los archivos que ya estaban guardados permanecen asociados.
+
+### Preparar los adicionales de cada equipo
+
+En el paso **Adicionales**, escribe el nombre y, si hace falta, una descripción de cada opción (por ejemplo, ruedas o baranda). Elige cómo se cobra: **unidad**, **metro lineal**, **metro cuadrado** o **personalizada**, con su etiqueta (por ejemplo, juego). La moneda es la del producto.
+
+El precio es opcional. Para mostrar una tarifa, escribe su importe y marca **Mostrar precio** en ese adicional. Si no lo marcas, se ofrece como **A cotizar**, aunque guardes una tarifa privada. Cada adicional controla su propia tarifa pública, independientemente del precio del equipo. El costo interno siempre es privado. Desmarca **Activo** para retirarlo de la web conservando sus datos, o cambia su orden para organizarlo.
+
+El cliente puede seleccionar estas opciones en la ficha del equipo; sus nombres se incluyen en la solicitud de WhatsApp junto a la variación elegida. Las cantidades, medidas y compatibilidad se confirman al cotizar: no se suman automáticamente tarifas de distintas unidades. Los adicionales se ofrecen por equipo; todavía no hay reglas de compatibilidad por variación ni colocación dentro del modelo 3D. Las definiremos con tus diseños.
+
+**Recargo fijo incluido**, en el paso Precio, sigue siendo una parte del precio base. No es una opción seleccionable. Los adicionales tienen su propio apartado y no se suman a ese recargo. Al duplicar un equipo se copian sus adicionales a un borrador; también se incluyen en el historial y en los respaldos comerciales.
 
 En **Productos**, busca por código o nombre y filtra por categoría, publicación y disponibilidad. Puedes crear un equipo, duplicar uno como borrador, cambiar su orden y editar sus variantes. Ocultar desmarca la publicación y conserva los datos. El campo activo permite retirar temporalmente un equipo de toda la oferta.
 

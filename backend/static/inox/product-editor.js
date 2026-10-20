@@ -9,6 +9,7 @@
     { id: 'details', title: 'Datos del equipo', description: 'Ponle un nombre, elige su línea y describe qué lo hace diferente.' },
     { id: 'media', title: 'Fotos y archivos', description: 'Selecciona los archivos que tengas listos. Puedes añadir o reemplazar los demás más adelante.' },
     { id: 'variants', title: 'Variaciones', description: 'Añade las versiones que ofrecerás de este equipo. Si todavía no las tienes, continúa sin añadir ninguna.' },
+    { id: 'additionals', title: 'Adicionales', description: 'Añade las opciones que el cliente puede solicitar con este equipo. Cada una puede tener su tarifa por unidad o medida, o quedar a cotizar. Los costos internos son privados; la ubicación en el modelo 3D se definirá con tus diseños.' },
     { id: 'pricing', title: 'Precio', description: 'Define cómo se cobra este equipo y si mostrarás su precio al público.' },
     { id: 'review', title: 'Revisar y guardar', description: 'Revisa lo que has preparado y decide si lo conservas como borrador o lo publicas.' },
   ];
@@ -172,8 +173,8 @@
     const target = form.querySelector(`[data-inox-summary="${key}"]`);
     if (target) target.textContent = text;
   };
-  function countInlineRows(fieldName) {
-    return [...form.querySelectorAll(`input[name$="-${fieldName}"]`)].filter(input => {
+  function countInlineRows(prefixName, fieldName) {
+    return [...form.querySelectorAll(`input[name^="${prefixName}-"][name$="-${fieldName}"]`)].filter(input => {
       if (input.closest('.empty-form') || !input.value.trim()) return false;
       const prefix = input.name.slice(0, -(fieldName.length));
       return !namedInput(`${prefix}DELETE`)?.checked;
@@ -184,8 +185,10 @@
     const category = namedInput('category');
     setSummary('category', category && category.value ? category.selectedOptions?.[0]?.textContent || category.value : 'Por elegir');
     mediaFields.forEach(field => setSummary(field.key, mediaState(field).text));
-    const variants = countInlineRows('name');
+    const variants = countInlineRows('variants', 'name');
     setSummary('variants', variants ? `${variants} ${variants === 1 ? 'variación' : 'variaciones'}` : 'Sin variaciones');
+    const additionals = countInlineRows('additionals', 'name');
+    setSummary('additionals', additionals ? `${additionals} ${additionals === 1 ? 'adicional preparado' : 'adicionales preparados'}` : 'Sin adicionales');
     const gallery = [...uploadCards.entries()].filter(([input, card]) => {
       if (!input.name.endsWith('-upload')) return false;
       const prefix = input.name.slice(0, -'upload'.length);
