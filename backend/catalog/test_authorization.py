@@ -76,6 +76,38 @@ class CatalogActionPermissionTests(TestCase):
     def test_reader_cannot_duplicate_through_forged_action_post(self):
         self.assert_forged_action_preserves_catalog("duplicate_products")
 
+    def test_reader_can_view_product_but_cannot_edit_or_delete_it(self):
+        editor_url = reverse("admin:catalog_product_change", args=[self.product.pk])
+        before = list(Product.objects.values())
+        before_audit = AuditLog.objects.count()
+        response = self.client.get(editor_url)
+        self.assertContains(response, self.product.name)
+        self.assertNotContains(response, 'name="_save"')
+        self.assertNotContains(response, 'name="name"')
+        self.assertEqual(self.client.post(editor_url, {
+            "name": "Unauthorized edit", "is_published": "on", "_save": "Guardar",
+        }).status_code, 403)
+        self.assertEqual(self.client.post(reverse("admin:catalog_product_delete", args=[self.product.pk]), {
+            "post": "yes",
+        }).status_code, 403)
+        self.assertEqual(list(Product.objects.values()), before)
+        self.assertEqual(AuditLog.objects.count(), before_audit)
+
+    def test_product_editor_offers_material_analysis_only_with_inventory_access(self):
+        self.set_permissions("view_product", "change_product")
+        editor_url = reverse("admin:catalog_product_change", args=[self.product.pk])
+        response = self.client.get(editor_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Analizar materiales y fabricación")
+        self.assertNotContains(response, reverse("inventory-dashboard"))
+        self.assertEqual(self.client.get(reverse("inventory-dashboard")).status_code, 403)
+        self.set_permissions("view_product", "change_product", "view_inventory")
+        response = self.client.get(editor_url)
+        self.assertContains(response, "Analizar materiales y fabricación de ACCESS-01")
+        self.assertContains(response, reverse("inventory-dashboard") + "?equipo=ACCESS-01&amp;cantidad=1&amp;almacen=Taller#planificar")
+        with patch("catalog.inventory_views.load_snapshot", return_value=None):
+            self.assertEqual(self.client.get(reverse("inventory-dashboard")).status_code, 200)
+
     def test_reader_actions_are_hidden_and_direct_calls_are_denied(self):
         for action in ("publish_products", "hide_products", "duplicate_products"):
             with self.subTest(action=action):

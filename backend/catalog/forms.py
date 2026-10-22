@@ -28,16 +28,24 @@ class ProductAdminForm(forms.ModelForm):
             if name in self.fields:
                 self.fields[name].required = False
                 self.fields[name].help_text = "Se genera al guardar. Déjalo vacío si no utilizas un identificador propio."
-        categories = [(value, label) for value, label in Product.Category.choices if value != Product.Category.FURNITURE]
-        if self.instance.pk and self.instance.category == Product.Category.FURNITURE:
-            categories.append((Product.Category.FURNITURE, "Mobiliario (catálogo anterior)"))
-        self.fields["category"].choices = [("", "Elige una línea"), *categories]
-        self.fields["is_published"].help_text = "Déjalo desmarcado para guardar un borrador privado. Puedes completar archivos y publicarlo después."
-        self.fields["price"].help_text = "Opcional. Déjalo vacío y desmarca Mostrar precio para ofrecer el botón Cotizar. No es necesario escribir 0."
-        self.fields["show_price"].help_text = "Desmarcado: se muestra Cotizar y el importe queda privado. Puedes publicar el equipo sin precio."
-        self.fields["additional_flat"].label = "Recargo fijo incluido"
-        self.fields["additional_flat"].help_text = "Opcional. Se suma al precio después del descuento; no es un adicional que el cliente elige."
-        self.fields["cost"].help_text = "Referencia manual del catálogo. El análisis de fabricación calcula su costo desde Recetas y Costos de la hoja; este valor no se sincroniza automáticamente."
+        # Django excludes editable fields for an account with view-only access.
+        if "category" in self.fields:
+            categories = [(value, label) for value, label in Product.Category.choices if value != Product.Category.FURNITURE]
+            if self.instance.pk and self.instance.category == Product.Category.FURNITURE:
+                categories.append((Product.Category.FURNITURE, "Mobiliario (catálogo anterior)"))
+            self.fields["category"].choices = [("", "Elige una línea"), *categories]
+        help_texts = {
+            "is_published": "Déjalo desmarcado para guardar un borrador privado. Puedes completar archivos y publicarlo después.",
+            "price": "Opcional. Déjalo vacío y desmarca Mostrar precio para ofrecer el botón Cotizar. No es necesario escribir 0.",
+            "show_price": "Desmarcado: se muestra Cotizar y el importe queda privado. Puedes publicar el equipo sin precio.",
+            "additional_flat": "Opcional. Se suma al precio después del descuento; no es un adicional que el cliente elige.",
+            "cost": "Referencia manual del catálogo. El análisis de fabricación calcula su costo desde Recetas y Costos de la hoja; este valor no se sincroniza automáticamente.",
+        }
+        for name, help_text in help_texts.items():
+            if name in self.fields:
+                self.fields[name].help_text = help_text
+        if "additional_flat" in self.fields:
+            self.fields["additional_flat"].label = "Recargo fijo incluido"
 
     def _new_identifier(self, field, prefix):
         while True:

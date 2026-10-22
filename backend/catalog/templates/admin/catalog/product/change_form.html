@@ -18,7 +18,7 @@
     <p class="inox-editor-eyebrow">Catálogo INOX 304</p>
     <h2 id="inox-editor-title">{% if add %}Nuevo equipo, paso a paso{% else %}Edita tu equipo{% endif %}</h2>
     <p>Empieza por sus datos. Puedes guardar un borrador y añadir las fotos, la ficha técnica y el modelo 3D cuando estén listos.</p>
-    {% if original %}<p><a href="{% url 'inventory-dashboard' %}?equipo={{ original.code|urlencode }}&amp;cantidad=1&amp;almacen=Taller#planificar">Analizar materiales y fabricación de {{ original.code }} →</a></p>{% endif %}
+    {% if original and perms.catalog.view_inventory %}<p><a href="{% url 'inventory-dashboard' %}?equipo={{ original.code|urlencode }}&amp;cantidad=1&amp;almacen=Taller#planificar">Analizar materiales y fabricación de {{ original.code }} →</a></p>{% endif %}
   </section>
   {% if errors %}
     <p class="inox-editor-notice" role="alert">Corrige los datos señalados. Si seleccionaste archivos nuevos, vuelve a elegirlos antes de guardar; los archivos que ya estaban guardados se conservan.</p>
