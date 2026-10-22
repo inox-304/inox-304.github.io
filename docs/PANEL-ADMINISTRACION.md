@@ -160,6 +160,25 @@ Para restaurar en otra instalación conserva de forma privada la misma `CATALOG_
 
 Para producción, programa un respaldo diario y una copia cifrada fuera del servidor. Haz una prueba de restauración antes del uso real y repítela periódicamente. Además del respaldo comercial, conserva un respaldo PostgreSQL y los secretos del servidor en almacenamiento privado para recuperación completa, sin dejarlos en Git.
 
+## Trasladar la instalación completa sin recrear cuentas
+
+Los comandos `export_installation` e `import_installation` trasladan las cuentas existentes, hashes de contraseña, correo/TOTP/passkeys, recuperación, permisos y grupos, sesiones, historial, catálogo, medios y última copia del inventario. Conservan las identidades de los registros, incluidas las relaciones de permisos, y los contadores históricos para no reutilizar IDs borrados. El destino debe ejecutar el mismo código y tener exactamente las mismas migraciones y tablas, ya creadas, **sin cuentas ni datos comerciales**. Solo se admiten las filas de tipos de contenido y permisos generadas por una instalación vacía.
+
+El paquete es privado: contiene secretos MFA y datos comerciales. Su firma HMAC y sus sumas SHA-256 detectan modificaciones, pero **el ZIP no está cifrado**. Guárdalo fuera de carpetas públicas, protégelo y transfiérelo por un canal seguro. No contiene `backend/.env`, la clave Django, la credencial Google ni otros archivos de secretos. Esos ajustes se trasladan por separado. La clave Django efectiva del destino debe ser idéntica a la del origen: su fingerprint y la firma se comprueban antes de importar. No reemplaces la clave existente por otra aleatoria durante este traslado.
+
+Detén las escrituras en el origen durante la exportación y hasta completar el cambio de servidor. Los comandos bloquean las tablas durante su propia operación, pero no impiden que una web todavía abierta guarde cambios después. Usa nombres nuevos para los paquetes; nunca se sobrescriben.
+
+```sh
+python backend/manage.py export_installation /ruta/privada/instalacion-inox.zip
+# En el destino migrado y vacío, con los secretos ya configurados:
+python backend/manage.py import_installation /ruta/privada/instalacion-inox.zip --check
+python backend/manage.py import_installation /ruta/privada/instalacion-inox.zip --confirm RESTORE_EMPTY_INSTALLATION
+```
+
+`--check` verifica el paquete, la clave, el esquema y que el destino esté vacío sin restaurar datos. La importación rechaza rutas inseguras, archivos faltantes, duplicados y paquetes que excedan los límites: 1 GiB comprimido, 2 GiB total, 128 MiB por archivo, 32 MiB por archivo de registros y 100.000 registros. Comprueba nuevamente los registros restaurados y sus relaciones antes de confirmar la transacción. Un error anterior a esa confirmación revierte los datos y retira los archivos recién creados. Si falla únicamente la limpieza del paquete temporal después de confirmar, conserva la instalación restaurada y avisa que hay un temporal privado por retirar; no se debe repetir la importación. PostgreSQL puede conservar contadores de secuencia adelantados tras un error; se mantienen seguros sin reutilizar IDs. Una interrupción del proceso o del equipo requiere revisar los directorios de destino antes de reintentar, porque la base y el sistema de archivos no comparten una transacción física.
+
+Conserva la copia del origen hasta verificar login, catálogo, medios, inventario y permisos en el servidor nuevo. Las sesiones se preservan en la base, pero la cookie del navegador local no se traslada a otro dominio: se vuelve a entrar normalmente. Las passkeys siguen vinculadas a su dominio original; se registran para el dominio definitivo mediante el flujo autorizado, sin alterar las existentes. La credencial Google debe montarse en una ruta privada válida del servidor y configurarse en `GOOGLE_APPLICATION_CREDENTIALS`. No uses `seed_catalog`, `create_owner` ni preparadores de acceso para este traslado.
+
 ## Publicar en un servidor
 
 Los archivos `Dockerfile`, `deploy/compose.yml` y `deploy/Caddyfile` preparan una instalación con Django, PostgreSQL y HTTPS. Necesitas un servidor con Docker y un dominio apuntando a su IP. Antes de contratar cualquier servicio se debe elegir proveedor y costo con el propietario.
