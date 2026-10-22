@@ -1,0 +1,26 @@
+{% extends 'security/base.html' %}
+{% load static %}
+{% block title %}Verificar con una llave{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'security/passkeys.css' %}?v=1">
+<script type="module" src="{% static 'security/passkeys.js' %}?v=1"></script>
+<div class="passkey-page">
+  <p class="eyebrow">PASO 2 DE 2 · VERIFICACIÓN</p>
+  <div class="passkey-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="10" r="4.5"/><path d="M11.5 13.5 19 21h3v-3h-3v-3h-3M6.5 8.5h.01"/></svg></div>
+  <h1>Confirma que eres tú</h1>
+  <p class="intro">Usa la llave de acceso que registraste. Tu dispositivo te pedirá su PIN, huella o reconocimiento facial.</p>
+  {% if not configured %}<div class="passkey-notice"><strong>Este dominio aún no está habilitado</strong><p>Las llaves de acceso necesitan la dirección HTTPS configurada del panel. Puedes continuar con otro método de verificación.</p></div>{% endif %}
+  <form method="post" data-passkey-form="login" data-configured="{{ configured|yesno:'true,false' }}" data-options-url="{% url 'security:passkey_login_options' %}" data-verify-url="{% url 'security:passkey_login_verify' %}">
+    {% csrf_token %}
+    <button class="primary" type="submit" data-passkey-submit disabled>Usar mi llave de acceso</button>
+    <p class="passkey-status" data-passkey-status role="status" aria-live="polite" aria-atomic="true"></p>
+  </form>
+  <noscript><p>Activa JavaScript para usar tu llave o elige otro método de verificación.</p></noscript>
+  <div class="note"><strong>Confirmación privada</strong><p>El panel recibe la confirmación de identidad; no recibe tu huella, rostro ni PIN.</p></div>
+  <div class="passkey-links">
+    <a class="secondary" href="{% url 'security:otp' %}">Usar un código de recuperación</a>
+    {% if email_fallback %}<form class="secondary-form" method="post" action="{% url 'security:passkey_email_fallback' %}">{% csrf_token %}<button type="submit" class="text-button">Recibir un código por correo</button></form>{% endif %}
+    <form class="secondary-form" method="post" action="{% url 'security:logout' %}">{% csrf_token %}<button type="submit" class="text-button">Cancelar y volver al acceso</button></form>
+  </div>
+</div>
+{% endblock %}

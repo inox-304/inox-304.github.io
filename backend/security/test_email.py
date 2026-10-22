@@ -182,7 +182,7 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
 
     @override_settings(SECURITY_EMAIL_RESEND_SECONDS=0)
     def test_pending_login_without_delivered_code_can_retry_without_rotating_session(self):
-        with patch("security.email_auth.send_mail", side_effect=PermissionError("synthetic failure")), \
+        with patch("security.email_auth.send_verification_message", side_effect=PermissionError("synthetic failure")), \
              self.assertLogs("security.email_auth", level="WARNING"):
             self.assertEqual(self.password_step().status_code, 400)
         original_key = self.client.session.session_key
@@ -243,7 +243,7 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
     def test_nondelivery_backends_cannot_create_usable_codes(self):
         for backend in ["console", "filebased", "dummy"]:
             with self.subTest(backend=backend), override_settings(EMAIL_BACKEND=f"django.core.mail.backends.{backend}.EmailBackend"):
-                with patch("security.email_auth.send_mail") as send:
+                with patch("security.email_auth.send_verification_message") as send:
                     self.assertEqual(self.password_step().status_code, 400)
                 send.assert_not_called()
                 self.assertFalse(EmailChallenge.objects.exists())

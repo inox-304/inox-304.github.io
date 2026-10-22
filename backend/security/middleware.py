@@ -12,7 +12,8 @@ from .services import LAST_SEEN, audit, is_admin_authenticated
 
 
 class SecuritySessionMiddleware(MiddlewareMixin):
-    public_auth_views = {"login", "otp", "setup", "setup_qr", "logout", "email_verify", "email_resend"}
+    public_auth_views = {"login", "otp", "setup", "setup_qr", "logout", "email_verify", "email_resend",
+                         "passkey_login", "passkey_login_options", "passkey_login_verify", "passkey_email_fallback"}
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         protected = request.path == "/admin" or request.path.startswith("/admin/")

@@ -18,6 +18,8 @@ class EmailDevice(TimestampMixin, Device):
     email = models.EmailField(blank=True, default="")
     confirmed = models.BooleanField(default=False)
     last_sent_at = models.DateTimeField(null=True, blank=True)
+    delivery_paused_at = models.DateTimeField(null=True, blank=True)
+    delivery_smtp_code = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta(Device.Meta):
         constraints = [models.UniqueConstraint(fields=["user"], name="one_email_device_per_user")]
@@ -41,6 +43,54 @@ class EmailChallenge(models.Model):
     attempts = models.PositiveSmallIntegerField(default=0)
     consumed_at = models.DateTimeField(null=True, blank=True)
     invalidated_at = models.DateTimeField(null=True, blank=True)
+
+
+class PasskeyIdentity(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    handle = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
+
+class PasskeyDevice(TimestampMixin, Device):
+    credential_id = models.CharField(max_length=1400, unique=True)
+    public_key = models.BinaryField()
+    sign_count = models.PositiveBigIntegerField(default=0)
+    rp_id = models.CharField(max_length=253)
+    origin = models.CharField(max_length=300)
+    backed_up = models.BooleanField(default=False)
+    device_type = models.CharField(max_length=20, default="single_device")
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    def verify_token(self, token):
+        return False  # Only a complete, verified WebAuthn ceremony may authenticate.
+
+
+class PasskeyGrant(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="passkey_grants")
+    authorized_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="authorized_passkeys")
+    label = models.CharField(max_length=64)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+
+class PasskeyChallenge(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    purpose = models.CharField(max_length=16)
+    challenge = models.BinaryField()
+    session_digest = models.CharField(max_length=64)
+    auth_hash = models.CharField(max_length=128)
+    session_version = models.PositiveIntegerField()
+    rp_id = models.CharField(max_length=253)
+    origin = models.CharField(max_length=300)
+    label = models.CharField(max_length=64, blank=True)
+    allowed_credentials = models.JSONField(default=list)
+    grant = models.ForeignKey(PasskeyGrant, null=True, blank=True, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
 
 
 class EnrollmentPermission(models.Model):

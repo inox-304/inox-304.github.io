@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from .models import EmailDevice, EnrollmentPermission, LoginThrottle, RecoveryCode, RecoveryDevice, SecurityEvent, SecurityState
+from .models import EmailDevice, EnrollmentPermission, LoginThrottle, PasskeyDevice, RecoveryCode, RecoveryDevice, SecurityEvent, SecurityState
 
 PENDING_KEY = "security_pending"
 AUTH_AT = "security_authenticated_at"
@@ -113,7 +113,11 @@ def is_admin_authenticated(request):
     if not device.confirmed or device.user_id != user.pk:
         return False
     state = state_for(user)
-    if state.mfa_method == "email":
+    if isinstance(device, PasskeyDevice):
+        from .passkeys import active_devices
+        if not active_devices(user).filter(pk=device.pk).exists():
+            return False
+    elif state.mfa_method == "email":
         if isinstance(device, EmailDevice):
             if not device.email or device.email != user.email:
                 return False
@@ -146,7 +150,7 @@ def complete_login(request, user, device, version=None):
     request.session[LAST_SEEN] = now
     request.session[VERSION] = version if version is not None else state_for(user).session_version
     request.session.set_expiry(seconds("SECURITY_SESSION_SECONDS", 28800))
-    method = "recovery" if isinstance(device, RecoveryDevice) else "email" if isinstance(device, EmailDevice) else "totp"
+    method = f"passkey:{device.pk}" if isinstance(device, PasskeyDevice) else "recovery" if isinstance(device, RecoveryDevice) else "email" if isinstance(device, EmailDevice) else "totp"
     audit("login_success", request, user, method)
 
 

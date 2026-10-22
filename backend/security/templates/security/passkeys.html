@@ -1,0 +1,86 @@
+{% extends 'security/base.html' %}
+{% load static %}
+{% block title %}Llaves de acceso{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'security/passkeys.css' %}?v=1">
+<script type="module" src="{% static 'security/passkeys.js' %}?v=1"></script>
+<div class="passkey-page">
+  <p class="eyebrow">SEGURIDAD DE TU CUENTA</p>
+  <h1>Llaves de acceso</h1>
+  <p class="intro">Confirma tu identidad con la huella, el rostro o el PIN de tu dispositivo. También puedes usar una llave de seguridad compatible.</p>
+  {% for message in messages %}<p class="passkey-status{% if message.tags == 'error' %} is-error{% endif %}" role="status">{{ message }}</p>{% endfor %}
+  {% if error %}<p class="passkey-status is-error" role="alert">{{ error }}</p>{% endif %}
+  {% if not configured %}
+  <div class="passkey-notice"><strong>Falta habilitar el dominio seguro</strong><p>El registro estará disponible cuando el panel tenga su dirección HTTPS configurada para llaves de acceso. Tus métodos actuales de verificación siguen disponibles.</p></div>
+  {% endif %}
+
+  <section class="passkey-section" aria-labelledby="register-heading">
+    <h2 id="register-heading">Agregar una llave</h2>
+    {% if is_owner %}<p>Registra una llave para tu propia cuenta. Elige un nombre que te permita reconocerla después.</p>{% elif grants %}<p>Elige la autorización que te asignó el propietario y confirma tu contraseña para guardar la llave en tu dispositivo.</p>{% else %}<div class="passkey-empty"><strong>Necesitas una autorización</strong><p>El propietario debe autorizar el registro de una llave para tu cuenta. Cuando lo haga, la autorización aparecerá aquí.</p></div>{% endif %}
+    {% if is_owner or grants %}
+    <form method="post" data-passkey-form="register" data-configured="{{ configured|yesno:'true,false' }}" data-options-url="{% url 'security:passkey_register_options' %}" data-verify-url="{% url 'security:passkey_register_verify' %}">
+      {% csrf_token %}
+      <fieldset{% if not configured %} disabled{% endif %}>
+        {% if is_owner %}
+        <p><label for="passkey-label">Nombre de la llave</label><input id="passkey-label" name="label" type="text" maxlength="64" placeholder="Por ejemplo, laptop de administración" autocomplete="off" required></p>
+        {% else %}
+        <p><label for="passkey-grant">Autorización de registro</label><select id="passkey-grant" name="grant_id" required>{% for grant in grants %}<option value="{{ grant.pk }}">{{ grant.label }} · hasta {{ grant.expires_at|date:'d/m/Y H:i' }}</option>{% endfor %}</select></p>
+        {% endif %}
+        <p><label for="passkey-password">Tu contraseña actual</label><input id="passkey-password" name="password" type="password" autocomplete="current-password" required></p>
+        <button class="primary" type="submit" data-passkey-submit disabled>Registrar llave de acceso</button>
+      </fieldset>
+      <p class="passkey-status" data-passkey-status role="status" aria-live="polite" aria-atomic="true"></p>
+    </form>
+    <noscript><p>Activa JavaScript en tu navegador para registrar una llave de acceso.</p></noscript>
+    {% endif %}
+  </section>
+
+  <section class="passkey-section" aria-labelledby="devices-heading">
+    <h2 id="devices-heading">{% if is_owner %}Llaves del equipo{% else %}Tus llaves{% endif %}</h2>
+    <p>{% if is_owner %}Revisa qué dispositivos pueden verificar el acceso y revoca los que ya no se utilicen.{% else %}Estas son las llaves registradas para tu cuenta. Si pierdes un dispositivo, pide al propietario que revoque su llave.{% endif %}</p>
+    {% if devices %}<ul class="passkey-devices">
+    {% for device in devices %}
+      <li class="passkey-device">
+        <div class="passkey-device-head"><h3>{{ device.name }}</h3><span class="passkey-badge{% if device.revoked_at %} is-revoked{% endif %}">{% if device.revoked_at %}Revocada{% else %}Activa{% endif %}</span></div>
+        <p class="passkey-meta">{% if is_owner %}<span>{{ device.user.username }}</span>{% endif %}<span>Registrada el {{ device.created_at|date:'d/m/Y H:i' }}</span><span>{% if device.last_used_at %}Último uso: {{ device.last_used_at|date:'d/m/Y H:i' }}{% else %}Todavía no se ha usado para entrar{% endif %}</span>{% if device.revoked_at %}<span>Revocada el {{ device.revoked_at|date:'d/m/Y H:i' }}</span>{% endif %}</p>
+        {% if is_owner and not device.revoked_at %}
+        <details class="passkey-revoke"><summary>Revocar esta llave</summary><form method="post" action="{% url 'security:passkey_revoke' device.pk %}">{% csrf_token %}<p class="hint">Esta llave dejará de permitir el acceso. Confirma con tu contraseña de propietario.</p><p><label for="revoke-password-{{ device.pk }}">Tu contraseña actual</label><input id="revoke-password-{{ device.pk }}" name="password" type="password" autocomplete="current-password" required></p><button type="submit" class="passkey-revoke-button">Revocar «{{ device.name }}»</button></form></details>
+        {% endif %}
+      </li>
+    {% endfor %}
+    </ul>{% else %}<div class="passkey-empty"><strong>Aún no hay llaves registradas</strong><p>Las llaves aparecerán aquí después de completar su registro en el dispositivo.</p></div>{% endif %}
+  </section>
+
+  {% if is_owner %}
+  <section class="passkey-section" aria-labelledby="grant-heading">
+    <h2 id="grant-heading">Autorizar una llave para el equipo</h2>
+    <p>Elige la cuenta y asigna un nombre. Esa persona completará el registro desde su propia sesión y su dispositivo.</p>
+    {% if managed_users %}
+    <form method="post" action="{% url 'security:passkey_grant' %}">{% csrf_token %}
+      <fieldset{% if not configured %} disabled{% endif %}>
+        <p><label for="grant-user">Cuenta autorizada</label><select id="grant-user" name="user_id" required><option value="">Selecciona una cuenta</option>{% for account in managed_users %}<option value="{{ account.pk }}">{{ account.username }}</option>{% endfor %}</select></p>
+        <p><label for="grant-label">Nombre de la llave</label><input id="grant-label" name="label" type="text" maxlength="64" placeholder="Por ejemplo, dispositivo de gerencia" autocomplete="off" required></p>
+        <p><label for="grant-password">Tu contraseña de propietario</label><input id="grant-password" name="password" type="password" autocomplete="current-password" required></p>
+        <button class="primary" type="submit"{% if not configured %} disabled{% endif %}>Autorizar registro</button>
+      </fieldset>
+    </form>
+    {% else %}<div class="passkey-empty"><p>No hay otras cuentas disponibles para autorizar.</p></div>{% endif %}
+    {% if issued_grants %}
+    <h3>Autorizaciones pendientes</h3>
+    <ul class="passkey-devices">{% for grant in issued_grants %}
+      <li class="passkey-device"><strong>{{ grant.label }}</strong><p class="passkey-meta">{{ grant.user.username }} · vence {{ grant.expires_at|date:'d/m/Y H:i' }}</p>
+      <details class="passkey-revoke"><summary>Cancelar autorización</summary>
+        <form method="post" action="{% url 'security:passkey_grant_revoke' grant.pk %}">{% csrf_token %}
+          <p><label for="grant-revoke-{{ grant.pk }}">Tu contraseña de propietario</label><input id="grant-revoke-{{ grant.pk }}" name="password" type="password" autocomplete="current-password" required></p>
+          <button class="passkey-revoke-button" type="submit"{% if not configured %} disabled{% endif %}>Cancelar registro pendiente</button>
+        </form>
+      </details></li>
+    {% endfor %}</ul>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <div class="note"><strong>Conserva una alternativa de acceso</strong><p>Guarda tus códigos de recuperación en un lugar privado. No compartas el PIN de tu dispositivo ni tu contraseña.</p></div>
+  <div class="passkey-links"><a class="secondary" href="{% url 'security:recovery_codes' %}">Códigos de recuperación</a><a class="secondary" href="{% url 'admin:index' %}">Volver al panel</a></div>
+</div>
+{% endblock %}

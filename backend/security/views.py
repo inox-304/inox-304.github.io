@@ -59,6 +59,11 @@ def login_view(request):
         if form.is_valid():
             user = authenticate(request, username=form.cleaned_data["email"], password=form.cleaned_data["password"])
             if user and user.is_active and user.is_staff:
+                from .passkeys import active_devices
+                if active_devices(user).exists():
+                    start_pending(request, user, "passkey")
+                    audit("password_verified", request, user)
+                    return redirect("security:passkey_login")
                 if state_for(user).mfa_method == "email":
                     has_device = EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists()
                     if has_device or enrollment_allowed(user):
@@ -101,10 +106,10 @@ def otp_view(request):
     if user is None:
         return redirect("security:login")
     mode = request.session[PENDING_KEY].get("mode")
-    if mode not in ("otp", "email"):
+    if mode not in ("otp", "email", "passkey"):
         return redirect("security:login")
-    email_mode = mode == "email"
-    if email_mode and not EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists():
+    email_mode = mode in ("email", "passkey")
+    if mode == "email" and not EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists():
         return redirect("security:email_verify")
     form = OTPForm(request.POST or None, initial={"method": "recovery" if email_mode else "totp"})
     if email_mode:

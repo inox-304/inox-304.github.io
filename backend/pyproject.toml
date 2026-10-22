@@ -12,4 +12,5 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "qrcode>=8",
     "whitenoise>=6.9",
+    "webauthn>=2.7,<3",
 ]

@@ -6,11 +6,12 @@ import smtplib
 import ssl
 import time
 from datetime import datetime, timedelta, timezone as datetime_timezone
+from email.utils import make_msgid, parseaddr
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
@@ -18,7 +19,7 @@ from django.utils.crypto import constant_time_compare, salted_hmac
 from django.views.decorators.debug import sensitive_variables
 
 from .models import EmailChallenge, EmailDevice, EnrollmentPermission, SecurityState
-from .smtp_backend import SUPPORTED_SMTP_BACKENDS
+from .smtp_backend import SUPPORTED_SMTP_BACKENDS, smtp_status
 from .services import PENDING_KEY, VERSION, audit, seconds
 
 EMAIL_REGENERATE_KEY = "security_email_regenerate"
@@ -38,14 +39,28 @@ def _log_delivery_failure(error):
         OSError, ValueError,
     )
     category = next((kind.__name__ for kind in categories if isinstance(error, kind)), "UnexpectedError")
-    smtp_code = getattr(error, "smtp_code", None) if isinstance(error, smtplib.SMTPResponseException) else None
-    if type(smtp_code) is not int or not 100 <= smtp_code <= 599:
-        smtp_code = None
+    smtp_code = smtp_status(error)
     logger.warning("Email verification delivery failed (error=%s, smtp_code=%s)", category, smtp_code)
 
 
 class EmailDeliveryError(Exception):
     pass
+
+
+class EmailDeliveryPaused(EmailDeliveryError):
+    pass
+
+
+@sensitive_variables()
+def send_verification_message(subject, body, recipient):
+    sender = parseaddr(settings.DEFAULT_FROM_EMAIL)[1]
+    validate_email(sender)
+    # Avoid using a Windows machine name as the Message-ID domain. Keep the
+    # configured sender and envelope; this does not guarantee Gmail delivery.
+    domain = sender.rsplit("@", 1)[1].encode("idna").decode("ascii")
+    message = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient],
+                           headers={"Message-ID": make_msgid(domain=domain)})
+    return message.send(fail_silently=False)
 
 
 class InvalidEmailFlow(Exception):
@@ -129,6 +144,7 @@ def issue_email_challenge(request, user, purpose):
     if not (smtp_backend or test_backend):
         raise EmailDeliveryError()
     failed = False
+    permanently_rejected = False
     with transaction.atomic():
         state = SecurityState.objects.select_for_update().get(user=user)
         user = get_user_model().objects.get(pk=user.pk)
@@ -147,6 +163,8 @@ def issue_email_challenge(request, user, purpose):
             raise InvalidEmailFlow()
         if not device.confirmed and (purpose != "login" or not EnrollmentPermission.objects.filter(user=user, used_at__isnull=True, expires_at__gt=timezone.now()).exists()):
             raise InvalidEmailFlow()
+        if device.delivery_paused_at is not None:
+            raise EmailDeliveryPaused()
         now = timezone.now()
         cooldown = seconds("SECURITY_EMAIL_RESEND_SECONDS", 60)
         if device.last_sent_at and now < device.last_sent_at + timedelta(seconds=cooldown):
@@ -169,13 +187,20 @@ def issue_email_challenge(request, user, purpose):
         action = "iniciar sesión" if purpose == "login" else "generar nuevos códigos de recuperación"
         deadline = timezone.localtime(challenge.expires_at).strftime("%d/%m/%Y a las %H:%M:%S")
         try:
-            delivered = send_mail("INOX 304 · Código de seguridad",
+            delivered = send_verification_message("INOX 304 · Código de seguridad",
                                   f"Tu código para {action} es:\n\n{token}\n\nCaduca el {deadline} (hora del panel) y funciona una sola vez. Su vigencia máxima es de 5 minutos. No compartas este código. Si no lo solicitaste, ignora este mensaje.",
-                                  settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+                                  user.email)
             failed = delivered != 1
         except Exception as error:
             _log_delivery_failure(error)
             failed = True
+            status = smtp_status(error)
+            permanently_rejected = status is not None and status >= 500
+            if permanently_rejected:
+                device.delivery_paused_at = timezone.now()
+                device.delivery_smtp_code = status
+                device.save(update_fields=["delivery_paused_at", "delivery_smtp_code"])
+                audit("email_delivery_paused", request, user, f"smtp_{status}")
         if failed:
             challenge.invalidated_at = timezone.now()
             challenge.save(update_fields=["invalidated_at"])
@@ -183,6 +208,8 @@ def issue_email_challenge(request, user, purpose):
         else:
             audit("email_code_sent", request, user, purpose)
     clear_challenge_pointer(request, purpose)
+    if permanently_rejected:
+        raise EmailDeliveryPaused()
     if failed:
         raise EmailDeliveryError()
     if purpose == "login":

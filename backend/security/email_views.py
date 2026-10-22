@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST, require_http_methods
 
-from .email_auth import (EMAIL_REGENERATE_KEY, EmailCooldown, EmailDeliveryError,
+from .email_auth import (EMAIL_REGENERATE_KEY, EmailCooldown, EmailDeliveryError, EmailDeliveryPaused,
                          InvalidEmailFlow, clear_challenge_pointer,
                          issue_email_challenge, verify_email_challenge)
 from .forms import EmailCodeForm
@@ -29,6 +29,13 @@ def email_error(request, user, error, purpose="login"):
         return response
     if isinstance(error, InvalidEmailFlow):
         return redirect("security:login")
+    if isinstance(error, EmailDeliveryPaused):
+        return render(request, "security/email_error.html", {
+            "title": "El envío de códigos está pausado",
+            "message": "Se registró un rechazo del correo. El responsable del sistema debe revisar la entrega antes de reanudar los envíos. Si guardaste tus códigos de recuperación, puedes usar uno para entrar.",
+            "can_recover": purpose == "login" and EmailDevice.objects.filter(user=user, confirmed=True).exists(),
+            "retry_login": purpose == "login", "delivery_paused": True,
+        }, status=400)
     audit("email_unavailable", request, user, purpose)
     return render(request, "security/email_error.html", {
         "title": "No pudimos enviar el código", "message": "El servicio de correo no está disponible. Inténtalo más tarde o contacta al responsable del sistema.",
