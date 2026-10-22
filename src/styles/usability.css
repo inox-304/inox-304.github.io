@@ -1,0 +1,23 @@
+/* Keep essential controls comfortable on touch screens and keyboard navigation. */
+button, input, select, textarea { touch-action: manipulation; }
+:is(a, button, input, select, textarea):focus-visible { outline: 3px solid #5487b5; outline-offset: 4px; }
+main:focus { outline: none; }
+.breadcrumbs a { display: inline-flex; align-items: center; min-height: 32px; }
+.quote-form :is(input, select, textarea) { font-size: 16px; }
+.quote-form label { font-size: 13px; line-height: 1.6; }
+.quote-form .form-note { font-size: 12px; }
+.product-detail-copy h1, .product-card-info h3 { overflow-wrap: anywhere; }
+.product-detail-cta p { font-size: 12px; line-height: 1.7; }
+.specifications li > svg { flex-shrink: 0; }
+@media (max-width: 600px) {
+  .product-card-info h3 { font-size: 14px; line-height: 1.5; }
+  .card-link { font-size: 11px; }
+  .quote-form { padding: 25px 20px; }
+  .contact-method a, .contact-method p { font-size: 14px; }
+  .contact-method .map-link { min-height: 44px; font-size: 13px; }
+  .footer-column a { min-height: 32px; }
+  .breadcrumbs { font-size: 11px; }
+}
+@media (forced-colors: active) {
+  :is(a, button, input, select, textarea):focus-visible { outline-color: Highlight; }
+}

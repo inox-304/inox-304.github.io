@@ -63,7 +63,8 @@ def clean_upload(upload, kind):
         raise ValidationError("El archivo supera 8 MB.")
     if kind == "image":
         try:
-            with Image.open(BytesIO(data)) as source:
+            # Reject other formats before their parsers inspect untrusted bytes.
+            with Image.open(BytesIO(data), formats=("JPEG", "PNG", "WEBP", "AVIF")) as source:
                 if source.format not in {"JPEG", "PNG", "WEBP", "AVIF"}:
                     raise ValidationError("Use una imagen JPG, PNG, WebP o AVIF.")
                 if source.width * source.height > 40_000_000:

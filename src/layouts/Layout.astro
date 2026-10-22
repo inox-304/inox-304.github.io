@@ -6,6 +6,7 @@ import CmsBridge from '../components/CmsBridge.astro';
 import '../styles/global.css';
 import '../styles/motion.css';
 import '../styles/commerce.css';
+import '../styles/usability.css';
 import { site } from '../data/site';
 interface Props { title?: string; description?: string; image?: string; home?: boolean; noindex?: boolean }
 const { title = 'Acero que impulsa tu negocio', description = site.description, image = '/images/hero-studio.webp', home = false, noindex = false } = Astro.props;
@@ -25,7 +26,7 @@ const canonical = new URL(withBase(Astro.url.pathname), Astro.site);
   <body id="top" class:list={[{ 'home-page': home }]}>
     <a class="skip-link" href="#main">Saltar al contenido</a>
     <Header/>
-    <main id="main"><slot/></main>
+    <main id="main" tabindex="-1"><slot/></main>
     <Footer/>
     <CmsBridge/>
     <script>import '../scripts/motion';</script>

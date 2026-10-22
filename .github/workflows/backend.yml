@@ -39,6 +39,7 @@ jobs:
           node scripts/test-product-stage.mjs
           node scripts/test-model-budget.mjs
           node scripts/test-passkeys.mjs
+          node scripts/test-catalog-controls.mjs
       - run: uv sync --project backend --locked
       - run: uv run --project backend python backend/manage.py makemigrations --check --dry-run
       - run: npm run server:test

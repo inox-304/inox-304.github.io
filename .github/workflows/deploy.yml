@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 24
           package-manager: npm
-          build-cmd: node scripts/configure-domain.mjs && npm run build && npm test && npm run check:models && node scripts/test-cms.mjs && node scripts/test-paths.mjs && node scripts/test-admin-entry.mjs && node scripts/test-product-stage.mjs && node scripts/test-model-budget.mjs
+          build-cmd: node scripts/configure-domain.mjs && npm run build && npm test && npm run check:models && node scripts/test-cms.mjs && node scripts/test-paths.mjs && node scripts/test-admin-entry.mjs && node scripts/test-product-stage.mjs && node scripts/test-model-budget.mjs && node scripts/test-catalog-controls.mjs
 
   deploy:
     needs: build

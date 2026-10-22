@@ -142,7 +142,7 @@ class CatalogTests(TestCase):
         ProductAdditional.objects.create(product=self.product, name="Ruedas", price=50, cost=20, show_price=False, charge_unit="custom", custom_unit="juego", is_active=False)
         ProductImage.objects.create(product=self.product, url="/images/segunda.webp")
         request = RequestFactory().post("/admin/")
-        request.user = get_user_model().objects.create_user(username="duplicator")
+        request.user = get_user_model().objects.create_user(username="duplicator", is_staff=True, is_superuser=True)
         model_admin = ProductAdmin(Product, admin.site)
         with patch.object(model_admin, "message_user"):
             model_admin.duplicate_products(request, Product.objects.filter(pk=self.product.pk))
@@ -172,6 +172,14 @@ class CatalogTests(TestCase):
             with self.assertRaises(ValidationError):
                 validate_glb(glb(document))
         validate_glb(glb({"asset": {"version": "2.0"}}))
+
+    def test_unsupported_image_parser_never_receives_upload_bytes(self):
+        data = BytesIO()
+        Image.new("RGB", (1, 1), "white").save(data, "BMP")
+        with patch("PIL.BmpImagePlugin.BmpImageFile._open", side_effect=AssertionError("Unexpected parser")) as parser:
+            with self.assertRaises(ValidationError):
+                clean_upload(SimpleUploadedFile("disguised.jpg", data.getvalue()), "image")
+            parser.assert_not_called()
 
     def test_seed_never_overwrites_existing_records(self):
         call_command("seed_catalog", stdout=StringIO())

@@ -3,6 +3,7 @@ import { apiProductRoute, catalogSlug, emptyCmsData, parsePublicCatalog } from '
 import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
 import { additionalsQuoteSummary, createAdditionalOption, reconcileAdditionalSelection, type AdditionalSelection } from '../lib/product-additionals';
+import { catalogSearchText } from '../lib/catalog-controls';
 
 type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
@@ -29,7 +30,9 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
     const copy = document.createElement('div'); copy.className = 'product-card-info';
     const label = document.createElement('p'); label.className = 'eyebrow';
     const name = document.createElement('h3'); const link = document.createElement('span'); link.className = 'card-link'; link.textContent = 'Explorar equipo ↗';
-    copy.append(label, name, link);
+    const code = document.createElement('span'); code.className = 'product-card-code'; code.dataset.cardCode = '';
+    const meta = document.createElement('div'); meta.className = 'product-card-meta'; meta.append(label, code);
+    copy.append(meta, name, link);
     const main = document.createElement('a'); main.className = 'product-card-main'; main.append(photo, copy);
     const commerce = document.createElement('div'); commerce.className = 'product-card-commerce';
     const price = document.createElement('p'); price.className = 'product-card-price'; price.dataset.cardPrice = '';
@@ -39,12 +42,14 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
   card.hidden = false;
   const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) main.href = route(product);
   card.dataset.productId = product.id;
-  card.dataset.category = product.category; card.dataset.name = `${product.name} ${product.summary} ${category(product)}`;
+  card.dataset.category = product.category; card.dataset.name = catalogSearchText(product, category(product));
+  card.dataset.title = product.name; card.dataset.catalogOrder = String(index);
   card.classList.toggle('product-cutout', getProductStage(product.image).isCutout);
   card.removeAttribute('data-reveal'); card.removeAttribute('style');
   setText('.product-index', String(index + 1).padStart(2, '0'), card);
   setText('.product-card-info .eyebrow', category(product), card);
   setText('.product-card-info h3', product.name, card);
+  setText('[data-card-code]', product.id, card);
   const image = card.querySelector('img'); if (image) { image.src = withBase(product.image); image.alt = product.name; image.removeAttribute('srcset'); }
   const price = formatProductPrice(product);
   const priceNode = card.querySelector<HTMLElement>('[data-card-price]'); if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
@@ -274,6 +279,7 @@ function showStatus(message = '') {
 }
 async function refresh() {
   if (document.hidden || inFlight || payload?.preview) return;
+  if (!successful) document.documentElement.dataset.cmsState = 'loading';
   const controller = new AbortController(); inFlight = controller;
   const request = ++revision;
   const timeout = window.setTimeout(() => controller.abort(), 12000);
@@ -298,6 +304,7 @@ function start() {
   catch { apply(emptyCmsData()); }
   if (payload?.preview) { document.documentElement.dataset.cmsState = 'preview'; showStatus('Vista previa privada. Los cambios sin publicar solo son visibles aquí.'); return; }
   void refresh();
+  document.addEventListener('inox:catalog-refresh', () => { void refresh(); });
   window.setInterval(() => { void refresh(); }, 30000);
   window.addEventListener('focus', () => { void refresh(); });
   document.addEventListener('visibilitychange', () => {

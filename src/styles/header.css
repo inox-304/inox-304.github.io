@@ -98,6 +98,8 @@
   transition: background 260ms ease, color 260ms ease;
 }
 .site-header .mobile-nav a:is(:hover, :focus-visible) { color: #e8ecf2; background: rgb(232 236 242 / 6%); }
+.site-header .mobile-nav a[aria-current="page"] { color: #fff; background: #ffffff10; box-shadow: inset 3px 0 #adc5e4; }
+.site-header .mobile-nav[hidden] { display: none; }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .site-header :is(.desktop-nav a, .header-cta):is(:hover, :focus-visible) { background: #292e36; }

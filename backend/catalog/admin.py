@@ -185,10 +185,28 @@ class ProductAdmin(AuditedAdmin):
         data["products"] = [existing for existing in data["products"] if existing["id"] != product.code] + [item]
         return _render_shell("equipo/index.html", data, title=f"Vista previa · {product.name}", description=product.description, canonical=f"/catalogo/{product.slug}/", preview=True, preview_product_id=product.code)
 
-    @admin.action(description="Duplicar seleccionados como borradores")
+    def has_duplicate_permission(self, request):
+        # A duplicate includes variants, additionals and gallery rows. Granting
+        # product access alone must not bypass the permissions of those inlines.
+        if not self.has_view_or_change_permission(request) or not self.has_add_permission(request):
+            return False
+        for model in (ProductVariant, ProductAdditional, ProductImage):
+            name = model._meta.model_name
+            if not request.user.has_perm(f"catalog.add_{name}") or not (
+                request.user.has_perm(f"catalog.view_{name}")
+                or request.user.has_perm(f"catalog.change_{name}")
+            ):
+                return False
+        return True
+
+    @admin.action(description="Duplicar seleccionados como borradores", permissions=["duplicate"])
     def duplicate_products(self, request, queryset):
+        if not self.has_duplicate_permission(request):
+            raise PermissionDenied
         with transaction.atomic(), audit_context(request.user):
             for source in queryset:
+                if not self.has_view_or_change_permission(request, source):
+                    raise PermissionDenied
                 token = uuid4().hex[:8]
                 values = {field.attname: getattr(source, field.attname) for field in source._meta.concrete_fields if not field.primary_key and field.name not in ("created_at", "updated_at")}
                 values.update(code=f"{source.code[:53]}-C-{token}", slug=f"{source.slug[:134]}-copia-{token}", name=f"{source.name[:242]} (copia)", is_published=False)
@@ -200,9 +218,13 @@ class ProductAdmin(AuditedAdmin):
         self.message_user(request, "Copias creadas como borradores. Puede editarlas antes de publicarlas.")
 
     def _visibility_action(self, request, queryset, published):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
         if request.POST.get("confirm") == "yes":
             with transaction.atomic(), audit_context(request.user):
                 for product in queryset:
+                    if not self.has_change_permission(request, product):
+                        raise PermissionDenied
                     product.is_published = published
                     if published:
                         product.is_active = True
@@ -211,11 +233,11 @@ class ProductAdmin(AuditedAdmin):
             return None
         return TemplateResponse(request, "admin/catalog/confirm_action.html", {**self.admin_site.each_context(request), "title": "Confirmar publicación" if published else "Confirmar ocultación", "queryset": queryset, "action": "publish_products" if published else "hide_products", "opts": self.model._meta, "action_checkbox_name": admin.helpers.ACTION_CHECKBOX_NAME})
 
-    @admin.action(description="Ocultar seleccionados (conservar datos)")
+    @admin.action(description="Ocultar seleccionados (conservar datos)", permissions=["change"])
     def hide_products(self, request, queryset):
         return self._visibility_action(request, queryset, False)
 
-    @admin.action(description="Publicar seleccionados")
+    @admin.action(description="Publicar seleccionados", permissions=["change"])
     def publish_products(self, request, queryset):
         return self._visibility_action(request, queryset, True)
 
