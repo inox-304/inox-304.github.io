@@ -318,7 +318,9 @@ class VariantConfigurationTests(TestCase):
             product.save()
             response = self.client.get(variant.model_asset.public_url)
             self.assertEqual(response.status_code, 200)
-            response.close()
+            # Let the test client's streaming wrapper close the file without
+            # closing PostgreSQL's connection inside this TestCase transaction.
+            self.assertEqual(b"".join(response.streaming_content), Path(variant.model_asset.file.path).read_bytes())
             variant.is_active = False
             variant.save()
             self.assertEqual(self.client.get(variant.model_asset.public_url).status_code, 404)
