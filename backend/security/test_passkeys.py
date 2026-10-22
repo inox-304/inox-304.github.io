@@ -15,7 +15,7 @@ from unittest import skipUnless
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.db import close_old_connections, connection, transaction
+from django.db import close_old_connections, connection, connections, transaction
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -589,7 +589,10 @@ class PasskeyConcurrencyTests(PasskeyFlowHelpers, TransactionTestCase):
                 barrier.wait(timeout=10)
                 return self.post_json(name, payload, client).status_code
             finally:
-                close_old_connections()
+                # Worker threads own their connections. Healthy persistent
+                # connections otherwise outlive the executor and block DROP
+                # DATABASE when the PostgreSQL test runner tears down.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             return list(executor.map(submit, clients_and_payloads))
