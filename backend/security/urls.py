@@ -3,9 +3,13 @@ from django.urls import path
 from . import views
 from . import email_views
 from . import passkey_views
+from . import account_views
 
 app_name = "security"
 urlpatterns = [
+    path("accounts/", account_views.manage, name="accounts"),
+    path("accounts/create/", account_views.create, name="account_create"),
+    path("accounts/<int:user_id>/update/", account_views.update, name="account_update"),
     path("keys/", passkey_views.manage, name="passkeys"),
     path("keys/grants/", passkey_views.grant, name="passkey_grant"),
     path("keys/grants/<uuid:grant_id>/revoke/", passkey_views.revoke_grant, name="passkey_grant_revoke"),

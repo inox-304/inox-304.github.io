@@ -8,7 +8,7 @@
 <div class="inv-shell" data-refresh-url="{% url 'inventory-refresh' %}">
   <header class="inv-heading">
     <div><span class="inv-eyebrow">CONTROL DE OPERACIONES</span><h1>Tu inventario, en orden.</h1><p>Una vista de la tienda, el taller y lo que cuesta fabricar.</p></div>
-    <div class="inv-actions"><a class="inv-button inv-secondary" href="{% url 'admin:catalog_product_changelist' %}">Catálogo</a>{% if sheet_url %}<a class="inv-button inv-secondary" href="{{ sheet_url }}" target="_blank" rel="noopener noreferrer">Abrir Google Sheets ↗</a>{% endif %}{% if sync_ready %}<form id="inv-refresh-form" method="post" action="{% url 'inventory-refresh' %}">{% csrf_token %}<button class="inv-button" type="submit">Actualizar ahora</button></form>{% endif %}</div>
+    <div class="inv-actions">{% if perms.catalog.view_product or perms.catalog.change_product %}<a class="inv-button inv-secondary" href="{% url 'admin:catalog_product_changelist' %}">Catálogo</a>{% endif %}{% if sheet_url %}<a class="inv-button inv-secondary" href="{{ sheet_url }}" target="_blank" rel="noopener noreferrer">Abrir Google Sheets ↗</a>{% endif %}{% if sync_ready %}<form id="inv-refresh-form" method="post" action="{% url 'inventory-refresh' %}">{% csrf_token %}<button class="inv-button" type="submit">Actualizar ahora</button></form>{% endif %}</div>
   </header>
   <div class="inv-sync" id="inv-sync-status" role="status" aria-live="polite" data-state="{{ sync.state }}"><span class="inv-source-dot"></span><strong>{{ sync.message }}</strong><a href="{% url 'security:login' %}?next={% url 'inventory-dashboard' %}" hidden>Volver a iniciar sesión</a></div>
   {{ sync|json_script:"inv-sync-data" }}

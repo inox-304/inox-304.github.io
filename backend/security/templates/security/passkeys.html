@@ -81,6 +81,6 @@
   {% endif %}
 
   <div class="note"><strong>Conserva una alternativa de acceso</strong><p>Guarda tus códigos de recuperación en un lugar privado. No compartas el PIN de tu dispositivo ni tu contraseña.</p></div>
-  <div class="passkey-links"><a class="secondary" href="{% url 'security:recovery_codes' %}">Códigos de recuperación</a><a class="secondary" href="{% url 'admin:index' %}">Volver al panel</a></div>
+  <div class="passkey-links">{% if is_owner %}<a class="secondary" href="{% url 'security:accounts' %}">Accesos del equipo</a>{% endif %}<a class="secondary" href="{% url 'security:recovery_codes' %}">Códigos de recuperación</a><a class="secondary" href="{% url 'admin:index' %}">Volver al panel</a></div>
 </div>
 {% endblock %}

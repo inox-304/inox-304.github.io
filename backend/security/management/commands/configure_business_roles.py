@@ -26,12 +26,13 @@ def normalized_email(value):
 
 
 def commercial_permission_ids():
-    # Use the models' standard permission names, never arbitrary custom grants.
+    # Only standard catalog permissions and the explicit inventory capability.
     expected = {
         (model._meta.model_name, f"{action}_{model._meta.model_name}")
         for model in apps.get_app_config("catalog").get_models()
         for action in ACTIONS.intersection(model._meta.default_permissions)
     }
+    expected.add(("product", "view_inventory"))
     found = {
         (model, codename): pk
         for pk, model, codename in Permission.objects.filter(

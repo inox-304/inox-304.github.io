@@ -149,6 +149,7 @@ class Product(ValidatedModel):
         ordering = ("order", "name", "pk")
         verbose_name = "producto"
         verbose_name_plural = "productos"
+        permissions = [("view_inventory", "Puede consultar y actualizar la copia del inventario")]
 
     def clean(self):
         super().clean()

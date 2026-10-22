@@ -12,7 +12,7 @@ from .inventory_sync import refresh_inventory, sync_status
 
 @require_GET
 def inventory_dashboard(request):
-    if not request.user.has_perm("catalog.view_product"):
+    if not request.user.has_perm("catalog.view_inventory"):
         raise PermissionDenied
     context = {**admin.site.each_context(request), "title": "Inventario", "inventory": None, "error": "", "is_nav_sidebar_enabled": False}
     try:
@@ -44,7 +44,7 @@ def inventory_dashboard(request):
 def inventory_refresh(request):
     # Refresh is a read from Google, never a stock/catalog edit. All inventory
     # readers can keep their private projection up to date, with CSRF protection.
-    if not request.user.has_perm("catalog.view_product"):
+    if not request.user.has_perm("catalog.view_inventory"):
         raise PermissionDenied
     result = refresh_inventory()
     if result["refreshed"] and result["changed"]:
@@ -60,6 +60,6 @@ def inventory_refresh(request):
 
 @require_GET
 def inventory_status(request):
-    if not request.user.has_perm("catalog.view_product"):
+    if not request.user.has_perm("catalog.view_inventory"):
         raise PermissionDenied
     return JsonResponse(sync_status())

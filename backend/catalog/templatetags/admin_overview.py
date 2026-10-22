@@ -4,8 +4,18 @@ from django import template
 from django.db.models import Count, Q
 
 from catalog.models import Product
+from security.passkeys import configuration, is_owner
 
 register = template.Library()
+
+
+@register.simple_tag(takes_context=True)
+def team_access_overview(context):
+    """Only the configured owner can administer accounts or other users' keys."""
+    request = context.get("request")
+    if request is None or not is_owner(request.user):
+        return None
+    return {"passkeys_configured": configuration() is not None}
 
 
 @register.simple_tag(takes_context=True)

@@ -1,0 +1,24 @@
+.auth-shell:has(.accounts-page) { width: min(100% - 40px, 920px); }
+.accounts-page h1 { max-width: none; }
+.accounts-section { margin-top: 30px; padding-top: 26px; border-top: 1px solid #d8e2ed; }
+.accounts-section h2 { font-size: 21px; margin: 0 0 12px; color: #10243a; }
+.accounts-section > p, .accounts-explainer p { font-size: 14px; color: #52677d; line-height: 1.7; }
+.accounts-explainer, .accounts-notice { padding: 18px; border: 1px solid #d5e3f0; background: #edf3f9; border-radius: 12px; color: #21466c; }
+.accounts-explainer p { margin-bottom: 0; }
+.accounts-error { padding: 14px 18px; border: 1px solid #f0c6bf; background: #fff2ef; border-radius: 10px; color: #9c2e20; }
+.accounts-list { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 14px; }
+.account-item { border: 1px solid #d4dfea; padding: 20px; border-radius: 14px; background: #fff; }
+.account-item-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.account-item h3 { font-size: 17px; margin: 0; color: #17314d; overflow-wrap: anywhere; }
+.account-item-heading p, .account-meta { color: #576b80; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.account-badge { font-size: 12px; border-radius: 999px; padding: 5px 10px; background: #e9f4ee; color: #286042; white-space: nowrap; }
+.account-badge.is-inactive { background: #edf0f4; color: #526176; }
+.account-action { padding-top: 12px; border-top: 1px solid #e2e8ef; margin-top: 12px; }
+.account-action summary { color: #244f77; cursor: pointer; padding: 8px 0; font-size: 14px; }
+.account-action form { padding-top: 5px; }
+.accounts-page .helptext { display: block; font-size: 12px; line-height: 1.6; color: #5a6d81; margin-top: 7px; }
+.accounts-page select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #bbcbdd; border-radius: 8px; background: #fff; color: #163049; font: inherit; }
+.account-danger { padding: 12px 18px; min-height: 46px; border: 1px solid #d0a79f; border-radius: 8px; background: #fff; color: #9a3020; font: inherit; cursor: pointer; }
+.accounts-links { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 30px; }
+.accounts-page :is(button, input, select, summary, a):focus-visible { outline: 3px solid #5487b5; outline-offset: 3px; }
+@media(max-width: 600px) { .account-item { padding: 16px; } .account-item-heading { flex-wrap: wrap; } .accounts-page input, .accounts-page select { font-size: 16px; } }

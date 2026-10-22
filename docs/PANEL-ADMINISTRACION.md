@@ -126,6 +126,17 @@ En **Contactos** cambia teléfonos, WhatsApp y mensajes. En **Ajustes del negoci
 
 El panel avisa de cambios sin guardar. Los formularios validan en el servidor y las eliminaciones piden confirmación. Prefiere **ocultar** para conservar la información y el historial.
 
+## Accesos del equipo
+
+El propietario configurado dispone de **Accesos del equipo → Gestionar cuentas y permisos** en el inicio del panel, en `/admin/auth/accounts/`. La gerencia no puede abrir esa pantalla, crear cuentas ni conceder permisos. Cada cambio requiere la sesión con segundo factor, la contraseña actual del propietario y protección CSRF.
+
+- **Agregar una cuenta:** indica correo, nombre, contraseña segura y acceso a catálogo, inventario o ambos. La cuenta no obtiene permisos de propietario. Tiene 24 horas para confirmar su propio segundo factor; hasta entonces no puede entrar al panel.
+- **Cambiar permisos:** limita los módulos disponibles. El inventario permite consultar y actualizar la copia privada de Google Sheets; editar la hoja exige el permiso de editor otorgado por separado en Google.
+- **Desactivar o reactivar:** conserva contraseña, segundo factor y datos. Desactivar bloquea la cuenta, sus llaves y sesiones; reactivar exige iniciar sesión nuevamente. Los cambios de permisos también invalidan las sesiones anteriores.
+- **Renovar activación inicial:** aparece cuando vencieron las 24 horas de una cuenta activa que nunca confirmó su segundo factor y conserva una autorización sin usar. Renueva otras 24 horas, sin cambiar contraseña ni dispositivos ni enviar códigos. Rechaza cuentas ya activadas; la recuperación de MFA sigue siendo un procedimiento separado.
+
+La cuenta del propietario y cualquier superusuario quedan protegidos frente a estas acciones. No se borran cuentas ni se permite elevarlas a superusuario. La sección **Seguridad y llaves** administra las autorizaciones de dispositivos por separado; el registro de llaves requiere la dirección HTTPS definitiva del panel. Todas las acciones que cambian accesos se registran sin contraseñas ni códigos.
+
 ## Cuentas y duración de sesiones
 
 - No existe registro público. Solo un operador con acceso al servidor puede autorizar propietarios mediante `create_owner`.

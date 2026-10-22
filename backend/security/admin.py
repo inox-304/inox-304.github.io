@@ -5,7 +5,8 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from .models import SecurityEvent
 
-# Account authorization and MFA enrollment are explicit server CLI operations.
+# Account authorization uses the owner-only accounts screen. Generic auth/MFA
+# editors remain disabled: they could bypass owner, role and enrollment checks.
 for protected_model in (get_user_model(), Group, TOTPDevice):
     if admin.site.is_registered(protected_model):
         admin.site.unregister(protected_model)

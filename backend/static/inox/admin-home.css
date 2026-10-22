@@ -45,5 +45,17 @@
 .inox-home #content-main{float:none;width:100%}
 .inox-home-more-content:after{content:"";display:block;clear:both}
 .inox-home .module:last-child{margin-bottom:0!important}
+.inox-home-team{margin:0 0 24px;padding:25px 28px;border:1px solid #cfdeed;border-radius:16px;background:linear-gradient(125deg,#f8fbff,#eef4fa)}
+.inox-home-team-heading{display:flex;align-items:center;gap:14px;margin-bottom:21px}
+.inox-home-team-heading .inox-home-eyebrow{margin:0 0 5px}
+.inox-home-team h2{margin:0;color:#153653;font-size:24px;letter-spacing:-.5px}
+.inox-home-team-options{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.inox-home-team-options>div+div{border-left:1px solid #d7e2ed;padding-left:24px}
+.inox-home-team h3{margin:0 0 7px;color:#244762;font-size:15px;font-weight:650}
+.inox-home-team-options p{max-width:460px;margin:0 0 10px;color:#536d85;font-size:13px;line-height:1.65}
+.inox-home-team .inox-home-secondary{display:inline-flex;align-items:center;gap:12px;min-height:40px}
+.inox-home-team-notice{margin:19px 0 0;padding:13px 15px;border:1px solid #d3deea;border-radius:9px;background:#fff;color:#506a80;font-size:12px;line-height:1.7}
+.inox-home-team-notice strong{color:#2b4963}
 @media(max-width:900px){.inox-home #content{padding:25px 18px}.inox-home-card{padding:24px}.inox-home-grid{gap:16px}.inox-home .inox-home-primary{gap:16px}.inox-home-actions{gap:10px 18px}.inox-home-more>summary small{display:block;margin:5px 0 0 20px}}
 @media(max-width:700px){.inox-home-grid{grid-template-columns:1fr}.inox-home #content .inox-home-heading h1{font-size:29px}.inox-home-description{min-height:0}.inox-home-card{padding:24px}.inox-home-card-heading{margin-bottom:16px}.inox-home-connection{margin:16px 0 20px}.inox-home-more-content{padding:14px}.inox-home-metrics{gap:8px}.inox-home-more .module table td{white-space:normal}.inox-home-more .module table td a{padding-right:0}}
+@media(max-width:700px){.inox-home-team{padding:22px;margin-bottom:16px}.inox-home-team h2{font-size:22px}.inox-home-team-options{grid-template-columns:1fr;gap:19px}.inox-home-team-options>div+div{padding:19px 0 0;border-left:0;border-top:1px solid #d7e2ed}.inox-home-team-heading{gap:11px}.inox-home-team .inox-home-eyebrow{font-size:9px;letter-spacing:.1em}}

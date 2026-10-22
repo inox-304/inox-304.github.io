@@ -1,7 +1,7 @@
 {% extends "admin/index.html" %}
 {% load static admin_overview %}
 
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/admin-home.css' %}?v=1">{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/admin-home.css' %}?v=2">{% endblock %}
 {% block coltype %}colM{% endblock %}
 {% block bodyclass %}{{ block.super }} inox-home{% endblock %}
 {% block content_title %}
@@ -14,6 +14,30 @@
 
 {% block content %}
 {% catalog_overview as overview %}
+{% team_access_overview as team_access %}
+{% if team_access %}
+<section class="inox-home-team" aria-labelledby="team-access-title">
+  <div class="inox-home-team-heading">
+    <span class="inox-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3 3 7v5c0 5 9 9 9 9s9-4 9-9V7l-9-4Z M8 12l3 3 5-6"/></svg></span>
+    <div><p class="inox-home-eyebrow">CONTROL DEL PROPIETARIO</p><h2 id="team-access-title">Accesos del equipo</h2></div>
+  </div>
+  <div class="inox-home-team-options">
+    <div>
+      <h3>Cuentas y permisos</h3>
+      <p>Activa o desactiva una cuenta y define qué puede administrar. Desactivar la cuenta bloquea todos sus accesos.</p>
+      <a class="inox-home-secondary" href="{% url 'security:accounts' %}">Gestionar cuentas y permisos <span aria-hidden="true">→</span></a>
+    </div>
+    <div>
+      <h3>Seguridad y llaves</h3>
+      <p>Autoriza el registro de un dispositivo o revoca una llave. Revocar una llave no desactiva la cuenta ni sus otros métodos.</p>
+      <a class="inox-home-secondary" href="{% url 'security:passkeys' %}">Gestionar llaves de acceso <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+  {% if not team_access.passkeys_configured %}
+  <p class="inox-home-team-notice"><strong>Registro de llaves pendiente.</strong> Falta habilitar la dirección HTTPS del panel. La gestión de cuentas y los métodos actuales de verificación siguen disponibles.</p>
+  {% endif %}
+</section>
+{% endif %}
 <div class="inox-home-grid">
   {% if overview %}
   <section class="inox-home-card inox-home-catalog" aria-labelledby="catalog-title">
@@ -40,7 +64,7 @@
   </section>
   {% endif %}
 
-  {% if perms.catalog.view_product %}
+  {% if perms.catalog.view_inventory %}
   <section class="inox-home-card inox-home-inventory" aria-labelledby="inventory-title">
     <div class="inox-home-card-heading">
       <span class="inox-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21V7l9-4 9 4v14H3Z M7 21V11h10v10 M7 15h10 M7 18h10 M2 21h20"/></svg></span>

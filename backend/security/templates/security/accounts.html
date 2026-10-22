@@ -1,0 +1,66 @@
+{% extends 'security/base.html' %}
+{% load static %}
+{% block title %}Accesos del equipo{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'security/accounts.css' %}?v=1">
+<div class="accounts-page">
+  <p class="eyebrow">CONTROL DEL PROPIETARIO</p>
+  <h1>Accesos del equipo</h1>
+  <p class="intro">Decide qué cuentas entran al panel y qué pueden gestionar. Tu cuenta de propietario conserva el control de estos accesos.</p>
+  {% for message in messages %}<p class="accounts-notice" role="status">{{ message }}</p>{% endfor %}
+  {% if error %}<p class="accounts-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="accounts-explainer"><strong>Cuenta, permisos y llave</strong><p>La cuenta define quién entra; sus permisos habilitan catálogo o inventario. La llave confirma la identidad al entrar. Desactivar una cuenta bloquea todas sus llaves y sesiones.</p><p>Los permisos de edición de Google Sheets se administran por separado en Google. El acceso al inventario permite consultar y actualizar su copia en el panel.</p></div>
+
+  <section class="accounts-section" aria-labelledby="accounts-list-heading">
+    <h2 id="accounts-list-heading">Cuentas del panel</h2>
+    <ul class="accounts-list">
+    {% for row in accounts %}
+      <li class="account-item">
+        <div class="account-item-heading"><div><h3>{{ row.account.first_name|default:row.account.username }}</h3>{% if row.account.first_name %}<p>{{ row.account.username }}</p>{% endif %}</div><span class="account-badge{% if not row.account.is_active %} is-inactive{% endif %}">{% if row.protected %}Protegida{% elif row.account.is_active and row.account.is_staff %}Activa{% else %}Sin acceso{% endif %}</span></div>
+        {% if row.protected %}<p class="account-meta">Esta cuenta no se puede modificar desde la gestión del equipo.</p>
+        {% else %}
+          <p class="account-meta">{{ row.role_label }}</p>
+          {% if row.initial_pending %}<p class="account-meta">Primera verificación pendiente. {% if row.initial_expired %}El plazo de activación venció.{% else %}Autorizada hasta {{ row.initial_expires|date:"d/m/Y H:i" }}.{% endif %}</p>{% endif %}
+          {% if row.can_renew %}
+          <details class="account-action"><summary>Renovar activación inicial</summary>
+            <form method="post" action="{% url 'security:account_update' row.account.pk %}">
+              {% csrf_token %}<input type="hidden" name="action" value="renew_enrollment">
+              <p class="hint">Autoriza otras 24 horas para completar su primera verificación en dos pasos. Conserva su contraseña y los dispositivos pendientes; no restablece una verificación ya activada.</p>
+              {{ row.enrollment_form.as_p }}
+              <button class="primary" type="submit">Renovar por 24 horas</button>
+            </form>
+          </details>
+          {% endif %}
+          <details class="account-action"><summary>Cambiar permisos</summary>
+            <form method="post" action="{% url 'security:account_update' row.account.pk %}">
+              {% csrf_token %}<input type="hidden" name="action" value="access">
+              <p class="hint">Elige los módulos que podrá usar. Al guardar un cambio, tendrá que volver a iniciar sesión.</p>
+              {{ row.access_form.as_p }}
+              <button class="primary" type="submit">Guardar acceso</button>
+            </form>
+          </details>
+          <details class="account-action"><summary>{% if row.account.is_active %}Desactivar acceso{% else %}Reactivar acceso{% endif %}</summary>
+            <form method="post" action="{% url 'security:account_update' row.account.pk %}">
+              {% csrf_token %}<input type="hidden" name="action" value="{% if row.account.is_active %}deactivate{% else %}reactivate{% endif %}">
+              <p class="hint">{% if row.account.is_active %}Esta cuenta dejará de entrar inmediatamente. Se conservan sus datos y sus verificaciones; podrás reactivarla después.{% else %}La cuenta podrá iniciar sesión otra vez con su contraseña y su segundo factor. Sus sesiones anteriores seguirán cerradas.{% endif %}</p>
+              {{ row.confirmation_form.as_p }}
+              <button class="{% if row.account.is_active %}account-danger{% else %}primary{% endif %}" type="submit">{% if row.account.is_active %}Desactivar esta cuenta{% else %}Reactivar esta cuenta{% endif %}</button>
+            </form>
+          </details>
+        {% endif %}
+      </li>
+    {% endfor %}
+    </ul>
+  </section>
+
+  <section class="accounts-section" aria-labelledby="account-create-heading">
+    <h2 id="account-create-heading">Agregar una cuenta</h2>
+    <p>Para un acceso nuevo, indica su correo y crea una contraseña segura. La persona confirmará su segundo factor al entrar por primera vez.</p>
+    <form method="post" action="{% url 'security:account_create' %}">
+      {% csrf_token %}{{ create_form.as_p }}
+      <button class="primary" type="submit">Crear cuenta y autorizar acceso</button>
+    </form>
+  </section>
+  <div class="accounts-links"><a class="secondary" href="{% url 'security:passkeys' %}">Administrar llaves de acceso</a><a class="secondary" href="{% url 'admin:index' %}">Volver al panel</a></div>
+</div>
+{% endblock %}
