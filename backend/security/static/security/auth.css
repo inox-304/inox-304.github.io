@@ -20,6 +20,7 @@ input:focus,select:focus{border-color:#315d8d;box-shadow:0 0 0 3px #315d8d22}
 .primary{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;background:linear-gradient(135deg,var(--blue-bright),#16365a);border:1px solid #274f7c;border-radius:8px;padding:13px 16px;color:#f7f9fc;text-decoration:none;font-weight:650;font-size:13px;cursor:pointer;min-height:47px;box-shadow:0 3px 12px #142c491a}
 .primary:hover{background:linear-gradient(135deg,#2c5b8d,#1b416b);box-shadow:0 5px 15px #142c4929}
 .primary span{margin-left:auto}
+button:disabled{cursor:wait;opacity:.65}
 .note{background:#eaf0f8;border:1px solid #d9e4f1;padding:15px 17px;border-radius:8px;margin-top:24px;color:#53677e;font-size:12px;line-height:1.6}
 .note strong{font-size:12px;color:var(--blue)}
 .note p{margin:5px 0 0}

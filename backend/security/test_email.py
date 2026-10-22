@@ -18,7 +18,7 @@ from django.test import Client, RequestFactory, TestCase, TransactionTestCase, o
 from django.urls import reverse
 from django.utils import timezone
 
-from .email_auth import EMAIL_REGENERATE_KEY, verify_email_challenge
+from .email_auth import EMAIL_REGENERATE_KEY, _log_delivery_failure, verify_email_challenge
 from .models import (
     EmailChallenge,
     EmailDevice,
@@ -104,6 +104,124 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
                 self.assertNotIn(PENDING_KEY, self.client.session)
                 self.assert_anonymous()
 
+    def test_repeated_password_post_preserves_pending_code_and_session(self):
+        challenge, code = self.start_email()
+        original_key = self.client.session.session_key
+        original_pending = dict(self.client.session[PENDING_KEY])
+        for _ in range(3):
+            self.assertRedirects(self.password_step(), reverse("security:email_verify"), fetch_redirect_response=False)
+            self.assertEqual(self.client.session.session_key, original_key)
+            self.assertEqual(self.client.session[PENDING_KEY], original_pending)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(EmailChallenge.objects.count(), 1)
+        self.assertEqual(SecurityEvent.objects.filter(event="email_code_sent").count(), 1)
+        challenge.refresh_from_db()
+        self.assertIsNone(challenge.invalidated_at)
+        self.assert_anonymous()
+        self.assertRedirects(self.verify(code), reverse("admin:index"), fetch_redirect_response=False)
+
+    def test_login_get_resumes_pending_code_without_sending_or_authenticating(self):
+        _, code = self.start_email()
+        original_key = self.client.session.session_key
+        self.assertRedirects(self.client.get(reverse("security:login")), reverse("security:email_verify"), fetch_redirect_response=False)
+        self.assertEqual(self.client.session.session_key, original_key)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assert_anonymous()
+        self.assertRedirects(self.verify(code), reverse("admin:index"), fetch_redirect_response=False)
+
+    def test_wrong_password_does_not_resume_pending_code(self):
+        self.start_email()
+        response = self.password_step(password="incorrect-password")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assert_anonymous()
+
+    def test_login_get_rechecks_challenge_binding_and_usability(self):
+        challenge, _ = self.start_email()
+        invalid_fields = {
+            "expires_at": timezone.now() - timedelta(seconds=1),
+            "consumed_at": timezone.now(), "invalidated_at": timezone.now(),
+            "attempts": 5, "auth_hash": "changed", "session_digest": "other-session",
+            "recipient": "another@example.com", "session_version": 999,
+            "purpose": "regenerate",
+        }
+        for field, invalid in invalid_fields.items():
+            with self.subTest(field=field):
+                EmailChallenge.objects.filter(pk=challenge.pk).update(**{field: invalid})
+                self.assertEqual(self.client.get(reverse("security:login")).status_code, 200)
+                self.assert_anonymous()
+                EmailChallenge.objects.filter(pk=challenge.pk).update(**{field: getattr(challenge, field)})
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_login_get_cannot_resume_copied_pending_state_in_other_session(self):
+        self.start_email()
+        stranger = Client()
+        session = stranger.session
+        session[PENDING_KEY] = dict(self.client.session[PENDING_KEY])
+        session.save()
+        self.assertEqual(stranger.get(reverse("security:login")).status_code, 200)
+        self.assert_anonymous(stranger)
+        self.assertEqual(len(mail.outbox), 1)
+
+    @override_settings(SECURITY_EMAIL_RESEND_SECONDS=0)
+    def test_expired_pending_login_starts_new_session_and_challenge(self):
+        first_challenge, _ = self.start_email()
+        original_key = self.client.session.session_key
+        session = self.client.session
+        session[PENDING_KEY] = {**session[PENDING_KEY], "expires": time.time() - 1}
+        session.save()
+        self.assertEqual(self.client.get(reverse("security:login")).status_code, 200)
+        self.assertNotIn(PENDING_KEY, self.client.session)
+        self.assertRedirects(self.password_step(), reverse("security:email_verify"), fetch_redirect_response=False)
+        self.assertNotEqual(self.client.session.session_key, original_key)
+        self.assertNotEqual(self.client.session[PENDING_KEY]["email_challenge_id"], str(first_challenge.pk))
+        self.assertEqual(len(mail.outbox), 2)
+        first_challenge.refresh_from_db()
+        self.assertIsNotNone(first_challenge.invalidated_at)
+        self.assert_anonymous()
+
+    @override_settings(SECURITY_EMAIL_RESEND_SECONDS=0)
+    def test_pending_login_without_delivered_code_can_retry_without_rotating_session(self):
+        with patch("security.email_auth.send_mail", side_effect=PermissionError("synthetic failure")), \
+             self.assertLogs("security.email_auth", level="WARNING"):
+            self.assertEqual(self.password_step().status_code, 400)
+        original_key = self.client.session.session_key
+        now = time.time()
+        session = self.client.session
+        session[PENDING_KEY] = {**session[PENDING_KEY], "expires": now + 20}
+        session.set_expiry(20)
+        session.save()
+        self.assertNotIn("email_challenge_id", self.client.session[PENDING_KEY])
+        self.assertRedirects(self.password_step(), reverse("security:email_verify"), fetch_redirect_response=False)
+        self.assertEqual(self.client.session.session_key, original_key)
+        self.assertGreaterEqual(self.client.session[PENDING_KEY]["expires"], now + 300)
+        self.assertGreater(self.client.session.get_expiry_age(), 290)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(EmailChallenge.objects.filter(invalidated_at__isnull=True).count(), 1)
+        self.assert_anonymous()
+        with patch("security.services.time.time", return_value=now + 60):
+            self.assertRedirects(self.verify(self.message_code()), reverse("admin:index"), fetch_redirect_response=False)
+
+    def test_different_account_password_starts_separate_pending_session(self):
+        first_challenge, first_code = self.start_email()
+        original_key = self.client.session.session_key
+        other = get_user_model().objects.create_user(
+            "second@example.com", "second-mailbox@example.com", self.password,
+            is_staff=True, is_superuser=True,
+        )
+        SecurityState.objects.create(user=other, mfa_method="email")
+        EmailDevice.objects.create(user=other, name="email", email=other.email, confirmed=True)
+        response = self.password_step(email=other.username)
+        self.assertRedirects(response, reverse("security:email_verify"), fetch_redirect_response=False)
+        self.assertNotEqual(self.client.session.session_key, original_key)
+        self.assertEqual(self.client.session[PENDING_KEY]["user_id"], other.pk)
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[-1].to, [other.email])
+        request = RequestFactory().post(reverse("security:email_verify"))
+        request.session = self.client.session
+        self.assertIsNone(verify_email_challenge(request, other, first_challenge.pk, first_code, "login"))
+        self.assert_anonymous()
+
     def test_inactive_or_nonstaff_account_never_sends(self):
         for field in ["is_active", "is_staff"]:
             with self.subTest(field=field):
@@ -170,6 +288,49 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
                 self.assertEqual(self.client.post(path, {}, HTTP_ACCEPT="application/json").status_code, 401)
         self.assertEqual(get_user_model().objects.count(), 1)
         self.assert_anonymous()
+
+    def test_email_mfa_unlocks_catalog_editing_and_public_changes(self):
+        from catalog.models import AuditLog, Product
+
+        product = Product.objects.create(
+            code="MFA-CATALOG", slug="equipo-verificado", name="Equipo original",
+            category="linea-caliente", is_published=True,
+            internal_notes="PRIVATE-CATALOG-NOTE", cost="23.45",
+        )
+        edit_url = reverse("admin:catalog_product_change", args=[product.pk])
+        data = {
+            "name": "Equipo editado desde el panel", "category": "linea-caliente",
+            "currency": "PEN", "charge_unit": "unit", "availability": "made_to_order",
+            "discount_percent": "0", "additional_flat": "0", "order": "0",
+            "is_active": "on", "is_published": "on", "cost": "23.45",
+            "internal_notes": "PRIVATE-CATALOG-NOTE", "_save": "Guardar",
+        }
+        for prefix in ("variants", "additionals", "gallery_images"):
+            data.update({f"{prefix}-TOTAL_FORMS": "0", f"{prefix}-INITIAL_FORMS": "0"})
+
+        self.assertEqual(self.client.post(edit_url, data).status_code, 302)
+        _, code = self.start_email()
+        self.assertEqual(self.client.get(edit_url).status_code, 302)
+        self.assertEqual(self.client.post(edit_url, data).status_code, 302)
+        product.refresh_from_db()
+        self.assertEqual(product.name, "Equipo original")
+
+        self.assertRedirects(self.verify(code), reverse("admin:index"), fetch_redirect_response=False)
+        self.assertEqual(self.client.get(edit_url).status_code, 200)
+        saved = self.client.post(edit_url, data)
+        self.assertRedirects(saved, reverse("admin:catalog_product_changelist"), fetch_redirect_response=False)
+        product.refresh_from_db()
+        self.assertEqual(product.name, data["name"])
+        self.assertTrue(AuditLog.objects.filter(actor=self.user).exists())
+        public = self.client.get("/api/catalog/")
+        self.assertEqual(public.json()["products"][0]["name"], data["name"])
+        self.assertNotContains(public, "PRIVATE-CATALOG-NOTE")
+        self.assertNotContains(public, '"cost"')
+
+        self.client.post(reverse("security:logout"))
+        self.assertEqual(self.client.post(edit_url, {**data, "name": "Cambio bloqueado"}).status_code, 302)
+        product.refresh_from_db()
+        self.assertEqual(product.name, data["name"])
 
     def test_code_is_six_digits_hashed_and_expires_after_five_minutes(self):
         challenge, code = self.start_email()
@@ -388,6 +549,30 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
         self.assert_anonymous(other_browser)
 
     @override_settings(SECURITY_EMAIL_RESEND_SECONDS=0)
+    def test_resend_near_pending_expiry_uses_actual_deadline_without_extending_access(self):
+        self.start_email()
+        deadline = time.time() + 20
+        session = self.client.session
+        session[PENDING_KEY] = {**session[PENDING_KEY], "expires": deadline}
+        session.set_expiry(20)
+        session.save()
+        original_key = session.session_key
+        response = self.client.post(reverse("security:email_resend"))
+        self.assertRedirects(response, reverse("security:email_verify"), fetch_redirect_response=False)
+        self.assertEqual(self.client.session.session_key, original_key)
+        self.assertEqual(self.client.session[PENDING_KEY]["expires"], deadline)
+        challenge = EmailChallenge.objects.get(pk=self.client.session[PENDING_KEY]["email_challenge_id"])
+        self.assertAlmostEqual(challenge.expires_at.timestamp(), deadline, places=5)
+        self.assertLessEqual((challenge.expires_at - challenge.created_at).total_seconds(), 20)
+        shown_deadline = timezone.localtime(challenge.expires_at).strftime("%d/%m/%Y a las %H:%M:%S")
+        self.assertIn(f"Caduca el {shown_deadline}", mail.outbox[-1].body)
+        self.assertNotIn("Caduca en 5 minutos", mail.outbox[-1].body)
+        self.assertContains(self.client.get(reverse("security:email_verify")), "Reenviar no amplía el tiempo de este acceso.")
+        with patch("security.services.time.time", return_value=deadline + 1):
+            self.assertRedirects(self.verify(self.message_code()), reverse("security:login"), fetch_redirect_response=False)
+        self.assert_anonymous()
+
+    @override_settings(SECURITY_EMAIL_RESEND_SECONDS=0)
     def test_resend_invalidates_previous_code_and_sends_only_to_account(self):
         first_challenge, _ = self.start_email()
         response = self.client.post(reverse("security:email_resend"), {"recipient": "attacker@example.com"})
@@ -430,13 +615,36 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
         self.assert_anonymous()
 
     def test_delivery_exception_fails_closed_without_usable_challenge(self):
-        with patch("django.core.mail.backends.locmem.EmailBackend.send_messages", side_effect=smtplib.SMTPException("test-only SMTP failure")):
+        private_content = f"password=synthetic-secret code=123456 recipient={self.user.email} message=private-body"
+        with patch("django.core.mail.backends.locmem.EmailBackend.send_messages", side_effect=smtplib.SMTPDataError(550, private_content.encode())), \
+             self.assertLogs("security.email_auth", level="WARNING") as logged:
             response = self.password_step()
+        self.assertEqual(logged.output, ["WARNING:security.email_auth:Email verification delivery failed (error=SMTPDataError, smtp_code=550)"])
+        self.assertIsNone(logged.records[0].exc_info)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(len(mail.outbox), 0)
         self.assert_anonymous()
         self.assertFalse(EmailChallenge.objects.filter(consumed_at__isnull=True, invalidated_at__isnull=True).exists())
         self.assertEqual(self.client.get("/admin/", HTTP_ACCEPT="application/json").status_code, 401)
+
+    def test_permission_denied_delivery_is_diagnosable_without_private_details(self):
+        with patch("django.core.mail.backends.locmem.EmailBackend.send_messages", side_effect=PermissionError("private-address private-password private-body")), \
+             self.assertLogs("security.email_auth", level="WARNING") as logged:
+            response = self.password_step()
+        self.assertEqual(logged.output, ["WARNING:security.email_auth:Email verification delivery failed (error=PermissionError, smtp_code=None)"])
+        self.assertEqual(response.status_code, 400)
+        self.assert_anonymous()
+        self.assertFalse(EmailChallenge.objects.filter(consumed_at__isnull=True, invalidated_at__isnull=True).exists())
+
+    def test_delivery_diagnostics_reject_untrusted_class_names_and_response_codes(self):
+        private_error = type("SecretCode123456", (Exception,), {})
+        with self.assertLogs("security.email_auth", level="WARNING") as logged:
+            _log_delivery_failure(private_error("private body"))
+        self.assertEqual(logged.output, ["WARNING:security.email_auth:Email verification delivery failed (error=UnexpectedError, smtp_code=None)"])
+        for untrusted_code in ["private-value", 123456, True, None]:
+            with self.subTest(code=untrusted_code), self.assertLogs("security.email_auth", level="WARNING") as logged:
+                _log_delivery_failure(smtplib.SMTPDataError(untrusted_code, b"private body"))
+            self.assertEqual(logged.output, ["WARNING:security.email_auth:Email verification delivery failed (error=SMTPDataError, smtp_code=None)"])
 
     def test_backend_reporting_zero_deliveries_fails_closed(self):
         with patch("django.core.mail.backends.locmem.EmailBackend.send_messages", return_value=0):
@@ -560,6 +768,7 @@ class EmailMFAFlowTests(EmailFlowHelpers, TestCase):
         self.assertEqual(mail.outbox[-1].to, [self.user.email])
         challenge = EmailChallenge.objects.get(pk=self.client.session[EMAIL_REGENERATE_KEY])
         self.assertEqual(challenge.purpose, "regenerate")
+        self.assertAlmostEqual((challenge.expires_at - challenge.created_at).total_seconds(), 300, delta=0.01)
         code = self.message_code()
         wrong_code = f"{(int(code) + 1) % 1000000:06d}"
         self.assertEqual(self.client.post(reverse("security:email_regenerate_verify"), {"token": wrong_code}).status_code, 400)

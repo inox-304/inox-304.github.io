@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_safe
 
-from .models import MediaAsset, Product
+from .models import MediaAsset, Product, ProductVariant
 from .serializers import public_catalog_data, public_product_queryset
 
 
@@ -23,7 +23,8 @@ def catalog_api(request):
 def public_media(request, asset_id):
     asset = get_object_or_404(MediaAsset, pk=asset_id)
     referenced = Product.objects.filter(is_active=True, is_published=True).filter(Q(image_asset_id=asset_id) | Q(technical_asset_id=asset_id) | Q(model_asset_id=asset_id) | Q(poster_asset_id=asset_id) | Q(gallery_images__asset_id=asset_id)).exists()
-    if not referenced:
+    variant_reference = ProductVariant.objects.filter(product__is_active=True, product__is_published=True, is_active=True).filter(Q(model_asset_id=asset_id) | Q(technical_asset_id=asset_id)).exists()
+    if not referenced and not variant_reference:
         raise Http404
     return media_response(asset)
 

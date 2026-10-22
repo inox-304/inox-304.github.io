@@ -1,54 +1,34 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
+import { adminEntryUrl } from '../../lib/admin-entry';
+
+const remoteUrl = import.meta.env.PUBLIC_ADMIN_URL || '';
+const panelUrl = remoteUrl.trim()
+  ? adminEntryUrl(false, remoteUrl)
+  : 'http://127.0.0.1:8000/admin/auth/login/';
+const remote = Boolean(remoteUrl.trim());
 ---
-<Layout title="Acceso de administración" description="Cómo abrir y configurar el panel privado de INOX 304." noindex>
+<Layout title="Acceso de administración" description="Acceso privado al panel de INOX 304." noindex>
   <section class="admin-access shell">
-    <div class="admin-access-heading">
-      <span class="eyebrow">INOX 304 / ADMINISTRACIÓN</span>
-      <h1>Tu espacio<br/><em>para administrar.</em></h1>
-      <p>El panel está preparado para ejecutarse en la computadora del negocio. Su publicación en Internet todavía está pendiente.</p>
-    </div>
+    <span class="eyebrow">INOX 304 / ADMINISTRACIÓN</span>
+    <h1>Tu espacio de trabajo.</h1>
     <div class="access-card">
-      <div class="access-status"><span aria-hidden="true"></span> ACCESO LOCAL</div>
-      <h2>En la computadora del negocio</h2>
-      <p>Abre la carpeta <strong>web inox304</strong> del escritorio. Estos archivos te guían sin editar código:</p>
-      <ol class="access-steps">
-        <li><span class="step-number" aria-hidden="true">01</span><div><h3>Conecta el correo de verificación</h3><p>Si todavía no conectaste el correo, abre <strong>CONFIGURAR-CORREO.cmd</strong>. Introduce el Gmail remitente y su contraseña de aplicación de Google únicamente en esa ventana.</p></div></li>
-        <li><span class="step-number" aria-hidden="true">02</span><div><h3>Prepara tu cuenta</h3><p>Abre <strong>CONFIGURAR-ACCESO.cmd</strong>. Elige tu cuenta y habilita su primera verificación si está pendiente. Puedes conservar tu contraseña o elegir una nueva en privado. Completa el primer acceso dentro de las siguientes 24 horas.</p></div></li>
-        <li><span class="step-number" aria-hidden="true">03</span><div><h3>Abre el panel</h3><p>Ejecuta <strong>INICIAR-PANEL.cmd</strong> y deja esa ventana abierta. Luego entra con tu correo y contraseña y confirma el código que recibirás en ese correo.</p></div></li>
-      </ol>
-      <a class="button button-chrome" href="http://127.0.0.1:8000/admin/">Abrir panel en esta computadora <Icon name="diagonal" size={18}/></a>
-      <p class="access-note">Este botón funciona después de iniciar el panel, en la misma computadora. Si aparece “no se puede acceder”, vuelve al paso 3.</p>
-    </div>
-    <div class="access-details">
-      <div><h2>¿Y los seis toques?</h2><p>Toca seis veces seguidas el logo del pie de página, con menos de cinco segundos entre toques. En la web local abre el inicio de sesión; en esta versión pública abre esta guía. También puedes usar Tab y Enter.</p></div>
-      <div><h2>La web pública y tus cambios</h2><p>GitHub Pages muestra el catálogo publicado. Por ahora, las ediciones del panel se guardan en la copia local y no actualizan automáticamente esta web. Para administrar por Internet falta alojar y conectar el servidor del panel.</p></div>
-      <div><h2>La contraseña es tuya</h2><p>El acceso siempre requiere contraseña y verificación en dos pasos. El logo solo abre el acceso. No hay una clave universal ni un formulario público para crear administradores.</p></div>
+      <h2>Administrar el catálogo</h2>
+      <p>Ingresa con tu correo y contraseña. Después confirma el código de seguridad de tu cuenta para abrir el panel.</p>
+      <a class="button button-chrome" href={panelUrl}>Continuar al panel <Icon name="diagonal" size={18}/></a>
+      {!remote && <p class="access-note">El acceso por Internet aún no está habilitado. Este botón abre el panel local si está iniciado en esta computadora.</p>}
     </div>
   </section>
 </Layout>
 <style>
-  .admin-access{padding-block:76px 90px;max-width:1080px}
-  .admin-access-heading{max-width:680px;margin-bottom:42px}
-  .admin-access-heading .eyebrow{color:#b6c8e0}
-  h1{font-size:clamp(36px,5.4vw,64px);line-height:1.08;letter-spacing:-.04em;margin:22px 0}
-  h1 em{font-style:normal;color:#cbd9eb}
-  .admin-access-heading>p{color:#bac7d8;font-size:16px;line-height:1.75;max-width:570px}
-  .access-card{padding:40px 44px;background:#f3f6fa;color:#192b40;border:1px solid #d9e1eb;border-radius:18px}
-  .access-status{display:flex;align-items:center;gap:9px;color:#526176;font-size:11px;letter-spacing:.14em;font-weight:700;margin-bottom:22px}
-  .access-status>span{width:8px;height:8px;border-radius:50%;background:#526176}
-  h2{font-size:24px;line-height:1.3;letter-spacing:-.025em;margin:0 0 12px}
-  .access-card>p,.access-steps p{color:#526176;font-size:14px;line-height:1.8}
-  .access-steps{list-style:none;margin:28px 0;padding:0;display:grid;gap:24px}
-  .access-steps li{display:flex;gap:20px}
-  .step-number{flex:0 0 36px;font-size:13px;font-weight:600;padding-top:3px;color:#60748f}
-  h3{font-size:16px;margin:0 0 5px}
-  .access-steps p{margin:0;max-width:660px}
+  .admin-access{padding-block:76px 90px;max-width:800px}
+  .eyebrow{color:#b6c8e0}
+  h1{font-size:clamp(36px,5.4vw,56px);line-height:1.08;letter-spacing:-.04em;margin:22px 0 36px}
+  .access-card{padding:36px;background:#f3f6fa;color:#192b40;border:1px solid #d9e1eb;border-radius:18px}
+  h2{font-size:24px;line-height:1.3;margin:0 0 12px}
+  .access-card p{color:#526176;font-size:14px;line-height:1.8;max-width:580px;margin:0 0 24px}
   .access-card .button{font-size:13px;gap:16px}
-  .access-card>.access-note{font-size:12px;max-width:580px;margin:15px 0 0}
-  .access-details{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:38px}
-  .access-details h2{font-size:17px;color:#e5edf8}
-  .access-details p{font-size:13px;line-height:1.8;color:#afbed1}
-  @media(max-width:700px){.admin-access{padding-block:42px 60px}.access-card{padding:26px 22px;border-radius:12px}.access-steps li{gap:10px}.step-number{flex-basis:24px}.access-details{grid-template-columns:1fr;gap:20px}.access-card .button{width:100%;text-align:left}.access-steps strong{overflow-wrap:anywhere}}
+  .access-card .access-note{font-size:12px;margin:18px 0 0}
+  @media(max-width:700px){.admin-access{padding-block:42px 60px}.access-card{padding:26px 22px;border-radius:12px}}
 </style>

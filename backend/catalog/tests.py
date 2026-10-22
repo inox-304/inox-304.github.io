@@ -79,7 +79,7 @@ class CatalogTests(TestCase):
         self.assertEqual(len(response.json()["products"]), 1)
         item = response.json()["products"][0]
         self.assertEqual(item["price"], 94.2)
-        self.assertEqual(item["variants"], [{"id": str(variant.pk), "name": "Grande", "price": 183.25, "availability": "made_to_order"}])
+        self.assertEqual(item["variants"], [{"id": str(variant.pk), "name": "Grande", "price": 183.25, "availability": "made_to_order", "model3d": "", "technicalSheet": "", "materialVariant": "", "doorAnimation": ""}])
         self.assertEqual(item["additionalCharges"][0]["price"], 3.25)
         self.assertEqual(len(response.json()["contacts"]), 1)
         self.assertNotIn("cost", response.content.decode())

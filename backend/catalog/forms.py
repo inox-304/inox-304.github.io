@@ -4,7 +4,7 @@ from django.forms.models import BaseInlineFormSet
 from django.utils.text import slugify
 from uuid import uuid4
 
-from .models import MediaAsset, Product, ProductAdditional, ProductImage
+from .models import MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 from .validators import clean_upload
 
 
@@ -20,6 +20,7 @@ class ProductAdminForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = "__all__"
+        widgets = {"description": forms.Textarea(attrs={"rows": 4}), "characteristics": forms.Textarea(attrs={"rows": 5}), "internal_notes": forms.Textarea(attrs={"rows": 4})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,6 +37,7 @@ class ProductAdminForm(forms.ModelForm):
         self.fields["show_price"].help_text = "Desmarcado: se muestra Cotizar y el importe queda privado. Puedes publicar el equipo sin precio."
         self.fields["additional_flat"].label = "Recargo fijo incluido"
         self.fields["additional_flat"].help_text = "Opcional. Se suma al precio después del descuento; no es un adicional que el cliente elige."
+        self.fields["cost"].help_text = "Referencia manual del catálogo. El análisis de fabricación calcula su costo desde Recetas y Costos de la hoja; este valor no se sincroniza automáticamente."
 
     def _new_identifier(self, field, prefix):
         while True:
@@ -71,6 +73,31 @@ class ProductAdditionalForm(forms.ModelForm):
             "custom_unit": "Solo para cobro personalizado: por ejemplo, juego o instalación.",
             "is_active": "Desmárcalo para retirar la opción de la web conservando sus datos.",
         }
+
+
+class ProductVariantForm(forms.ModelForm):
+    model_upload = forms.FileField(label="Subir 3D de esta variación", required=False, widget=forms.FileInput(attrs={"accept": ".glb"}), help_text="GLB · hasta 8 MB. Opcional: sin archivo propio, usa el modelo principal.")
+    technical_upload = forms.FileField(label="Subir ficha de esta variación", required=False, widget=forms.FileInput(attrs={"accept": ".pdf"}), help_text="PDF · hasta 8 MB. Sin ficha propia, usa la del equipo.")
+
+    class Meta:
+        model = ProductVariant
+        fields = "__all__"
+        labels = {"name": "Nombre de la variación"}
+        help_texts = {"name": "Por ejemplo: a gas con horno, eléctrica con cooler o 150 cm.",
+                      "material_variant": "Elige un acabado de los que muestra el archivo al subirlo. Si no tiene acabados, déjalo vacío.",
+                      "cost": "Referencia manual privada. El costo de fabricación se calcula por su código en la hoja."}
+
+    def clean(self):
+        data = super().clean()
+        self.instance._prepared_uploads = {}
+        for field, target, kind in (("model_upload", "model_asset", "glb"), ("technical_upload", "technical_asset", "pdf")):
+            if data.get(field):
+                try:
+                    cleaned, mime = clean_upload(data[field], kind)
+                    self.instance._prepared_uploads[target] = (cleaned, kind, mime)
+                except ValidationError as exc:
+                    self.add_error(field, exc)
+        return data
 
 
 class ProductImageForm(forms.ModelForm):

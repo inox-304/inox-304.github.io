@@ -2,10 +2,10 @@ import { withBase } from './paths.ts';
 import { categories, normalizeCategory } from '../data/categories.ts';
 
 export type CmsContact = { id: string; name: string; whatsapp: string; phone: string; email: string; message: string; active: boolean };
-export type CmsVariant = { id: string; name: string; price?: number; availability: string };
+export type CmsVariant = { id: string; name: string; price?: number; availability: string; model3d?: string; technicalSheet?: string; materialVariant?: string; doorAnimation?: string };
 export type CmsAdditionalCharge = { id: string; name: string; price?: number };
 export type CmsAdditional = { id: string; name: string; description: string; price: number | null; chargeUnit: 'unit' | 'm' | 'm2' | 'custom'; unitLabel: string };
-export type CmsProduct = { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; gallery: string[]; chargeUnit?: string; unitLabel?: string; availability?: string; variants?: CmsVariant[]; additionalCharges?: CmsAdditionalCharge[]; additionals?: CmsAdditional[] };
+export type CmsProduct = { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; doorAnimation?: string; gallery: string[]; chargeUnit?: string; unitLabel?: string; availability?: string; variants?: CmsVariant[]; additionalCharges?: CmsAdditionalCharge[]; additionals?: CmsAdditional[] };
 export type CmsData = { products: CmsProduct[]; contacts: CmsContact[]; settings: Record<string, string> };
 export const categoryNames: Record<string, string> = Object.fromEntries(categories.map(category => [category.id, category.name]));
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();

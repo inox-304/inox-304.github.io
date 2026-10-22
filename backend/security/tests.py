@@ -69,6 +69,29 @@ class SecurityFlowTests(TestCase):
         self.assertFalse(Session.objects.filter(session_key=old_key).exists())
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_inventory_background_updates_do_not_extend_idle_session(self):
+        self.full_login()
+        session = self.client.session
+        last_human_activity = time.time() - 120
+        session[LAST_SEEN] = last_human_activity
+        session.save()
+        with patch("catalog.inventory_views.load_snapshot", return_value=None):
+            response = self.client.get("/admin/inventario/", HTTP_X_INOX_AUTOMATIC="1")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session[LAST_SEEN], last_human_activity)
+        # A deliberate navigation counts as activity, unlike the polling request.
+        with patch("catalog.inventory_views.load_snapshot", return_value=None):
+            self.client.get("/admin/inventario/")
+        self.assertGreater(self.client.session[LAST_SEEN], last_human_activity)
+        session = self.client.session
+        session[LAST_SEEN] = time.time() - 1801
+        session.save()
+        with patch("catalog.inventory_views.load_snapshot") as read_snapshot:
+            response = self.client.post("/admin/inventario/actualizar/", HTTP_X_INOX_AUTOMATIC="1", HTTP_ACCEPT="application/json")
+            read_snapshot.assert_not_called()
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
     def test_nonstaff_and_inactive_users_are_denied(self):
         for field in ["is_staff", "is_active"]:
             get_user_model().objects.filter(pk=self.user.pk).update(**{field: False})

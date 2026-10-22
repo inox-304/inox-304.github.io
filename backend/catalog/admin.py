@@ -11,7 +11,7 @@ from django.utils.html import format_html
 from django.views.decorators.http import require_safe
 
 from .audit import TRACKED_MODELS, audit_context
-from .forms import GalleryInlineFormSet, ProductAdminForm, ProductAdditionalForm, ProductImageForm, persist_uploads
+from .forms import GalleryInlineFormSet, ProductAdminForm, ProductAdditionalForm, ProductImageForm, ProductVariantForm, persist_uploads
 from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 from .serializers import catalog_product_queryset, public_catalog_data, public_product
 
@@ -41,13 +41,30 @@ class AuditedAdmin(admin.ModelAdmin):
             super().delete_queryset(request, queryset)
 
 
-class ProductVariantInline(admin.TabularInline):
+class ProductVariantInline(admin.StackedInline):
     model = ProductVariant
+    form = ProductVariantForm
     extra = 0
-    fields = ("name", "price", "cost", "availability", "is_active", "order")
+    fieldsets = (
+        (None, {"fields": ("name", "manufacturing_code")}),
+        ("Precio y disponibilidad", {"fields": (("price", "cost"), "availability")}),
+        ("Modelo y ficha de esta variación", {"fields": ("model_upload", "technical_upload", "current_files")}),
+        ("Reutilizar archivos guardados", {"fields": ("model_asset", "technical_asset"), "classes": ("collapse",)}),
+        ("Puertas y acabados del 3D", {"fields": ("material_variant", "door_animation"), "classes": ("collapse",)}),
+        ("Visibilidad", {"fields": (("is_active", "order"),)}),
+    )
+    readonly_fields = ("current_files",)
+    autocomplete_fields = ("model_asset", "technical_asset")
     classes = ("inox-step", "inox-step-variants")
     verbose_name = "variación"
     verbose_name_plural = "Variaciones (opcional)"
+
+    @admin.display(description="Archivos guardados")
+    def current_files(self, obj):
+        from django.utils.html import format_html_join
+        files = [(reverse("admin:catalog_media_download", args=(asset.pk,)), label)
+                 for asset, label in ((obj.model_asset, "Abrir modelo 3D"), (obj.technical_asset, "Abrir ficha PDF")) if asset]
+        return format_html_join(" · ", '<a href="{}" target="_blank" rel="noopener">{}</a>', files) if files else "Usará los archivos principales hasta que guardes otros."
 
 
 class ProductImageInline(admin.StackedInline):
@@ -67,7 +84,7 @@ class ProductAdditionalInline(admin.StackedInline):
     model = ProductAdditional
     form = ProductAdditionalForm
     extra = 0
-    fields = ("name", "description", ("price", "show_price"), ("charge_unit", "custom_unit"), "cost", ("is_active", "order"))
+    fields = ("name", "description", "manufacturing_code", ("price", "show_price"), ("charge_unit", "custom_unit"), "cost", ("is_active", "order"))
     classes = ("inox-step", "inox-step-additionals")
     verbose_name = "opción"
     verbose_name_plural = "Adicionales del equipo (opcional)"
@@ -93,7 +110,7 @@ class ProductAdmin(AuditedAdmin):
         ("Identificadores", {"description": "Se crean automáticamente en un equipo nuevo y se conservan al editarlo.", "fields": ("code", "slug"), "classes": ("collapse", "inox-step", "inox-step-details")}),
         ("Foto principal", {"fields": ("image_upload", "image_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Ficha técnica", {"fields": ("technical_upload", "technical_current"), "classes": ("inox-step", "inox-step-media")}),
-        ("Modelo 3D", {"description": "El archivo se asocia a este equipo para su visor 360°. Las animaciones y los adicionales se definirán cuando estén listos tus diseños.", "fields": ("model_upload", "model_current", "poster_upload", "poster_current"), "classes": ("inox-step", "inox-step-media")}),
+        ("Modelo 3D", {"description": "Sube el modelo principal. Cada variación puede tener otro GLB y otra ficha. Abrir puertas requiere un clip animado dentro del archivo; el botón aparece cuando el visor lo reconoce.", "fields": ("model_upload", "model_current", "poster_upload", "poster_current", "door_animation"), "classes": ("inox-step", "inox-step-media")}),
         ("Reutilizar archivos o enlaces existentes", {"description": "Opcional. Para añadir un archivo nuevo usa los botones de arriba. Un archivo subido tiene prioridad sobre su enlace.", "fields": ("image_asset", "image", "technical_asset", "technical_sheet", "model_asset", "model_3d", "poster_asset", "model_poster"), "classes": ("collapse", "inox-step", "inox-step-media")}),
         ("Precio público", {"description": "Puedes dejar el precio vacío para cotizar por consulta. La tarifa final se calcula en el servidor.", "fields": ("price", "currency", "show_price", "charge_unit", "custom_unit", "discount_percent", "additional_flat", "public_price"), "classes": ("inox-step", "inox-step-pricing")}),
         ("Información privada", {"fields": ("cost", "internal_notes"), "classes": ("collapse", "inox-step", "inox-step-pricing")}),
@@ -103,6 +120,10 @@ class ProductAdmin(AuditedAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return self.readonly_fields + (("code", "slug") if obj else ())
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        context["is_nav_sidebar_enabled"] = False
+        return super().render_change_form(request, context, *args, **kwargs)
 
     def _current_file(self, obj, asset_field, url_field, kind):
         asset = getattr(obj, asset_field, None)
@@ -155,6 +176,10 @@ class ProductAdmin(AuditedAdmin):
         for field, asset in (("image", product.image_asset), ("technicalSheet", product.technical_asset), ("model3d", product.model_asset), ("modelPoster", product.poster_asset)):
             if asset:
                 item[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
+        for variant_data, variant in zip(item["variants"], product.variants.all()):
+            for field, asset in (("model3d", variant.model_asset), ("technicalSheet", variant.technical_asset)):
+                if asset:
+                    variant_data[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
         item["gallery"] = [reverse("admin:catalog_media_download", args=(image.asset_id,)) if image.asset_id else image.url for image in product.gallery_images.all()]
         data = public_catalog_data()
         data["products"] = [existing for existing in data["products"] if existing["id"] != product.code] + [item]

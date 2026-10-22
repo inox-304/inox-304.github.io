@@ -1,16 +1,16 @@
 ---
 import { withBase } from '../lib/paths';
 import FlameLogo from './FlameLogo.astro';
+import { adminEntryUrl } from '../lib/admin-entry';
 interface Props { footer?: boolean }
 const { footer = false } = Astro.props;
+const adminUrl = adminEntryUrl(import.meta.env.PUBLIC_CMS_MODE === 'api', import.meta.env.PUBLIC_ADMIN_URL);
 ---
 {footer ? (
   <div class="footer-brand-entry">
-    <button class="brand brand-footer" type="button" data-admin-entry={withBase('/admin/')} aria-label="INOX 304 — toca seis veces para abrir administración" aria-describedby="admin-entry-status">
+    <button class="brand brand-footer" type="button" data-admin-entry={adminUrl} aria-label="INOX 304">
       <span class="brand-logo"><FlameLogo /></span>
     </button>
-    <span id="admin-entry-status" class="admin-entry-status" role="status" aria-live="polite" aria-atomic="true"></span>
-    <noscript><a href={withBase('/admin/')}>Acceso de administración</a></noscript>
   </div>
 ) : (
   <a class="brand" href={withBase('/')} aria-label="INOX 304 — Inicio">
@@ -20,10 +20,8 @@ const { footer = false } = Astro.props;
 <script>import '../scripts/admin-entry';</script>
 <style>
   .footer-brand-entry{position:relative;flex-shrink:0}
-  button.brand{padding:0;border:0;background:none;color:inherit;cursor:pointer;touch-action:manipulation;user-select:none}
+  button.brand{padding:0;border:0;background:none;color:inherit;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent}
   button.brand:focus-visible{outline:2px solid #b9c9de;outline-offset:5px;border-radius:4px}
-  .admin-entry-status{display:block;position:absolute;top:100%;left:0;width:240px;margin-top:3px;color:#c6d2e2;font-size:11px;line-height:1.5}
-  noscript a{font-size:12px;text-decoration:underline}
   .brand-logo{display:block;width:218px;height:auto;max-height:87px;aspect-ratio:5/2}
   .brand-footer .brand-logo{width:232px}
   @media(max-width:1150px){.brand-logo{width:187px}}

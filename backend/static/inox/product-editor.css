@@ -64,3 +64,4 @@
   .inox-step-actions p { flex-basis: 100%; order: 2; text-align: left; }
   .inox-editor-intro h2 { font-size: 22px; }
 }
+.inox-model-inspection{margin-top:12px;padding:14px 16px;border:1px solid #dce6ef;border-radius:8px;background:#f5f8fb;color:#37516a;max-width:780px}.inox-model-inspection p{font-size:12px;line-height:1.7}.inox-model-inspection .button{margin:3px 6px 3px 0;cursor:pointer}

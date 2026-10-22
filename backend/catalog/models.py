@@ -140,6 +140,7 @@ class Product(ValidatedModel):
     model_3d = models.CharField("modelo GLB existente (URL)", blank=True, max_length=1000)
     model_asset = models.ForeignKey(MediaAsset, related_name="product_models", null=True, blank=True, on_delete=models.PROTECT, verbose_name="modelo subido", limit_choices_to={"kind": "glb"})
     model_poster = models.CharField("poster 3D existente (URL)", blank=True, max_length=1000)
+    door_animation = models.CharField("animación de puertas", max_length=120, blank=True, help_text="Nombre exacto del clip incluido en el GLB. Déjalo vacío hasta tener el modelo animado.")
     poster_asset = models.ForeignKey(MediaAsset, related_name="product_posters", null=True, blank=True, on_delete=models.PROTECT, verbose_name="poster subido", limit_choices_to={"kind": "image"})
     created_at = models.DateTimeField("creado", auto_now_add=True)
     updated_at = models.DateTimeField("actualizado", auto_now=True)
@@ -183,6 +184,11 @@ class Product(ValidatedModel):
 class ProductVariant(ValidatedModel):
     product = models.ForeignKey(Product, related_name="variants", on_delete=models.CASCADE)
     name = models.CharField("variante / tamaño", max_length=180)
+    manufacturing_code = models.CharField("código de fabricación", max_length=64, blank=True, validators=[CODE_VALIDATOR], help_text="Código de esta configuración completa en Inventario y Recetas, por ejemplo EQ-001-GAS. Vacío: consumo aún por definir.")
+    model_asset = models.ForeignKey(MediaAsset, related_name="variant_models", null=True, blank=True, on_delete=models.PROTECT, verbose_name="modelo de esta variación", limit_choices_to={"kind": "glb"})
+    technical_asset = models.ForeignKey(MediaAsset, related_name="variant_documents", null=True, blank=True, on_delete=models.PROTECT, verbose_name="ficha de esta variación", limit_choices_to={"kind": "pdf"})
+    material_variant = models.CharField("acabado en el GLB", max_length=120, blank=True, help_text="Nombre exacto del acabado KHR_materials_variants. No cambia la geometría.")
+    door_animation = models.CharField("animación de puertas", max_length=120, blank=True, help_text="Vacío: usa el nombre del equipo principal, si el modelo incluye ese clip.")
     price = models.DecimalField("precio base", max_digits=11, decimal_places=2, blank=True, null=True, validators=MONEY_VALIDATORS, help_text="Vacío: usa el precio base del producto.")
     cost = models.DecimalField("costo interno (privado)", max_digits=11, decimal_places=2, blank=True, null=True, validators=MONEY_VALIDATORS)
     availability = models.CharField("disponibilidad", max_length=20, choices=Product.Availability, default=Product.Availability.MADE_TO_ORDER)
@@ -199,6 +205,16 @@ class ProductVariant(ValidatedModel):
     def computed_price(self):
         return final_price(self.price if self.price is not None else self.product.price, self.product.discount_percent, self.product.additional_flat)
 
+    def clean(self):
+        super().clean()
+        errors = {}
+        for field, kind in (("model_asset", "glb"), ("technical_asset", "pdf")):
+            asset = getattr(self, field, None)
+            if asset and asset.kind != kind:
+                errors[field] = "El tipo de archivo no corresponde."
+        if errors:
+            raise ValidationError(errors)
+
     def __str__(self):
         return self.name
 
@@ -206,6 +222,7 @@ class ProductVariant(ValidatedModel):
 class ProductAdditional(ValidatedModel):
     product = models.ForeignKey(Product, related_name="additionals", on_delete=models.CASCADE)
     name = models.CharField("nombre del adicional", max_length=180)
+    manufacturing_code = models.CharField("código de fabricación", max_length=64, blank=True, validators=[CODE_VALIDATOR], help_text="Código del adicional en Inventario y Recetas. Su consumo y mano de obra se suman a la configuración elegida; no repitas componentes ya incluidos.")
     description = models.TextField("descripción", blank=True, max_length=1500)
     price = models.DecimalField("tarifa", max_digits=11, decimal_places=2, blank=True, null=True, validators=MONEY_VALIDATORS)
     cost = models.DecimalField("costo interno (privado)", max_digits=11, decimal_places=2, blank=True, null=True, validators=MONEY_VALIDATORS)

@@ -1,8 +1,32 @@
-# Administrar INOX 304 sin Sheets
+# Administrar INOX 304
 
 La nueva versión tiene una base de datos y un panel en **`/admin/`**, dentro del mismo dominio que la web. Guardar un producto o un contacto actualiza la fuente que consulta la página pública: no necesita recompilar ni publicar código. Una página recién abierta lee los datos actuales; una pestaña abierta los revisa cada 30 segundos y al recuperar el foco.
 
+El catálogo se edita en el panel. El inventario y los costos usan una hoja privada y una copia en el panel: consulta [Inventario y fabricación](INVENTARIO-FABRICACION.md) para el flujo y la conexión de Google pendiente.
+
 **Estado de alojamiento:** GitHub Pages solo puede servir la versión estática. Este panel necesita ejecutar Python y mantener una base de datos. La dirección `inox-304.github.io` no puede ejecutar Django ni alojar una base de datos propia. La implementación se prueba en esta computadora; la activación en Internet requiere un servidor y una dirección que apunte a él. No se ha contratado ningún servicio ni cambiado el dominio público.
+
+## Instalación recuperada y acceso discreto
+
+Esta copia ya conserva catálogo, cuentas y configuración privada de correo. Para iniciarla utiliza `INICIAR-PORTABLE.cmd`; no repitas los preparadores de instalación nueva, seed ni configuradores de cuentas. Las instrucciones de instalación siguientes son para instalaciones nuevas. Consulta `CONTEXTO/CONTINUAR_AQUI.txt` para la continuidad del respaldo.
+
+El logo del pie conserva el atajo de seis toques, sin contador, avisos intermedios ni instrucciones públicas. Se reinicia tras cinco segundos sin tocarlo y admite teclado con Tab y Enter. El atajo abre el acceso; la contraseña y el segundo paso siguen siendo obligatorios para consultar o modificar el catálogo. La animación decorativa habitual de la marca se conserva.
+
+En Django el atajo abre `/admin/auth/login/` en el mismo servidor. La versión estática puede enlazar a un panel publicado configurando `PUBLIC_ADMIN_URL=https://DOMINIO/admin/` al compilar, o la variable de repositorio del mismo nombre en GitHub Actions. Solo se admiten direcciones HTTPS que terminen en `/admin/`, sin credenciales ni parámetros. Sin esa variable conserva el acceso local; no existe un servidor remoto predeterminado.
+
+Para que el catálogo público refleje lo guardado desde el panel, publica la web completa y Django juntos con `build:server` y el despliegue de `deploy/`. Configurar `PUBLIC_ADMIN_URL` en GitHub Pages solo conecta el acceso: no sincroniza su catálogo estático. El servidor y el dominio siguen pendientes de elección. Antes de trasladar datos se debe preparar y verificar una copia privada que conserve cuentas, hashes de contraseña, segundo factor, medios y claves de respaldo; el respaldo comercial por sí solo no incluye las cuentas. No uses seed ni recrees propietarios para sustituir la instalación recuperada.
+
+La revisión local del 21/10/2026 encontró las dos cuentas con método correo, sin dispositivo confirmado ni autorización de primera activación vigente. La primera verificación debe habilitarse para la cuenta elegida al ponerla en servicio, conservando su contraseña y los dispositivos existentes; requiere que el propietario complete el código en privado. No se renuevan automáticamente autorizaciones al arrancar ni al compilar.
+
+Para habilitar únicamente esa primera verificación desde el servidor, un operador puede ejecutar `python manage.py authorize_initial_enrollment --email CORREO` con el entorno de la instalación cargado. Requiere una cuenta administrativa activa, contraseña utilizable y método ya configurado; para correo también comprueba la configuración SMTP. Autoriza 24 horas y registra el evento, conservando contraseña, método, sesiones y dispositivos pendientes. Si la autorización ya está vigente, conserva su vencimiento. Rechaza cuentas con cualquier dispositivo confirmado o una inscripción ya consumida: no sustituye la recuperación de MFA. El comando no envía mensajes; el código se envía cuando el propietario ingresa su contraseña en el panel y debe confirmarlo en privado. Esta autorización sirve tanto para el catálogo como para el inventario dentro del mismo panel.
+
+## Alojamiento gratuito evaluado (21/10/2026)
+
+El propietario eligió buscar exclusivamente opciones gratuitas. La propuesta es una VM Oracle Always Free para ejecutar el Compose existente y un subdominio DuckDNS para HTTPS, sin comprar dominio. La compatibilidad se deduce de la arquitectura; todavía no se ha desplegado ni probado en Oracle.
+
+La [documentación de Oracle](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) indica un cupo A1 de 2 OCPU y 12 GB de memoria, sujeto a disponibilidad regional, y permite recuperar instancias inactivas. Su [registro gratuito](https://www.oracle.com/cloud/free/faq/) exige tarjeta para verificar identidad y puede producir una retención temporal. El propietario debe completar ese registro en privado; no se ha creado cuenta ni contratado recursos. [DuckDNS](https://www.duckdns.org/faqs.jsp) ofrece DNS dinámico gratuito; el nombre disponible sigue pendiente.
+
+[Render gratuito](https://render.com/docs/free) no encaja directamente: su disco es efímero, PostgreSQL gratuito vence a los 30 días y bloquea SMTP en 25/465/587. Requeriría otros servicios para conservar archivos y cambiar el transporte del correo. No se ha sustituido el Gmail existente.
 
 ## Una sola vez en esta PC
 
@@ -25,7 +49,7 @@ Abre **`CONFIGURAR-ACCESO.cmd`** desde la misma carpeta que usas para iniciar el
 3. Para una cuenta que nunca terminó su primer segundo paso, confirma **S** cuando pregunte si habilitas la primera verificación durante 24 horas. Conserva la contraseña y los dispositivos pendientes. Si ya hay un segundo factor confirmado, lo conserva y no pide volver a inscribirlo. Una cuenta que completó su activación anteriormente y perdió sus dispositivos necesita recuperación del operador.
 4. Abre **`INICIAR-PANEL.cmd`** y entra en `http://127.0.0.1:8000/admin/`, o toca seis veces seguidas el logo del pie de la web local. Introduce correo, contraseña y después el código del método configurado.
 
-En la web pública, tocar seis veces el logo lleva a la guía de acceso: **no es un inicio de sesión remoto mientras el servidor no esté publicado**. No introduzcas credenciales del panel en GitHub ni en la guía estática. El atajo solo abre la dirección del panel; la contraseña y el segundo paso siguen siendo obligatorios.
+En la web pública, tocar seis veces el logo abre el servidor configurado en `PUBLIC_ADMIN_URL`, o directamente `http://127.0.0.1:8000/admin/auth/login/` si todavía no hay servidor: **no es un inicio de sesión remoto mientras el servidor no esté publicado**. No introduzcas credenciales en la página estática. El atajo solo abre la dirección del panel; la contraseña y el segundo paso siguen siendo obligatorios.
 
 Para revisar el estado sin preguntas ni cambios desde una terminal:
 

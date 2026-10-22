@@ -57,7 +57,7 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
     if (item.visible !== true) throw new Error('Unpublished catalog product');
     const variants = list(item.variants ?? [], 100).map(value => {
       const variant = record(value);
-      return { id: identifier(variant.id), name: string(variant.name, 250), price: amount(variant.price), availability: string(variant.availability ?? '', 250) };
+      return { id: identifier(variant.id), name: string(variant.name, 250), price: amount(variant.price), availability: string(variant.availability ?? '', 250), model3d: asset(variant.model3d, modelUrl), technicalSheet: asset(variant.technicalSheet, documentUrl), materialVariant: string(variant.materialVariant ?? '', 120), doorAnimation: string(variant.doorAnimation ?? '', 120) };
     });
     const additionalCharges = list(item.additionalCharges ?? [], 100).map(value => {
       const charge = record(value);
@@ -78,7 +78,7 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
       visible: true, featured: boolean(item.featured), order: item.order,
       contactId: item.contactId ? identifier(item.contactId) : '', price: amount(item.price), currency: item.currency,
       showPrice: boolean(item.showPrice), technicalSheet: asset(item.technicalSheet, documentUrl),
-      model3d: asset(item.model3d, modelUrl), modelPoster: asset(item.modelPoster, imageUrl),
+      model3d: asset(item.model3d, modelUrl), modelPoster: asset(item.modelPoster, imageUrl), doorAnimation: string(item.doorAnimation ?? '', 120),
       gallery: list(item.gallery ?? [], 8).map(value => asset(value, imageUrl, true)),
       chargeUnit: string(item.chargeUnit ?? '', 80), unitLabel: string(item.unitLabel ?? '', 120),
       availability: string(item.availability ?? '', 250), variants, additionalCharges, additionals,

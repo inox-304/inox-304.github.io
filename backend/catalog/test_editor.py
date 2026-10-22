@@ -294,3 +294,31 @@ class ProductEditorAdminTests(TestCase):
         self.assertFalse(MediaAsset.objects.exists())
         self.assertFalse(self.media_root.exists() and any(self.media_root.rglob("*")))
 
+
+
+class VariantConfigurationTests(TestCase):
+    def test_uploads_recipe_reference_public_projection_and_draft_media(self):
+        from .forms import ProductVariantForm, persist_uploads
+        from .models import ProductVariant
+        from .serializers import public_product
+        product = Product.objects.create(code="EQ-GAS", slug="cocina-gas", name="Cocina", category="linea-caliente", door_animation="Puertas", is_published=False)
+        with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory):
+            form = ProductVariantForm(data={"product": product.pk, "name": "Eléctrica con cooler", "manufacturing_code": "EQ-ELEC-COOL", "order": 0, "availability": "made_to_order", "is_active": True, "material_variant": "AISI 304", "door_animation": "Abrir"}, files={"model_upload": model_upload(), "technical_upload": pdf_upload()})
+            self.assertTrue(form.is_valid(), form.errors)
+            variant = form.save(commit=False)
+            persist_uploads(variant)
+            variant.save()
+            projected = public_product(product)["variants"][0]
+            self.assertEqual(projected["model3d"], variant.model_asset.public_url)
+            self.assertEqual(projected["technicalSheet"], variant.technical_asset.public_url)
+            self.assertNotIn("manufacturing_code", projected)
+            self.assertNotIn("cost", projected)
+            self.assertEqual(self.client.get(variant.model_asset.public_url).status_code, 404)
+            product.is_published = True
+            product.save()
+            response = self.client.get(variant.model_asset.public_url)
+            self.assertEqual(response.status_code, 200)
+            response.close()
+            variant.is_active = False
+            variant.save()
+            self.assertEqual(self.client.get(variant.model_asset.public_url).status_code, 404)

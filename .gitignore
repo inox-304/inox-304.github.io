@@ -21,3 +21,14 @@ backend/.env
 *.sqlite3
 *.sqlite3-*
 backups/
+
+# Private workstation backups and portable runtimes never belong in a release.
+/CONTEXTO/
+/HISTORICO/
+/RESPALDOS/
+/DEPENDENCIAS/
+/HERRAMIENTAS/
+/VERIFICACION/
+/ADJUNTOS_USUARIO/
+/outputs/
+/backend/.portable-python/

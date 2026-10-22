@@ -28,6 +28,19 @@ test('allows an empty catalog without reviving contacts or products', () => {
   assert.deepEqual(parsePublicCatalog(emptyCmsData()), emptyCmsData());
 });
 
+test('validates variant models and PDFs while excluding manufacturing and private costs', () => {
+  const input = catalog();
+  Object.assign(input.products[0].variants[0], { model3d: '/models/cocina.glb', technicalSheet: '/documents/cocina.pdf', materialVariant: 'AISI 304', doorAnimation: 'Puertas', manufacturing_code: 'EQ-PRIVATE', cost: 900 });
+  const variant = parsePublicCatalog(input).products[0].variants![0];
+  assert.equal(variant.model3d, '/models/cocina.glb');
+  assert.equal(variant.technicalSheet, '/documents/cocina.pdf');
+  assert.equal(variant.doorAnimation, 'Puertas');
+  assert.equal(Object.hasOwn(variant, 'cost'), false);
+  assert.equal(Object.hasOwn(variant, 'manufacturing_code'), false);
+  Object.assign(input.products[0].variants[0], { model3d: 'javascript:alert(1)' });
+  assert.throws(() => parsePublicCatalog(input));
+});
+
 test('accepts opaque UUID media and preserves natural proportions without old crop bounds', () => {
   const asset = '/media/964ca472-b823-440e-8f09-7c32e08a0e5c/';
   const input = catalog();

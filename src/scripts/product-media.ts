@@ -2,7 +2,7 @@ import { safeImage, safeModel, safePreviewAsset, type CmsProduct } from '../lib/
 import { withBase } from '../lib/paths';
 import type { ModelViewerElement } from '@google/model-viewer';
 
-type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'gallery' | 'model3d' | 'modelPoster'>>;
+type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
 let viewerModule: Promise<typeof import('@google/model-viewer')> | undefined;
 let closeActiveViewer: (() => void) | undefined;
 let privatePreview = false;
@@ -36,14 +36,50 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   let revision = 0;
   let timeout: number | undefined;
   let viewer: ModelViewerElement | undefined;
+  let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
+  let doorFrame: number | undefined;
+  const doors = document.createElement('button');
+  doors.type = 'button'; doors.className = 'product-view-button'; doors.hidden = true;
+  doors.textContent = 'Abrir puertas'; doors.setAttribute('aria-pressed', 'false');
+  toolbar.append(doors);
+
+  function configureViewer() {
+    if (!viewer || !product) return;
+    if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
+    const material = selectedVariant?.materialVariant || '';
+    viewer.variantName = material && viewer.availableVariants.includes(material) ? material : null;
+    const animation = selectedVariant?.doorAnimation || product.doorAnimation || '';
+    doors.hidden = !animation || !viewer.availableAnimations.includes(animation);
+    doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
+    if (!doors.hidden) { viewer.animationName = animation; viewer.pause(); viewer.currentTime = 0; }
+  }
+  doors.addEventListener('click', () => {
+    if (!viewer || doors.hidden) return;
+    const opening = doors.getAttribute('aria-pressed') !== 'true';
+    viewer.pause();
+    if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
+    const element = viewer, start = element.currentTime, target = opening ? element.duration : 0;
+    const began = performance.now();
+    const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450;
+    const step = (now: number) => {
+      if (viewer !== element) return;
+      const progress = duration ? Math.min(1, (now - began) / duration) : 1;
+      element.currentTime = start + (target - start) * (progress * progress * (3 - 2 * progress));
+      if (progress < 1) doorFrame = requestAnimationFrame(step);
+    };
+    doorFrame = requestAnimationFrame(step);
+    doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? 'Cerrar puertas' : 'Abrir puertas';
+  });
 
   function message(value = '') { status.textContent = value; status.hidden = !value; }
   function resetViewer() {
     revision++;
     window.clearTimeout(timeout);
+    if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
     viewer?.removeAttribute('src');
     viewer?.remove();
     viewer = undefined;
+    doors.hidden = true;
     host.replaceChildren(); host.hidden = true; help.hidden = true;
     message();
     button.setAttribute('aria-pressed', 'false'); button.removeAttribute('aria-busy');
@@ -68,7 +104,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   }
   async function showModel() {
     if (!product) return;
-    const model = modelUrl(product.model3d || '');
+    const model = modelUrl(selectedVariant?.model3d || product.model3d || '');
     if (!model) return;
     if (button.getAttribute('aria-pressed') === 'true') { selectPhoto(selectedPhoto); return; }
     closeActiveViewer?.(); resetViewer(); closeActiveViewer = resetViewer;
@@ -106,6 +142,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy');
         button.firstChild!.textContent = 'Volver a foto ';
         help.hidden = false;
+        configureViewer();
         photos.querySelectorAll('button').forEach(photo => photo.setAttribute('aria-pressed', 'false'));
         element.focus();
       }, { once: true });
@@ -118,7 +155,9 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     resetViewer(); message(); product = next; selectedPhoto = 0;
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
     sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
-    const model = next ? modelUrl(next.model3d || '') : '';
+    const variantSelect = document.querySelector<HTMLSelectElement>('[data-product-variant]');
+    selectedVariant = next?.variants?.find(item => item.id === variantSelect?.value);
+    const model = next ? modelUrl(selectedVariant?.model3d || next.model3d || '') : '';
     button.hidden = !model; toolbar.hidden = !model && sources.length < 2;
     photos.replaceChildren();
     if (!toolbar.hidden) sources.forEach((_source, index) => {
@@ -132,6 +171,17 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   root.addEventListener('keydown', event => { if (event.key === 'Escape' && viewer) { selectPhoto(selectedPhoto); button.focus(); } });
   document.addEventListener('inox:product-updated', event => {
     update((event as CustomEvent<{ product: MediaProduct | null }>).detail.product);
+  });
+  document.addEventListener('inox:configuration-updated', event => {
+    const detail = (event as CustomEvent<{ productId: string; variant?: typeof selectedVariant }>).detail;
+    if (!product || product.id !== detail.productId) return;
+    const wasOpen = !!viewer;
+    const oldModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
+    selectedVariant = detail.variant;
+    const nextModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
+    button.hidden = !nextModel; toolbar.hidden = !nextModel && sources.length < 2;
+    if (oldModel !== nextModel) { resetViewer(); if (wasOpen && nextModel) void showModel(); }
+    else configureViewer();
   });
   window.addEventListener('pagehide', resetViewer);
   try { update(JSON.parse(root.dataset.currentProduct ?? root.dataset.initialProduct ?? 'null')); }

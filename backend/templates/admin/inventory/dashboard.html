@@ -1,0 +1,61 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/inventory.css' %}?v=2">{% endblock %}
+{% block extrahead %}{{ block.super }}<script defer src="{% static 'inox/inventory.js' %}?v=2"></script>{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Panel</a> / Inventario</div>{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+<div class="inv-shell" data-refresh-url="{% url 'inventory-refresh' %}">
+  <header class="inv-heading">
+    <div><span class="inv-eyebrow">CONTROL DE OPERACIONES</span><h1>Tu inventario, en orden.</h1><p>Una vista de la tienda, el taller y lo que cuesta fabricar.</p></div>
+    <div class="inv-actions"><a class="inv-button inv-secondary" href="{% url 'admin:catalog_product_changelist' %}">Catálogo</a>{% if sheet_url %}<a class="inv-button inv-secondary" href="{{ sheet_url }}" target="_blank" rel="noopener noreferrer">Abrir Google Sheets ↗</a>{% endif %}{% if sync_ready %}<form id="inv-refresh-form" method="post" action="{% url 'inventory-refresh' %}">{% csrf_token %}<button class="inv-button" type="submit">Actualizar ahora</button></form>{% endif %}</div>
+  </header>
+  <div class="inv-sync" id="inv-sync-status" role="status" aria-live="polite" data-state="{{ sync.state }}"><span class="inv-source-dot"></span><strong>{{ sync.message }}</strong><a href="{% url 'security:login' %}?next={% url 'inventory-dashboard' %}" hidden>Volver a iniciar sesión</a></div>
+  {{ sync|json_script:"inv-sync-data" }}
+  {% if error %}<div class="inv-notice">{{ error }}</div>{% endif %}
+  <div id="inv-data">
+  {% if inventory %}
+  <div class="inv-source">Última lectura válida <time datetime="{{ inventory.source.fetchedAt }}">{{ inventory.source.fetchedAt }}</time><span>Edita el inventario en Google Sheets; los equipos, fichas y modelos 3D en Catálogo.</span></div>
+  <nav class="inv-tabs" aria-label="Secciones de inventario"><a href="#resumen">Resumen</a><a href="#planificar">Analizar un equipo</a><a href="#existencias">Existencias</a><a href="#fabricacion">Fabricación y margen</a></nav>
+  <form class="inv-filters" method="get"><label>Ubicación<select name="ubicacion"><option value="">Tienda y taller</option>{% for place in inventory.locations %}<option{% if inventory.selected_location == place %} selected{% endif %}>{{ place }}</option>{% endfor %}</select></label><label>Unidad de medida<select name="unidad"><option value="">Todas las unidades</option>{% for unit in inventory.units %}<option{% if inventory.selected_unit == unit %} selected{% endif %}>{{ unit }}</option>{% endfor %}</select></label><button type="submit" class="inv-button inv-secondary">Aplicar filtros</button><p>Las cantidades se muestran por artículo y unidad.</p></form>
+  <section class="inv-kpis" id="resumen" aria-label="Indicadores de inventario">
+    <article><span>Referencias</span><strong>{{ inventory.references }}</strong><small>Materias primas, accesorios y equipos</small></article>
+    <article><span>Saldos confirmados</span><strong>{{ inventory.counted }}</strong><small>Combinaciones de artículo y ubicación</small></article>
+    <article class="inv-kpi-alert"><span>Requieren atención</span><strong>{{ inventory.low }}</strong><small>Stock mínimo o saldo negativo</small></article>
+    <article><span>Pendientes de contar</span><strong>{{ inventory.uncounted }}</strong><small>Completa el conteo inicial en la hoja</small></article>
+  </section>
+  <section class="inv-chart-grid" aria-label="Gráficas de inventario">
+    <article class="inv-card"><div class="inv-card-heading"><div><span class="inv-eyebrow">COMPOSICIÓN</span><h2>Referencias por tipo</h2></div><span class="inv-chip">Artículos distintos</span></div><div id="inv-kind-chart" class="inv-category-chart"></div></article>
+    <article class="inv-card"><div class="inv-card-heading"><div><span class="inv-eyebrow">REPOSICIÓN</span><h2>Estado de las existencias</h2></div></div><div id="inv-state-chart" class="inv-state-chart"></div></article>
+    <article class="inv-card inv-wide"><div class="inv-card-heading"><div><span class="inv-eyebrow">ACTIVIDAD</span><h2>Movimientos por mes</h2></div><span class="inv-chip">Número de operaciones</span></div><div id="inv-month-chart" class="inv-month-chart"></div></article>
+  </section>
+  <section class="inv-card inv-section" id="planificar">
+    <div class="inv-card-heading"><div><span class="inv-eyebrow">ANTES DE FABRICAR</span><h2>¿Qué necesitas para este equipo?</h2></div><span class="inv-chip">Simulación · conserva las existencias</span></div>
+    <p class="inv-card-description">Elige el código de la configuración completa (gas, eléctrica, con cooler…) y, si corresponde, los códigos de sus adicionales. Sus recetas se suman, incluyendo materiales compartidos y merma.</p>
+    <form method="get" action="#planificar" class="inv-filters inv-planner">
+      <label>Equipo / configuración<select required name="equipo"><option value="">Selecciona un equipo</option>{% for item in finished_items %}<option value="{{ item.code }}" {% if plan.code == item.code %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select></label>
+      <label>Cantidad<input name="cantidad" type="number" min="1" max="10000" step="1" value="{{ plan.quantity|default:'1' }}" required></label>
+      <label>Usar materiales de<select name="almacen"><option value="Taller" {% if plan.location == 'Taller' %}selected{% endif %}>Taller · Vallecito</option><option value="Tienda" {% if plan.location == 'Tienda' %}selected{% endif %}>Tienda · San Sebas</option></select></label>
+      {% for slot in extra_slots %}<label>Adicional {{ forloop.counter }} · opcional<select name="adicional"><option value="">Sin adicional</option>{% for item in finished_items %}<option value="{{ item.code }}" {% if item.code == slot %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select></label>{% endfor %}
+      <button class="inv-button" type="submit">Analizar disponibilidad</button>
+    </form>
+    {% if plan_error %}<p class="inv-notice" role="alert">{{ plan_error }}</p>{% endif %}
+    {% if plan %}
+      <div class="inv-plan-result"><div><span class="inv-eyebrow">{{ plan.code }} · {{ plan.quantity }} equipo(s)</span><h3>{{ plan.name }}</h3></div><span class="inv-status {% if not plan.ready %}inv-status-pending{% endif %}">{% if plan.capacity is None %}Capacidad pendiente de completar{% else %}Puedes fabricar {{ plan.capacity }} con estos materiales{% endif %}</span></div>
+      {% if plan.missing %}<p class="inv-notice">Falta definir la receta de: {{ plan.missing|join:', ' }}. Los consumos parciales no representan el equipo completo.</p>{% endif %}
+      {% if plan.rows %}<div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>Componente</th><th>Por equipo + merma</th><th>Necesitas</th><th>Disponible · {{ plan.location }}</th><th>Faltante</th><th>Unidad</th><th>Estado</th></tr></thead><tbody>{% for row in plan.rows %}<tr><td><strong>{{ row.code }}</strong><small>{{ row.name }}{% if row.grade %} · {{ row.grade }}{% endif %}{% if row.thickness %} · {{ row.thickness }}{% endif %}</small></td><td>{{ row.per_unit }}</td><td>{{ row.needed }}</td><td>{{ row.available|default_if_none:'Por contar' }}</td><td>{{ row.shortage|default_if_none:'Pendiente' }}</td><td>{{ row.unit }}</td><td><span class="inv-status {% if row.shortage %}inv-status-alert{% endif %}">{{ row.state }}</span></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+      <p class="inv-card-description">Costo del lote ({{ plan.currency }}): materiales {{ plan.materials|floatformat:2|default:'pendientes' }} · mano de obra {{ plan.labor|floatformat:2|default:'pendiente' }} · costo directo {{ plan.total|floatformat:2|default:'pendiente' }}. Disponibilidad según la última copia; no reserva materiales ni contempla cortes de plancha.</p>
+    {% endif %}
+  </section>
+  <section class="inv-card inv-section" id="existencias"><div class="inv-card-heading"><div><span class="inv-eyebrow">DISPONIBILIDAD</span><h2>Existencias por ubicación</h2></div><label class="inv-search"><span class="sr-only">Buscar artículo</span><input type="search" id="inv-search" placeholder="Buscar código, artículo o tipo…"></label></div>
+    <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>Código / artículo</th><th>Tipo</th><th>Ubicación</th><th>Existencia</th><th>Unidad</th><th>Estado</th></tr></thead><tbody id="inv-stock-rows">{% for row in inventory.rows %}<tr><td><strong>{{ row.name }}</strong><small>{{ row.code }}</small></td><td>{{ row.kind }}</td><td>{{ row.place }}</td><td class="inv-number">{{ row.quantity|default_if_none:"—" }}</td><td>{{ row.unit }}</td><td><span class="inv-status {% if row.state == 'Reponer' or row.state == 'Revisar saldo' %}inv-status-alert{% elif row.state == 'Por contar' %}inv-status-pending{% endif %}">{{ row.state }}</span></td></tr>{% endfor %}</tbody></table></div><p id="inv-no-results" class="inv-empty" hidden>No hay artículos que coincidan con tu búsqueda.</p>
+  </section>
+  <section class="inv-card inv-section" id="fabricacion"><div class="inv-card-heading"><div><span class="inv-eyebrow">RENTABILIDAD</span><h2>Cuánto cuesta fabricar</h2></div><a class="inv-text-link" href="{{ sheet_url }}" target="_blank" rel="noopener noreferrer">Completar recetas y precios ↗</a></div><p class="inv-card-description">Materiales y accesorios según la receta, más mano de obra. El margen se calcula sobre el precio de venta. Son costos directos estimados; no incluyen impuestos ni gastos generales.</p>
+    <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>Equipo</th><th>Moneda</th><th>Materiales</th><th>Mano de obra</th><th>Costo directo</th><th>Venta</th><th>Margen</th><th>Pendiente</th></tr></thead><tbody>{% for cost in inventory.costs %}<tr><td><strong>{{ cost.name }}</strong><small>{{ cost.code }}</small></td><td>{{ cost.currency }}</td><td class="inv-number">{{ cost.materials|floatformat:2|default:"—" }}</td><td class="inv-number">{{ cost.labor|floatformat:2|default:"—" }}</td><td class="inv-number">{{ cost.total|floatformat:2|default:"—" }}</td><td class="inv-number">{{ cost.sale|floatformat:2|default:"—" }}</td><td class="inv-number">{% if cost.margin is not None %}{{ cost.margin|floatformat:1 }}%{% else %}—{% endif %}</td><td><span class="inv-status inv-status-pending">{{ cost.state }}</span></td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  <footer class="inv-footer"><span>Tienda · San Sebas</span><span>Taller · Vallecito</span><span>Datos privados · Acceso verificado</span></footer>
+  {{ chart_data|json_script:"inv-chart-data" }}
+  {% else %}<section class="inv-card inv-empty-state"><span class="inv-eyebrow">EMPIEZA POR TUS DATOS</span><h2>Tu inventario tendrá su propio espacio.</h2><p>Conecta la hoja privada de Google Sheets para consultar existencias, reposición y costos de fabricación. Los saldos aparecerán después de registrar el primer conteo.</p></section>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -4,8 +4,8 @@
 <p class="eyebrow">PASO 2 DE 2 · VERIFICACIÓN</p><h1>Revisa tu correo</h1>
 <p class="intro">Enviamos un código de 6 dígitos al correo autorizado de tu cuenta. Escribe el código para continuar.</p>
 <form method="post">{% csrf_token %}{{ form.as_p }}<button class="primary" type="submit">Confirmar código <span aria-hidden="true">→</span></button></form>
-<p class="hint">El código caduca en 5 minutos y funciona una sola vez. Revisa también la carpeta de correo no deseado.</p>
-<form class="secondary-form" action="{% url 'security:email_resend' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Reenviar código</button><p class="hint">Puedes solicitar otro código después de 60 segundos. El anterior dejará de funcionar.</p></form>
+<p class="hint">El código dura como máximo 5 minutos y vence al terminar este intento de acceso. Consulta la hora de caducidad en el correo. Revisa también la carpeta de correo no deseado.</p>
+<form class="secondary-form" action="{% url 'security:email_resend' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Reenviar código</button><p class="hint">Puedes solicitar otro código después de 60 segundos. El anterior dejará de funcionar. Reenviar no amplía el tiempo de este acceso.</p></form>
 {% if can_recover %}<a class="secondary" href="{% url 'security:otp' %}">Usar un código de recuperación</a>{% endif %}
 <form class="secondary-form" action="{% url 'security:logout' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Cancelar y volver</button></form>
 {% endblock %}

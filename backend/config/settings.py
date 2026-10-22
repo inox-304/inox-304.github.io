@@ -76,7 +76,10 @@ if database_url:
 else:
     if ENVIRONMENT == 'production':
         raise ImproperlyConfigured('A persistent PostgreSQL DATABASE_URL is required in production.')
-    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': DATA_DIR / 'inox.sqlite3', 'OPTIONS': {'timeout': 20}}}
+    # Reserve the writer before an atomic block reads throttle/MFA state. A
+    # deferred read-to-write upgrade can fail immediately under concurrency,
+    # even with a busy timeout; SQLite has no SELECT FOR UPDATE row locks.
+    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': DATA_DIR / 'inox.sqlite3', 'OPTIONS': {'timeout': 20, 'transaction_mode': 'IMMEDIATE'}}}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher', 'django.contrib.auth.hashers.PBKDF2PasswordHasher']

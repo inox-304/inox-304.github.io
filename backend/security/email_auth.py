@@ -1,8 +1,11 @@
 """Purpose-bound email OTPs. Only HMACs of codes are persisted."""
+import logging
 import re
 import secrets
+import smtplib
+import ssl
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as datetime_timezone
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -19,6 +22,26 @@ from .smtp_backend import SUPPORTED_SMTP_BACKENDS
 from .services import PENDING_KEY, VERSION, audit, seconds
 
 EMAIL_REGENERATE_KEY = "security_email_regenerate"
+logger = logging.getLogger(__name__)
+
+
+def _log_delivery_failure(error):
+    # Only fixed categories and numeric SMTP statuses may enter logs. SMTP
+    # exception messages can contain recipients, credentials or message bodies.
+    categories = (
+        smtplib.SMTPAuthenticationError, smtplib.SMTPSenderRefused,
+        smtplib.SMTPRecipientsRefused, smtplib.SMTPDataError,
+        smtplib.SMTPHeloError, smtplib.SMTPConnectError,
+        smtplib.SMTPServerDisconnected, smtplib.SMTPNotSupportedError,
+        smtplib.SMTPResponseException, smtplib.SMTPException,
+        ssl.SSLError, PermissionError, TimeoutError, ConnectionError,
+        OSError, ValueError,
+    )
+    category = next((kind.__name__ for kind in categories if isinstance(error, kind)), "UnexpectedError")
+    smtp_code = getattr(error, "smtp_code", None) if isinstance(error, smtplib.SMTPResponseException) else None
+    if type(smtp_code) is not int or not 100 <= smtp_code <= 599:
+        smtp_code = None
+    logger.warning("Email verification delivery failed (error=%s, smtp_code=%s)", category, smtp_code)
 
 
 class EmailDeliveryError(Exception):
@@ -69,6 +92,34 @@ def clear_challenge_pointer(request, purpose):
 
 
 @sensitive_variables()
+def pending_email_challenge(request, user):
+    """Resume only an unconsumed login challenge bound to this exact session."""
+    if not getattr(settings, "SECURITY_EMAIL_ENABLED", False):
+        return None
+    state = SecurityState.objects.filter(user=user).first()
+    if state is None or not valid_context(request, user, state, "login"):
+        return None
+    challenge_id = request.session[PENDING_KEY].get("email_challenge_id")
+    try:
+        challenge = EmailChallenge.objects.select_related("device").filter(
+            pk=challenge_id, device__user=user, purpose="login",
+            consumed_at__isnull=True, invalidated_at__isnull=True,
+            attempts__lt=5, expires_at__gt=timezone.now(), recipient=user.email,
+            session_version=state.session_version,
+        ).first()
+    except (ValidationError, ValueError, TypeError):
+        return None
+    if (challenge is None or challenge.device.email != user.email
+            or not constant_time_compare(challenge.auth_hash, user.get_session_auth_hash())
+            or not constant_time_compare(challenge.session_digest, session_digest(request))):
+        return None
+    if not challenge.device.confirmed and not EnrollmentPermission.objects.filter(
+            user=user, used_at__isnull=True, expires_at__gt=timezone.now()).exists():
+        return None
+    return challenge
+
+
+@sensitive_variables()
 def issue_email_challenge(request, user, purpose):
     if not getattr(settings, "SECURITY_EMAIL_ENABLED", False):
         raise EmailDeliveryError()
@@ -103,22 +154,27 @@ def issue_email_challenge(request, user, purpose):
         # One active code per account, including parallel pending browser sessions.
         device.challenges.filter(consumed_at__isnull=True, invalidated_at__isnull=True).update(invalidated_at=now)
         token = f"{secrets.randbelow(1000000):06d}"
+        expires_at = now + timedelta(seconds=min(300, seconds("SECURITY_EMAIL_CODE_SECONDS", 300)))
+        if purpose == "login":
+            pending_expires_at = datetime.fromtimestamp(request.session[PENDING_KEY]["expires"], tz=datetime_timezone.utc)
+            expires_at = min(expires_at, pending_expires_at)
         challenge = EmailChallenge(device=device, purpose=purpose, recipient=user.email,
                                    session_digest=session_digest(request), auth_hash=user.get_session_auth_hash(),
                                    session_version=state.session_version, created_at=now,
-                                   expires_at=now + timedelta(seconds=min(300, seconds("SECURITY_EMAIL_CODE_SECONDS", 300))))
+                                   expires_at=expires_at)
         challenge.token_hash = code_digest(challenge, token)
         challenge.save()
         device.last_sent_at = now
         device.save(update_fields=["last_sent_at"])
         action = "iniciar sesión" if purpose == "login" else "generar nuevos códigos de recuperación"
+        deadline = timezone.localtime(challenge.expires_at).strftime("%d/%m/%Y a las %H:%M:%S")
         try:
             delivered = send_mail("INOX 304 · Código de seguridad",
-                                  f"Tu código para {action} es:\n\n{token}\n\nCaduca en 5 minutos y funciona una sola vez. No compartas este código. Si no lo solicitaste, ignora este mensaje.",
+                                  f"Tu código para {action} es:\n\n{token}\n\nCaduca el {deadline} (hora del panel) y funciona una sola vez. Su vigencia máxima es de 5 minutos. No compartas este código. Si no lo solicitaste, ignora este mensaje.",
                                   settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
             failed = delivered != 1
-        except Exception:
-            # Never log SMTP credentials, message bodies, or the token from an exception.
+        except Exception as error:
+            _log_delivery_failure(error)
             failed = True
         if failed:
             challenge.invalidated_at = timezone.now()

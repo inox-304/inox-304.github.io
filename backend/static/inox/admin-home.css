@@ -1,0 +1,49 @@
+.inox-home #content{max-width:1240px;width:auto;margin:0 auto;padding-top:36px}
+.inox-home-heading{margin-bottom:28px}
+.inox-home-eyebrow{font-size:10px;font-weight:700;letter-spacing:.14em;color:#647890}
+.inox-home-heading .inox-home-eyebrow{margin:0 0 9px}
+.inox-home #content .inox-home-heading h1{font-size:34px;letter-spacing:-1px;margin:0 0 8px;color:#152e49}
+.inox-home-heading>p:last-child{margin:0;font-size:15px;color:#61758b}
+.inox-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.inox-home-card{display:flex;flex-direction:column;background:#fff;border:1px solid #d9e3ee;border-radius:18px;padding:30px;box-shadow:0 4px 20px #19344e04}
+.inox-home-card-heading{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.inox-home-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:12px;background:#eaf1f9;color:#274f79;flex-shrink:0}
+.inox-home-icon svg{width:27px;height:27px}
+.inox-home-inventory .inox-home-icon{background:#e7f5f0;color:#256b5b}
+.inox-home-card h2{font-size:28px;letter-spacing:-.65px;margin:0 0 9px;color:#152e49}
+.inox-home-description{min-height:48px;font-size:14px;line-height:1.7;color:#5a6f85;margin:0 0 22px;max-width:430px}
+.inox-home-metrics{display:grid;grid-template-columns:.8fr 1.4fr .9fr;gap:10px;margin:0 0 24px;padding:18px 0;border-top:1px solid #e5ebf2;border-bottom:1px solid #e5ebf2}
+.inox-home-metrics>div{display:flex;flex-direction:column-reverse;align-items:flex-start;gap:3px}
+.inox-home-metrics dt{font-size:11px;color:#687c90;font-weight:400;line-height:1.4}
+.inox-home-metrics dd{font-size:27px;color:#183b60;font-weight:650;line-height:1.2;margin:0}
+.inox-home-locations{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;padding:18px 0;border-top:1px solid #e5ebf2;border-bottom:1px solid #e5ebf2;min-height:52px}
+.inox-home-locations>div{display:flex;flex-direction:column;gap:4px}
+.inox-home-locations span{font-size:11px;color:#687c90}
+.inox-home-locations strong{font-size:19px;color:#275b50;font-weight:600}
+.inox-home-features{list-style:none;padding:0;margin:0 0 27px;display:grid;gap:16px}
+.inox-home-features li{display:flex;gap:12px;margin:0;padding:0;align-items:flex-start}
+.inox-home-features li>span{font-size:10px;letter-spacing:.04em;color:#7d91a7;margin-top:3px}
+.inox-home-features strong{display:block;font-size:13px;line-height:1.5;font-weight:600;color:#27445f}
+.inox-home-features small{display:block;color:#697d91;font-size:12px;line-height:1.55;margin-top:2px}
+.inox-home-actions{margin-top:auto;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.inox-home .inox-home-primary{display:inline-flex;gap:24px;align-items:center;justify-content:space-between;padding:12px 17px;background:#214d79;color:#fff;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none}
+.inox-home .inox-home-primary:hover{background:#173a5d}
+.inox-home .inox-home-inventory .inox-home-primary{background:#286a5b}
+.inox-home .inox-home-inventory .inox-home-primary:hover{background:#1f5347}
+.inox-home .inox-home-secondary{font-size:13px;font-weight:600;color:#315475;text-decoration:none;padding:7px 0}
+.inox-home .inox-home-secondary:hover{text-decoration:underline}
+.inox-home a:focus-visible,.inox-home summary:focus-visible{outline:3px solid #4581b6;outline-offset:4px}
+.inox-home-connection{margin:20px 0 26px;border:1px solid #dbe5ef;border-radius:12px;background:#eaf1f8;padding:17px 21px}
+.inox-home-connection strong{font-size:13px;color:#345775;font-weight:600}
+.inox-home-connection p{font-size:12px;line-height:1.7;color:#60788f;margin:5px 0 0;max-width:950px}
+.inox-home-more{border:1px solid #dae4ee;background:#fff;border-radius:13px;padding:0;overflow:hidden}
+.inox-home-more>summary{cursor:pointer;padding:19px 22px;color:#34516e}
+.inox-home-more>summary>span{font-size:14px;font-weight:600;margin-left:5px}
+.inox-home-more>summary small{display:inline;font-size:12px;color:#73859a;font-weight:400;margin-left:14px}
+.inox-home-more[open]>summary{border-bottom:1px solid #e4eaf1}
+.inox-home-more-content{padding:22px}
+.inox-home #content-main{float:none;width:100%}
+.inox-home-more-content:after{content:"";display:block;clear:both}
+.inox-home .module:last-child{margin-bottom:0!important}
+@media(max-width:900px){.inox-home #content{padding:25px 18px}.inox-home-card{padding:24px}.inox-home-grid{gap:16px}.inox-home .inox-home-primary{gap:16px}.inox-home-actions{gap:10px 18px}.inox-home-more>summary small{display:block;margin:5px 0 0 20px}}
+@media(max-width:700px){.inox-home-grid{grid-template-columns:1fr}.inox-home #content .inox-home-heading h1{font-size:29px}.inox-home-description{min-height:0}.inox-home-card{padding:24px}.inox-home-card-heading{margin-bottom:16px}.inox-home-connection{margin:16px 0 20px}.inox-home-more-content{padding:14px}.inox-home-metrics{gap:8px}.inox-home-more .module table td{white-space:normal}.inox-home-more .module table td a{padding-right:0}}

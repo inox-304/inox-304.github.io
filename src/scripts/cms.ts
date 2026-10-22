@@ -160,6 +160,10 @@ function updateDetail(data: CmsData) {
       styleQuote(selectedPrice);
       if (unit) unit.hidden = !selectedPrice || !unit.textContent;
       if (availability) { availability.textContent = formatAvailability(variant?.availability || product.availability); availability.hidden = !availability.textContent; }
+      const selectedSheet = variant?.technicalSheet || product.technicalSheet;
+      const sheetLink = detail.querySelector<HTMLAnchorElement>('[data-product-technical-sheet]');
+      if (sheetLink) { sheetLink.href = selectedSheet ? withBase(selectedSheet) : ''; sheetLink.hidden = !selectedSheet; }
+      document.dispatchEvent(new CustomEvent('inox:configuration-updated', { detail: { productId: product.id, variant } }));
       updateQuote();
     };
     variants.onchange = selectVariant; selectVariant();
@@ -192,8 +196,9 @@ function updateDetail(data: CmsData) {
   }
   const technicalSheet = detail.querySelector<HTMLAnchorElement>('[data-product-technical-sheet]');
   if (technicalSheet) {
-    technicalSheet.hidden = !product.technicalSheet;
-    if (product.technicalSheet) technicalSheet.href = withBase(product.technicalSheet);
+    const sheet = product.variants?.find(item => item.id === variants?.value)?.technicalSheet || product.technicalSheet;
+    technicalSheet.hidden = !sheet;
+    if (sheet) technicalSheet.href = withBase(sheet);
     else technicalSheet.removeAttribute('href');
   }
   const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;

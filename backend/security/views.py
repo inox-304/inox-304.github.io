@@ -1,4 +1,5 @@
 import base64
+import time
 from datetime import timedelta
 from io import BytesIO
 from urllib.parse import quote
@@ -21,7 +22,7 @@ from .models import EmailDevice, EnrollmentPermission, RecoveryCode, SecuritySta
 from .services import (PENDING_KEY, VERSION, allow_attempt, audit, complete_login,
                        enrollment_allowed, generate_recovery_codes,
                        is_admin_authenticated, pending_user, revoke_sessions,
-                       start_pending, state_for, verify_device)
+                       seconds, start_pending, state_for, verify_device)
 
 
 def limited(request, user=None):
@@ -43,6 +44,13 @@ def codes_response(request, codes):
 def login_view(request):
     if request.method == "GET" and is_admin_authenticated(request):
         return redirect("admin:index")
+    if request.method == "GET":
+        pending = request.session.get(PENDING_KEY)
+        if isinstance(pending, dict) and pending.get("mode") == "email":
+            from .email_auth import pending_email_challenge
+            user = pending_user(request, "email")
+            if user is not None and pending_email_challenge(request, user) is not None:
+                return redirect("security:email_verify")
     form = LoginForm(request.POST or None)
     if request.method == "POST":
         identity = request.POST.get("email", "").strip().lower()[:254]
@@ -54,8 +62,22 @@ def login_view(request):
                 if state_for(user).mfa_method == "email":
                     has_device = EmailDevice.objects.filter(user=user, confirmed=True, email=user.email).exclude(email="").exists()
                     if has_device or enrollment_allowed(user):
+                        from .email_auth import pending_email_challenge
                         from .email_views import send_login_code
-                        start_pending(request, user, "email")
+                        previous_user = pending_user(request, "email")
+                        if previous_user is None or previous_user.pk != user.pk:
+                            start_pending(request, user, "email")
+                        elif pending_email_challenge(request, user) is not None:
+                            return redirect("security:email_verify")
+                        else:
+                            # The password was just verified again. A new code
+                            # needs a fresh verification window, even if an older
+                            # failed send left this same session near expiration.
+                            lifetime = seconds("SECURITY_PENDING_SECONDS", 300)
+                            pending = request.session[PENDING_KEY].copy()
+                            pending["expires"] = time.time() + lifetime
+                            request.session[PENDING_KEY] = pending
+                            request.session.set_expiry(lifetime)
                         audit("password_verified", request, user)
                         return send_login_code(request, user)
                     form.add_error(None, "La activación de tu cuenta requiere autorización del responsable del sistema.")

@@ -1,0 +1,81 @@
+{% extends "admin/index.html" %}
+{% load static admin_overview %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/admin-home.css' %}?v=1">{% endblock %}
+{% block coltype %}colM{% endblock %}
+{% block bodyclass %}{{ block.super }} inox-home{% endblock %}
+{% block content_title %}
+<header class="inox-home-heading">
+  <p class="inox-home-eyebrow">TU ESPACIO DE TRABAJO</p>
+  <h1>Catálogo y operación</h1>
+  <p>Presenta tus equipos y organiza lo que necesitas para fabricarlos.</p>
+</header>
+{% endblock %}
+
+{% block content %}
+{% catalog_overview as overview %}
+<div class="inox-home-grid">
+  {% if overview %}
+  <section class="inox-home-card inox-home-catalog" aria-labelledby="catalog-title">
+    <div class="inox-home-card-heading">
+      <span class="inox-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 3 9 5v8l-9 5-9-5V8l9-5Z M3 8l9 5 9-5 M12 13v8 M7.5 5.5l9 5v5"/></svg></span>
+      <span class="inox-home-eyebrow">PRESENTACIÓN Y VENTA</span>
+    </div>
+    <h2 id="catalog-title">Catálogo</h2>
+    <p class="inox-home-description">Cada equipo, con sus fotos, modelo 3D, ficha técnica, tipos y adicionales.</p>
+    <dl class="inox-home-metrics">
+      <div><dt>Equipos</dt><dd>{{ overview.total }}</dd></div>
+      <div><dt>Activos y publicados</dt><dd>{{ overview.published }}</dd></div>
+      <div><dt>Borradores</dt><dd>{{ overview.drafts }}</dd></div>
+    </dl>
+    <ul class="inox-home-features">
+      <li><span>01</span><div><strong>Datos y archivos</strong><small>Nombre, fotos, GLB y ficha PDF.</small></div></li>
+      <li><span>02</span><div><strong>Tipos y adicionales</strong><small>Configuraciones, acabados y opciones por equipo.</small></div></li>
+      <li><span>03</span><div><strong>Precio y publicación</strong><small>Revisa los cambios y decide qué mostrar.</small></div></li>
+    </ul>
+    <div class="inox-home-actions">
+      <a class="inox-home-primary" href="{% url 'admin:catalog_product_changelist' %}">Abrir catálogo <span aria-hidden="true">→</span></a>
+      {% if perms.catalog.add_product %}<a class="inox-home-secondary" href="{% url 'admin:catalog_product_add' %}">+ Nuevo equipo</a>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if perms.catalog.view_product %}
+  <section class="inox-home-card inox-home-inventory" aria-labelledby="inventory-title">
+    <div class="inox-home-card-heading">
+      <span class="inox-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21V7l9-4 9 4v14H3Z M7 21V11h10v10 M7 15h10 M7 18h10 M2 21h20"/></svg></span>
+      <span class="inox-home-eyebrow">MATERIALES Y FABRICACIÓN</span>
+    </div>
+    <h2 id="inventory-title">Inventario</h2>
+    <p class="inox-home-description">Existencias por código, consumo de materiales, mano de obra y costos de fabricación.</p>
+    <div class="inox-home-locations">
+      <div><span>Tienda</span><strong>San Sebas</strong></div>
+      <div><span>Taller</span><strong>Vallecito</strong></div>
+    </div>
+    <ul class="inox-home-features">
+      <li><span>01</span><div><strong>Existencias y movimientos</strong><small>Consulta materiales, accesorios y equipos.</small></div></li>
+      <li><span>02</span><div><strong>Consumo por equipo</strong><small>Define componentes, cantidades y merma.</small></div></li>
+      <li><span>03</span><div><strong>Disponibilidad y costos</strong><small>Analiza cuánto puedes fabricar y qué falta.</small></div></li>
+    </ul>
+    <div class="inox-home-actions">
+      <a class="inox-home-primary" href="{% url 'inventory-dashboard' %}">Abrir inventario <span aria-hidden="true">→</span></a>
+      <a class="inox-home-secondary" href="{% url 'inventory-dashboard' %}#planificar">Analizar un equipo</a>
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{% if overview %}
+<aside class="inox-home-connection">
+  <strong>Un código para seguir cada equipo.</strong>
+  <p>Usa el código del catálogo en Inventario y Recetas. Cada tipo puede tener su propia receta; sus adicionales suman componentes.</p>
+</aside>
+{% endif %}
+
+<details class="inox-home-more">
+  <summary><span>Archivos y configuración</span><small>Biblioteca, contactos, datos del negocio e historial</small></summary>
+  <div class="inox-home-more-content">{{ block.super }}</div>
+</details>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

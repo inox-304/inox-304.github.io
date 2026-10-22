@@ -1,6 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "dist-server", ".work", "backend/data", "backend/.venv", "node_modules", "public/vendor"],
+  "exclude": ["dist", "dist-server", ".work", "backend/data", "backend/.venv", "node_modules", "public/vendor", "HISTORICO", "CONTEXTO", "RESPALDOS", "DEPENDENCIAS", "HERRAMIENTAS", "VERIFICACION", "backend/.portable-python"],
   "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["src/*"] } }
 }
