@@ -63,7 +63,22 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
   familyNote.textContent = family ? family.cardSummary || `${family.members.length} ${family.members.length === 1 ? 'modelo disponible' : 'modelos disponibles'}` : '';
   setText('[data-card-link-label]', family ? family.cardAction || 'Elegir capacidad / modelo' : 'Explorar equipo', card);
   setText('[data-card-code]', product.id, card);
-  const image = card.querySelector('img'); if (image) { image.src = withBase(product.image); image.alt = product.name; image.removeAttribute('srcset'); }
+  const image = card.querySelector('img');
+  if (image) {
+    const source = withBase(product.image), expectedSource = new URL(source, location.href).href;
+    const applyPhoto = (natural?: { width: number; height: number }) => {
+      const profile = getProductStage(product.image, natural);
+      image.setAttribute('data-product-photo', ''); image.setAttribute('style', profile.photoStyle);
+      image.width = profile.width; image.height = profile.height;
+    };
+    applyPhoto();
+    const loaded = () => {
+      if (image.onload !== loaded || image.currentSrc !== expectedSource || !image.naturalWidth || !image.naturalHeight) return;
+      applyPhoto({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onload = loaded; image.src = source; image.alt = product.name; image.removeAttribute('srcset');
+    if (image.complete) loaded();
+  }
   const price = formatProductPrice(product);
   const priceNode = card.querySelector<HTMLElement>('[data-card-price]'); if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
   const quote = card.querySelector<HTMLAnchorElement>('[data-card-quote]');
@@ -137,6 +152,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     const expectedSource = new URL(source, location.href).href;
     const applyStage = (natural?: { width: number; height: number }) => {
       const profile = getProductStage(product.image, natural);
+      image.setAttribute('data-product-photo', ''); image.setAttribute('style', profile.photoStyle);
       image.width = profile.width; image.height = profile.height;
     };
     // Clear placeholder geometry before loading a different product or CMS image.
@@ -177,7 +193,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   const updateCooktop = () => {
     if (!cooktopRoot) return;
     // A different SKU/variant has not inherited approval for this base's modules.
-    renderCooktop(cooktopRoot, variants?.value ? null : cooktopRules, product.id, text => { configuredSurface = text; updateConfiguredPrice(); updateQuote(); }, payload?.preview === true);
+    renderCooktop(cooktopRoot, variants?.value ? null : cooktopRules, product.id, text => { configuredSurface = text; updateConfiguredPrice(); updateQuote(); }, payload?.preview === true, product.model3d);
   };
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? productQuoteNote(product) : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);

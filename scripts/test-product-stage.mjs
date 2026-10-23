@@ -4,8 +4,8 @@ import { getProductStage } from '../src/lib/product-stage.ts';
 import { productImageBounds } from '../src/data/product-image-bounds.ts';
 import { products } from '../src/data/products.ts';
 
-function variables(profile) {
-  return Object.fromEntries(profile.style.split(';').map(declaration => {
+function variables(profile, key = 'style') {
+  return Object.fromEntries(profile[key].split(';').map(declaration => {
     const [name, value] = declaration.split(':');
     return [name, Number.parseFloat(value)];
   }));
@@ -13,10 +13,10 @@ function variables(profile) {
 function near(actual, expected, message) { assert.ok(Math.abs(actual - expected) < .00001, `${message}: ${actual} versus ${expected}`); }
 const asset = '/images/products/horno-ecologico-para-pollo-a-la-brasa.webp';
 
-test('authored bounds cover every catalog cutout and stay inside their image canvases', () => {
-  const cutouts = products.filter(product => /\.(?:webp|png)$/i.test(product.image)).map(product => product.image).sort();
-  assert.ok(cutouts.length > 0);
-  assert.deepEqual(Object.keys(productImageBounds).sort(), cutouts);
+test('authored bounds cover every catalog photo and stay inside their image canvases', () => {
+  const photos = products.map(product => product.image).sort();
+  assert.ok(photos.length > 0);
+  assert.deepEqual(Object.keys(productImageBounds).sort(), photos);
   for (const [file, metadata] of Object.entries(productImageBounds)) {
     const bounds = metadata.bounds;
     assert.ok(bounds.x >= 0 && bounds.y >= 0 && bounds.width > 0 && bounds.height > 0, file);
@@ -116,4 +116,42 @@ test('matching natural dimensions retain authored bounds while a same-path repla
   assert.equal(css['--image-top'], 0);
   assert.equal(css['--image-width'], 100);
   assert.equal(css['--image-height'], 100);
+});
+
+test('confirmed white JPG photos use their visible equipment bounds with a safe replacement fallback', () => {
+  const file = '/images/products/freidora-automatica-de-papas.jpg';
+  const metadata = productImageBounds[file];
+  const profile = getProductStage(file);
+  assert.equal(profile.isCutout, false);
+  assert.equal(profile.shape, 'tall');
+  assert.ok(metadata.bounds.width < metadata.width * .7, 'white side margins are excluded');
+  assert.equal(profile.width, metadata.width);
+  assert.deepEqual(getProductStage(`/inox304${file}?v=reviewed`, metadata), profile);
+  assert.deepEqual(getProductStage(file, { width: 1000, height: 1000 }), getProductStage('/images/products/new-photo.jpg', { width: 1000, height: 1000 }));
+});
+
+test('white photo frames center visible equipment on both axes without stretching or clipping it', () => {
+  for (const [file, metadata] of Object.entries(productImageBounds)) {
+    const css = variables(getProductStage(file), 'photoStyle'), bounds = metadata.bounds;
+    const left = css['--photo-image-left'] + bounds.x / metadata.width * css['--photo-image-width'];
+    const top = css['--photo-image-top'] + bounds.y / metadata.height * css['--photo-image-height'];
+    const width = bounds.width / metadata.width * css['--photo-image-width'];
+    const height = bounds.height / metadata.height * css['--photo-image-height'];
+    near(left + width / 2, 50, `${file} horizontal center`);
+    near(top + height / 2, 50, `${file} vertical center`);
+    near(width / height, bounds.width / bounds.height, `${file} original geometry`);
+    near(Math.max(width, height), 88, `${file} consistent longest dimension`);
+    assert.ok(left >= 5.99999 && top >= 5.99999, `${file} clear margin`);
+    assert.ok(left + width <= 94.00001 && top + height <= 94.00001, `${file} full equipment remains visible`);
+  }
+});
+
+test('white photo frames retain complete unknown and replaced images instead of inheriting another crop', () => {
+  for (const image of [asset, 'https://cdn.example/owner-photo.jpg']) {
+    const css = variables(getProductStage(image, { width: 1600, height: 500 }), 'photoStyle');
+    near(css['--photo-image-left'], 6, 'complete photo starts within the frame');
+    near(css['--photo-image-top'], 36.25, 'complete photo stays vertically centered');
+    near(css['--photo-image-width'], 88, 'complete width');
+    near(css['--photo-image-height'], 27.5, 'complete height');
+  }
 });

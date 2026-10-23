@@ -1,0 +1,25 @@
+/* Each equipment keeps its real proportions inside the same white square. */
+.product-card.product-photo-white .product-card-image {
+  aspect-ratio: 1;
+  background: #fff;
+  border: 1px solid #e0e5eb;
+  isolation: isolate;
+}
+.product-card.product-photo-white .product-card-image > img[data-product-photo],
+.product-photo-white .equipment-image[data-product-photo] {
+  position: absolute;
+  left: var(--photo-image-left, 6%);
+  top: var(--photo-image-top, 6%);
+  width: var(--photo-image-width, 88%);
+  height: var(--photo-image-height, 88%);
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: contain;
+  padding: 0;
+  mix-blend-mode: normal;
+  filter: none;
+}
+.product-card.product-photo-white:hover .product-card-image > img[data-product-photo] { transform: none; }
+.product-card.product-photo-white .product-index,
+.product-card.product-photo-white .product-arrow { z-index: 1; }

@@ -1,7 +1,16 @@
 import { cooktopQuoteSummary, cooktopSummary, energyName, initialCooktopSelection, moduleCells, placeCooktopModule, type CooktopConfig, type CooktopSelection } from '../lib/cooktop-config';
+import { cooktopAssetFor } from '../lib/cooktop-assets';
 
-type View = { key: string; selection: CooktopSelection; anchor: number; onChange: (text: string) => void };
+type View = { key: string; productId: string; config: CooktopConfig; selection: CooktopSelection; anchor: number; onChange: (text: string) => void; pick?: (anchor: number) => void };
 const views = new WeakMap<HTMLElement, View>();
+export function readCooktop(root: HTMLElement | null, productId: string) {
+  const view = root ? views.get(root) : undefined;
+  return view?.productId === productId ? { config: view.config, selection: view.selection } : null;
+}
+export function pickCooktopAnchor(root: HTMLElement | null, productId: string, anchor: number) {
+  const view = root ? views.get(root) : undefined;
+  if (view?.productId === productId) view.pick?.(anchor);
+}
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
@@ -10,15 +19,15 @@ function button(text: string, action: () => void, className = '') {
 }
 
 /** One controller per rendered product, using only that product's approved modules. */
-export function renderCooktop(root: HTMLElement, config: CooktopConfig | null, productId: string, onChange: (text: string) => void, preview = false): void {
-  if (!config || (!config.enabled && !preview)) { root.hidden = true; root.replaceChildren(); views.delete(root); onChange(''); return; }
+export function renderCooktop(root: HTMLElement, config: CooktopConfig | null, productId: string, onChange: (text: string) => void, preview = false, model3d = ''): void {
+  if (!config || (!config.enabled && !preview)) { root.hidden = true; root.replaceChildren(); views.delete(root); onChange(''); document.dispatchEvent(new CustomEvent('inox:cooktop-updated', { detail: { productId, state: null, interactive: false } })); return; }
   const key = `${productId}:${JSON.stringify(config)}`;
   let view = views.get(root);
-  if (!view || view.key !== key) { view = { key, selection: initialCooktopSelection(config), anchor: 0, onChange }; views.set(root, view); }
+  if (!view || view.key !== key) { view = { key, productId, config, selection: initialCooktopSelection(config), anchor: 0, onChange }; views.set(root, view); }
   view.onChange = onChange;
   root.hidden = false;
   const current = view;
-  function draw(announcement = '', focusCell = false) {
+  function draw(announcement = '', focusCell = false, interactive = false) {
     const layout = config!.layouts.find(l => l.id === current.selection.layoutId)!;
     const title = el('h2', 'Diseña tu superficie');
     const intro = el('p', 'Elige una posición y cambia su módulo. Solo aparecen las opciones autorizadas para esta cocina.', 'cooktop-intro');
@@ -27,12 +36,12 @@ export function renderCooktop(root: HTMLElement, config: CooktopConfig | null, p
     const layoutSelect = el('select'); layoutSelect.setAttribute('aria-label', 'Base de la cocina');
     layoutSelect.replaceChildren(...config!.layouts.map(l => new Option(`${l.name} · ${l.rows * l.columns} posiciones`, l.id)));
     layoutSelect.value = layout.id;
-    layoutSelect.onchange = () => { current.selection = { ...current.selection, layoutId: layoutSelect.value, placements: [] }; current.anchor = 0; draw('Cambió la base. Restablecimos las hornillas para que elijas una distribución compatible.'); root.querySelector<HTMLSelectElement>('[aria-label="Base de la cocina"]')?.focus(); };
+    layoutSelect.onchange = () => { current.selection = { ...current.selection, layoutId: layoutSelect.value, placements: [] }; current.anchor = 0; draw('Cambió la base. Restablecimos las hornillas para que elijas una distribución compatible.', false, true); root.querySelector<HTMLSelectElement>('[aria-label="Base de la cocina"]')?.focus(); };
     layoutLabel.append(layoutSelect);
     const energyLabel = el('label', 'Tipo de energía');
     const energySelect = el('select'); energySelect.setAttribute('aria-label', 'Energía de la superficie');
     energySelect.replaceChildren(...config!.energies.map(e => new Option(energyName(e), e))); energySelect.value = current.selection.energy;
-    energySelect.onchange = () => { current.selection = { ...current.selection, energy: energySelect.value as CooktopSelection['energy'], placements: [] }; current.anchor = 0; draw('Cambió la energía. Restablecimos los módulos para evitar una combinación incompatible.'); root.querySelector<HTMLSelectElement>('[aria-label="Energía de la superficie"]')?.focus(); };
+    energySelect.onchange = () => { current.selection = { ...current.selection, energy: energySelect.value as CooktopSelection['energy'], placements: [] }; current.anchor = 0; draw('Cambió la energía. Restablecimos los módulos para evitar una combinación incompatible.', false, true); root.querySelector<HTMLSelectElement>('[aria-label="Energía de la superficie"]')?.focus(); };
     energyLabel.append(energySelect); controls.append(layoutLabel, energyLabel);
     const surface = el('div', '', 'cooktop-surface');
     surface.append(el('p', 'FONDO · VISTA SUPERIOR', 'cooktop-direction'));
@@ -62,7 +71,7 @@ export function renderCooktop(root: HTMLElement, config: CooktopConfig | null, p
       let error = '';
       try { placeCooktopModule(config!, current.selection, module.id, current.anchor); } catch (e) { error = e instanceof Error ? e.message : 'No disponible en esta posición.'; }
       const option = button('', () => {
-        try { current.selection = placeCooktopModule(config!, current.selection, module.id, current.anchor); draw(`${module.name} seleccionado. ${cooktopSummary(config!, current.selection).text}.`, true); }
+        try { current.selection = placeCooktopModule(config!, current.selection, module.id, current.anchor); draw(`${module.name} seleccionado. ${cooktopSummary(config!, current.selection).text}.`, true, true); }
         catch (e) { draw(e instanceof Error ? e.message : 'No se puede colocar el módulo.'); }
       }, 'cooktop-module-option');
       option.disabled = Boolean(error); option.setAttribute('aria-pressed', String(active === module.id));
@@ -72,14 +81,19 @@ export function renderCooktop(root: HTMLElement, config: CooktopConfig | null, p
     }
     options.append(group);
     const summary = el('p', cooktopSummary(config!, current.selection).text, 'cooktop-summary');
-    const reset = button('Restablecer hornillas', () => { current.selection = { ...current.selection, placements: [] }; current.anchor = 0; draw('Distribución restablecida con todas las hornillas comunes.', true); }, 'cooktop-reset');
+    const reset = button('Restablecer hornillas', () => { current.selection = { ...current.selection, placements: [] }; current.anchor = 0; draw('Distribución restablecida con todas las hornillas comunes.', true, true); }, 'cooktop-reset');
     const status = el('p', announcement, 'cooktop-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
-    const note = el('p', 'Plano de distribución para cotizar. El visor 3D muestra el equipo base; esta selección aún no modifica su geometría. Medidas, precio y fabricación por confirmar.', 'cooktop-note');
+    const note = el('p', cooktopAssetFor(productId, model3d) ? 'Cambia un módulo y observa su distribución en 3D. También puedes tocar una pieza del modelo para seleccionar su posición. Visualización ilustrativa; medidas, precio y fabricación por confirmar.' : 'Plano de distribución para cotizar. Este equipo todavía no tiene piezas 3D separadas; el visor muestra el modelo base. Medidas, precio y fabricación por confirmar.', 'cooktop-note');
     root.replaceChildren(title, intro);
     if (!config!.enabled) root.append(el('p', 'Borrador privado · todavía no se ofrece a los clientes.', 'cooktop-draft'));
     root.append(controls, surface, options, summary, reset, status, note);
     if (focusCell) grid.querySelector<HTMLButtonElement>(`[data-anchor="${current.anchor}"]`)?.focus();
     current.onChange(cooktopQuoteSummary(config!, current.selection));
+    current.pick = anchor => {
+      if (!Number.isInteger(anchor) || anchor < 0 || anchor >= layout.rows * layout.columns) return;
+      current.anchor = anchor; draw(`Posición ${anchor + 1} seleccionada desde el modelo 3D.`);
+    };
+    document.dispatchEvent(new CustomEvent('inox:cooktop-updated', { detail: { productId, state: { config, selection: current.selection }, interactive } }));
   }
   draw();
 }

@@ -8,11 +8,14 @@ import { formatProductPrice } from '../lib/cms';
 import { whatsappUrl } from '../data/site';
 import { catalogSearchText } from '../lib/catalog-controls';
 import { getProductFamily } from '../lib/product-families';
+import { getProductStage } from '../lib/product-stage';
 import '../styles/product-family.css';
+import '../styles/product-photo.css';
 interface Props { product: Product; products?: Product[]; index?: number; href?: string }
 const { product, products = [], index = 0, href = withBase(`/catalogo/${product.slug}/`) } = Astro.props;
 const family = getProductFamily(product.id, products);
 const title = family?.name || product.name;
+const photo = getProductStage(product.image);
 const category = categories.find(item => item.id === product.category);
 const search = family ? [family.name, ...family.members.map(member => `${member.label} ${catalogSearchText(member.product, category?.name || '')}`)].join(' ') : catalogSearchText(product, category?.name || '');
 const price = formatProductPrice(product);
@@ -20,7 +23,7 @@ const quoteUrl = whatsappUrl(`Hola INOX 304, me interesa ${product.name}. Me gus
 ---
 <article class="product-card product-photo-white" data-product-id={product.id} data-category={product.category} data-title={title} data-catalog-order={index} data-name={search}>
   <a class="product-card-main" href={href}>
-  <div class="product-card-image"><span class="product-index">{String(index + 1).padStart(2, '0')}</span><img src={withBase(product.image)} alt={product.name} loading="lazy" decoding="async" width="640" height="520"/><span class="product-arrow"><Icon name="diagonal" size={22}/></span></div>
+  <div class="product-card-image"><span class="product-index">{String(index + 1).padStart(2, '0')}</span><img data-product-photo style={photo.photoStyle} src={withBase(product.image)} alt={product.name} loading="lazy" decoding="async" width={photo.width} height={photo.height}/><span class="product-arrow"><Icon name="diagonal" size={22}/></span></div>
   <div class="product-card-info"><div class="product-card-meta"><p class="eyebrow">{category?.shortName}</p><span class="product-card-code" data-card-code>{product.id}</span></div><h3>{title}</h3><p class="product-card-family" data-card-family hidden={!family}>{family ? family.cardSummary || `${family.members.length} ${family.members.length === 1 ? 'modelo disponible' : 'modelos disponibles'}` : ''}</p><span class="card-link"><span data-card-link-label>{family ? family.cardAction || 'Elegir capacidad / modelo' : 'Explorar equipo'}</span> <Icon name="arrow" size={15}/></span></div>
   </a>
   <div class="product-card-commerce">

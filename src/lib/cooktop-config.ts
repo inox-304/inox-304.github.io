@@ -126,5 +126,5 @@ export function cooktopSummary(config: CooktopConfig, state: CooktopSelection): 
 
 export function cooktopQuoteSummary(config: CooktopConfig, state: CooktopSelection): string {
   const valid = validateCooktopSelection(config, state), layout = config.layouts.find(l => l.id === valid.layoutId)!;
-  return `\nDistribución solicitada: ${layout.name} (${layout.rows * layout.columns} posiciones), ${energyName(valid.energy)}.\n${cooktopSummary(config, valid).text}.\n${valid.placements.map(p => { const m = config.modules.find(m => m.id === p.moduleId)!; return `• ${m.name}: posiciones ${moduleCells(layout, m, p.anchor).map(n => n + 1).join(', ')} (vista superior; numeración de izquierda a derecha, fondo a frente).`; }).join('\n')}\nPrecio, medidas y fabricación por confirmar. El 3D mostrado corresponde al equipo base.`;
+  return `\nDistribución solicitada: ${layout.name} (${layout.rows * layout.columns} posiciones), ${energyName(valid.energy)}.\n${cooktopSummary(config, valid).text}.\n${valid.placements.map(p => { const m = config.modules.find(m => m.id === p.moduleId)!; return `• ${m.name}: posiciones ${moduleCells(layout, m, p.anchor).map(n => n + 1).join(', ')} (vista superior; numeración de izquierda a derecha, fondo a frente).`; }).join('\n')}\nVisualización ilustrativa. Precio, medidas y fabricación por confirmar.`;
 }

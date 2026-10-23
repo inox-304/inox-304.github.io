@@ -1,6 +1,9 @@
 import { safeImage, safeModel, safePreviewAsset, type CmsProduct } from '../lib/cms';
 import { withBase } from '../lib/paths';
 import type { ModelViewerElement } from '@google/model-viewer';
+import { cooktopAssetFor } from '../lib/cooktop-assets';
+import { readCooktop, pickCooktopAnchor } from './cooktop-ui';
+import type { CooktopScene } from './cooktop-scene';
 
 type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'supplyType' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
 let viewerModule: Promise<typeof import('@google/model-viewer')> | undefined;
@@ -37,6 +40,9 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   let revision = 0;
   let timeout: number | undefined;
   let viewer: ModelViewerElement | undefined;
+  let modular: CooktopScene | undefined;
+  let modularLoading = false;
+  const cooktopRoot = document.querySelector<HTMLElement>('[data-cooktop-root]');
   let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
   let doorFrame: number | undefined;
   let animationLabels = { open: 'Abrir puertas', close: 'Cerrar puertas' };
@@ -62,6 +68,12 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (!doors.hidden) { viewer.animationName = animation; viewer.pause(); viewer.currentTime = 0; }
   }
   doors.addEventListener('click', () => {
+    if (modular && !doors.hidden) {
+      const opening = doors.getAttribute('aria-pressed') !== 'true';
+      modular.setDoors(opening);
+      doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? 'Cerrar puertas' : 'Abrir puertas';
+      return;
+    }
     if (!viewer || doors.hidden) return;
     const opening = doors.getAttribute('aria-pressed') !== 'true';
     viewer.pause();
@@ -89,6 +101,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     viewer?.removeAttribute('src');
     viewer?.remove();
     viewer = undefined;
+    modular?.dispose(); modular = undefined; modularLoading = false;
     doors.hidden = true;
     host.replaceChildren(); host.hidden = true; help.hidden = true;
     message();
@@ -112,11 +125,11 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     } else galleryImage.removeAttribute('src');
     photos.querySelectorAll<HTMLButtonElement>('button').forEach((photo, position) => photo.setAttribute('aria-pressed', String(position === index)));
   }
-  async function showModel(focusViewer = true) {
+  async function showModel(focusViewer = true, replaceView = false) {
     if (!product) return;
     const model = modelUrl(selectedVariant?.model3d || product.model3d || '');
     if (!model) return;
-    if (button.getAttribute('aria-pressed') === 'true') { selectPhoto(selectedPhoto); return; }
+    if (button.getAttribute('aria-pressed') === 'true' && !replaceView) { selectPhoto(selectedPhoto); return; }
     closeActiveViewer?.(); resetViewer(); closeActiveViewer = resetViewer;
     galleryImage.onload = null; galleryImage.onerror = null;
     const request = revision;
@@ -129,6 +142,31 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     }
     timeout = window.setTimeout(failed, 45000);
     try {
+      const state = !selectedVariant && product.id ? readCooktop(cooktopRoot, product.id) : null;
+      const asset = state ? cooktopAssetFor(product.id || '', model) : '';
+      if (state && asset) {
+        modularLoading = true;
+        const { createCooktopScene } = await import('./cooktop-scene');
+        if (request !== revision || !product) return;
+        host.hidden = false;
+        const productId = product.id!;
+        const scene = await createCooktopScene(host, withBase(asset), {
+          onPick: anchor => { if (request === revision) pickCooktopAnchor(cooktopRoot, productId, anchor); },
+          onError: () => { if (request === revision) message('No se puede representar esta combinación en 3D. Revisa la distribución o vuelve a la foto.'); },
+        });
+        if (request !== revision) { scene.dispose(); return; }
+        const latest = readCooktop(cooktopRoot, productId);
+        if (!latest) { scene.dispose(); resetViewer(); return; }
+        modular = scene; modularLoading = false;
+        window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy');
+        button.firstChild!.textContent = 'Volver a foto ';
+        help.hidden = false; help.textContent = `${navigationHelp} Toca una hornilla o módulo para elegir su posición. La distribución cambia al instante.`;
+        doors.hidden = !scene.hasDoors; doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
+        scene.update(latest.config, latest.selection);
+        photos.querySelectorAll('button').forEach(photo => photo.setAttribute('aria-pressed', 'false'));
+        if (focusViewer) host.querySelector('canvas')?.focus();
+        return;
+      }
       await loadViewer();
       if (request !== revision || !product) return;
       const element = document.createElement('model-viewer');
@@ -181,20 +219,29 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (wasOpen && model) void showModel(false);
   }
   button.addEventListener('click', () => { void showModel(); });
-  root.addEventListener('keydown', event => { if (event.key === 'Escape' && viewer) { selectPhoto(selectedPhoto); button.focus(); } });
+  root.addEventListener('keydown', event => { if (event.key === 'Escape' && (viewer || modular)) { selectPhoto(selectedPhoto); button.focus(); } });
   document.addEventListener('inox:product-updated', event => {
     update((event as CustomEvent<{ product: MediaProduct | null }>).detail.product);
   });
   document.addEventListener('inox:configuration-updated', event => {
     const detail = (event as CustomEvent<{ productId: string; variant?: typeof selectedVariant }>).detail;
     if (!product || product.id !== detail.productId) return;
-    const wasOpen = !!viewer;
+    const wasOpen = !!viewer || !!modular;
     const oldModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     selectedVariant = detail.variant;
     const nextModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     button.hidden = !nextModel; toolbar.hidden = !nextModel && sources.length < 2;
-    if (oldModel !== nextModel) { resetViewer(); if (wasOpen && nextModel) void showModel(); }
+    if (oldModel !== nextModel || modular || modularLoading) { resetViewer(); if (wasOpen && nextModel) void showModel(false); }
     else configureViewer();
+  });
+  document.addEventListener('inox:cooktop-updated', event => {
+    const detail = (event as CustomEvent<{ productId: string; interactive: boolean }>).detail;
+    if (!product || product.id !== detail.productId || selectedVariant) return;
+    const state = readCooktop(cooktopRoot, detail.productId);
+    if (!state) { if (modular || modularLoading) resetViewer(); return; }
+    if (modular) { modular.update(state.config, state.selection); return; }
+    if (modularLoading) return; // Creation applies the newest selection after loading.
+    if (cooktopAssetFor(detail.productId, product.model3d || '') && (detail.interactive || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
   });
   window.addEventListener('pagehide', resetViewer);
   try { update(JSON.parse(root.dataset.currentProduct ?? root.dataset.initialProduct ?? 'null')); }

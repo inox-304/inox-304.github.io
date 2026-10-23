@@ -5,6 +5,7 @@ export type ProductStageProfile = {
   isCutout: boolean;
   shape: 'wide' | 'square' | 'tall';
   style: string;
+  photoStyle: string;
   width: number;
   height: number;
 };
@@ -18,7 +19,7 @@ function validDimensions(value?: Dimensions): value is Dimensions {
   return !!value && Number.isFinite(value.width) && Number.isFinite(value.height) && value.width > 0 && value.height > 0;
 }
 
-/** Use asset-specific alpha bounds, then actual image dimensions for CMS replacements. */
+/** Use confirmed alpha or white-background bounds, then actual dimensions for CMS replacements. */
 export function getProductStage(image: string, natural?: Dimensions): ProductStageProfile {
   const pathname = imagePath(image);
   const isCutout = /\.(?:webp|png)$/i.test(pathname);
@@ -29,7 +30,7 @@ export function getProductStage(image: string, natural?: Dimensions): ProductSta
   const dimensions = actual || authored || { width: 800, height: 800 };
   // A CMS replacement at the same local URL must not inherit obsolete crop geometry.
   const matchingAsset = authored && (!actual || (actual.width === authored.width && actual.height === authored.height));
-  const bounds = isCutout && matchingAsset ? authored.bounds : { x: 0, y: 0, ...dimensions };
+  const bounds = matchingAsset ? authored.bounds : { x: 0, y: 0, ...dimensions };
   const ratio = bounds.width / bounds.height;
   const equipmentWidth = Math.min(76, 66 * ratio);
   const values: Record<string, number> = {
@@ -41,10 +42,19 @@ export function getProductStage(image: string, natural?: Dimensions): ProductSta
     '--image-width': dimensions.width / bounds.width * 100,
     '--image-height': dimensions.height / bounds.height * 100,
   };
+  const photoWidth = Math.min(88, 88 * ratio);
+  const photoHeight = photoWidth / ratio;
+  const photoValues: Record<string, number> = {
+    '--photo-image-left': (100 - photoWidth) / 2 - bounds.x / bounds.width * photoWidth,
+    '--photo-image-top': (100 - photoHeight) / 2 - bounds.y / bounds.height * photoHeight,
+    '--photo-image-width': dimensions.width / bounds.width * photoWidth,
+    '--photo-image-height': dimensions.height / bounds.height * photoHeight,
+  };
   return {
     isCutout,
     shape: ratio > 1.2 ? 'wide' : ratio < .8 ? 'tall' : 'square',
     style: Object.entries(values).map(([name, value]) => `${name}:${Number(value.toFixed(6))}%`).join(';'),
+    photoStyle: Object.entries(photoValues).map(([name, value]) => `${name}:${Number(value.toFixed(6))}%`).join(';'),
     width: dimensions.width,
     height: dimensions.height,
   };

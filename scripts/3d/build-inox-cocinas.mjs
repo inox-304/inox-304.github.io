@@ -8,16 +8,18 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { inspectGlb } from '../lib/model-budget.mjs';
+import { pathToFileURL } from 'node:url';
 globalThis.FileReader=class{readAsArrayBuffer(blob){blob.arrayBuffer().then(result=>{this.result=result;this.onloadend?.({target:this});}).catch(error=>this.onerror?.(error));}};
-const specs=[
+export const kitchenSpecs=[
  {id:'P02',slug:'cocina-industrial-de-3-hornillas',w:1.5,d:.57,h:.85,open:true,plain:true},
  {id:'P03',slug:'cocina-industrial-de-3-parrillas',w:1.5,d:.57,h:.85,open:true,plain:false},
  {id:'P04',slug:'cocina-industrial-4-hornillas-tipo-isla-plancha-ho',w:1.5,d:.85,h:.85,open:false,plain:false},
  {id:'P05',slug:'cocina-industrial-tipo-isla-4-parrillas-plancha-ho',w:1.5,d:.85,h:.85,open:false,plain:false},
 ];
-const arg=process.argv[2];if(arg&&!specs.some(s=>s.id===arg))throw Error('Unknown kitchen');
 function shape(w,h,r,cx=0,cy=0){let p=new T.Shape(),x=cx-w/2,y=cy-h/2;p.moveTo(x+r,y);p.lineTo(x+w-r,y);p.quadraticCurveTo(x+w,y,x+w,y+r);p.lineTo(x+w,y+h-r);p.quadraticCurveTo(x+w,y+h,x+w-r,y+h);p.lineTo(x+r,y+h);p.quadraticCurveTo(x,y+h,x,y+h-r);p.lineTo(x,y+r);p.quadraticCurveTo(x,y,x+r,y);return p;}
-async function build(s){
+// Shared scene factory: modular assets reuse the exact chassis and door geometry.
+// The normal command still includes the photographed surface and writes only v1/v2.
+export function createKitchenScene(s,{includeSurface=true}={}){
  const root=new T.Group();root.name='INOX_'+s.id;root.userData={description:'Visualización aproximada de fotografía del catálogo. Proporciones ilustrativas; medidas finales a confirmar.',dimensionsVerified:false,units:'meters',scale:'illustrative, not a dimension specification',sourceImage:'/images/products/'+s.slug+(s.id==='P02'?'.jpg':'.webp'),orientation:'Y up, front +Z',mechanisms:'No unverified opening or operation is simulated.'};
  const mats={steel:new T.MeshStandardMaterial({name:'Acero_satinado',color:0xbac3c8,metalness:.88,roughness:.31}),edge:new T.MeshStandardMaterial({name:'Acero_bordes',color:0xdde2e4,metalness:.94,roughness:.2}),dark:new T.MeshStandardMaterial({name:'Hierro_fundido',color:0x171b1e,metalness:.47,roughness:.59}),rubber:new T.MeshStandardMaterial({name:'Patas_y_controles',color:0x090d11,roughness:.73}),blue:new T.MeshStandardMaterial({name:'Placas_azules',color:0x153e75,metalness:.22,roughness:.35}),glass:new T.MeshStandardMaterial({name:'Visor_horno',color:0x152029,metalness:.2,roughness:.19}),white:new T.MeshStandardMaterial({name:'Esfera_indicador',color:0xe5e8e5,roughness:.6})};
  const parts=new Map(), moving=[];let activeParts=parts;
@@ -34,6 +36,7 @@ async function build(s){
  box(.024,.021,s.d,s.w/2-.009,top+.009,0,mats.edge);
  box(s.w,.021,.024,0,top+.009,-front+.01,mats.edge);
  function burner(x,z,size){
+  if(!includeSurface)return;
   const rim=shape(size,size,.005),hole=shape(size-.018,size-.018,.003);rim.holes.push(hole);
   add(new T.ExtrudeGeometry(rim,{depth:.012,bevelEnabled:false}),mats.edge,x,top+.018,z,[Math.PI/2,0,0]);
   box(size-.018,.005,size-.018,x,top+.012,z,mats.dark,0);
@@ -63,6 +66,7 @@ async function build(s){
  }else{
   for(const x of[-s.w*.33,-s.w*.04])for(const z of[-s.d*.235,s.d*.235])burner(x,z,s.d*.40);
   // Flat plancha and its perforated separator are individually recognizable.
+  if(includeSurface){
   const px=s.w*.328,pw=s.w*.28,pd=s.d*.85;box(pw,.014,pd,px,top+.021,0,mats.edge);
   for(const x of[px-pw/2,px+pw/2])box(.012,.032,pd,x,top+.035,0,mats.steel);
   for(const z of[-pd/2,pd/2])box(pw,.032,.012,px,top+.035,z,mats.steel);
@@ -72,6 +76,7 @@ async function build(s){
   box(.034,.003,pd-.008,sepX,top+.026,0,mats.dark,0);
   const holes=[];for(let i=0;i<9;i++){const h=new T.Path();h.absarc(0,-pd*.43+i*pd*.108,.012,0,Math.PI*2,true);holes.push(h);}
   plate(.048,pd,holes,.004,sepX,top+.1,0,mats.edge,[Math.PI/2,0,0]);
+  }
   box(s.w,.092,.025,0,top-.071,front-.012);box(s.w,.048,.032,0,top-.132,front-.016);
   const ovenW=s.w*.65,ovenX=-s.w*.16,bodyH=top-.20;
   // Hollow display enclosure. Interior/hinge proportions remain illustrative.
@@ -104,6 +109,13 @@ async function build(s){
  const tracks=moving.map(({hinge})=>new T.QuaternionKeyframeTrack(hinge.name+'.quaternion',[0,1.2],[0,0,0,1,...new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.PI*.43).toArray()]));
  const animations=tracks.length?[new T.AnimationClip('Abrir_puertas',1.2,tracks)]:[];
  if(animations.length)root.userData.mechanisms='Approximate bottom-hinged oven door for presentation; exact mechanism and interior must be confirmed with owner CAD.';
+ return {root,animations,materials:mats,surface:{minX:-s.w/2+.035,maxX:s.w/2-.035,minZ:-s.d/2+.035,maxZ:s.d/2-.035,y:top+.014}};
+}
+async function build(s){
+ const {root,animations}=createKitchenScene(s);
  const bytes=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true,animations}));const out='public/models/inox/'+s.slug+(animations.length?'-v2.glb':'-v1.glb');await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(out,bytes);const info=inspectGlb(bytes);if(info.errors.length)throw Error(info.errors.join(';'));console.log(JSON.stringify({id:s.id,path:out,size:bytes.length,triangles:info.triangleCount??info.triangles,dimensionBasis:'illustrative',warnings:info.warnings}));
 }
-for(const spec of specs.filter(s=>arg?arg===s.id:!s.open))await build(spec);
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+ const arg=process.argv[2];if(arg&&!kitchenSpecs.some(s=>s.id===arg))throw Error('Unknown kitchen');
+ for(const spec of kitchenSpecs.filter(s=>arg?arg===s.id:!s.open))await build(spec);
+}

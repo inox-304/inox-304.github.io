@@ -2,6 +2,7 @@
 import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
 import type { Product } from '../data/products';
+import '../styles/product-photo.css';
 interface Props { product: Product; category: string }
 const { product, category } = Astro.props;
 const stage = getProductStage(product.image);
@@ -9,7 +10,7 @@ const stage = getProductStage(product.image);
 <div class="product-detail-photo product-photo-white">
   <span class="eyebrow" data-product-id-label>INOX 304 / {product.id}</span>
   <div class="equipment-crop">
-    <img class="equipment-image" src={withBase(product.image)} alt={product.name} width={stage.width} height={stage.height} fetchpriority="high"/>
+    <img class="equipment-image" data-product-photo style={stage.photoStyle} src={withBase(product.image)} alt={product.name} width={stage.width} height={stage.height} fetchpriority="high"/>
   </div>
   <span class="photo-caption" data-product-caption>{category.toUpperCase()}</span>
 </div>
@@ -20,10 +21,9 @@ const stage = getProductStage(product.image);
     gap: 12px; padding: clamp(18px, 4.5%, 30px);
     border: 1px solid #e0e5eb;
   }
-  .product-photo-white .equipment-crop { display: block; min-height: 0; height: 100%; }
-  .product-photo-white .equipment-image {
-    width: 100%; height: 100%; max-height: none; aspect-ratio: auto;
-    object-fit: contain; padding: 0; mix-blend-mode: normal; filter: none;
+  .product-photo-white .equipment-crop {
+    position: relative; display: block; min-height: 0; height: 100%; width: auto;
+    aspect-ratio: 1; max-width: 100%; justify-self: center; overflow: hidden;
   }
   .product-photo-white > .eyebrow, .product-photo-white > .photo-caption { color: #536372; }
   .product-photo-white > .photo-caption { border-color: #e0e5eb; }
