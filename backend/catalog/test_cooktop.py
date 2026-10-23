@@ -16,6 +16,7 @@ from .forms import ProductAdminForm
 from .models import AuditLog, Product
 from .serializers import public_cooktop_config, public_product
 from .test_editor import product_data
+from .views import check_cooktop_selection, public_cooktop
 
 
 def cooktop_fixture(enabled=True):
@@ -106,6 +107,27 @@ class CooktopValidationTests(SimpleTestCase):
             candidate["layouts"][0]["name"] = name
             with self.assertRaises(CooktopValidationError):
                 validate_cooktop_config(candidate)
+
+    def test_invalid_unicode_in_memory_fails_closed_in_both_public_responses(self):
+        # PostgreSQL JSONB rejects isolated surrogates before persistence. An
+        # unsaved product exercises response safety without relying on SQLite's
+        # more permissive JSON storage or breaking a PostgreSQL transaction.
+        factory = RequestFactory()
+        for raw_name in ('"\\ud800"', '"\\udfff"'):
+            with self.subTest(raw_name=raw_name):
+                config = cooktop_fixture()
+                config["layouts"][0]["name"] = json.loads(raw_name)
+                product = Product(code="COOK-UNICODE", category="linea-caliente", supply_type="manufactured", equipment_family="cocinas", cooktop_config=config)
+                with patch("catalog.views._cooktop_product", return_value=product):
+                    response = public_cooktop(factory.get("/", HTTP_ORIGIN="https://evil.example"), product.code)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(json.loads(response.content), {"productId": product.code, "cooktopConfig": None})
+                    self.assertNotIn("Access-Control-Allow-Origin", response)
+                    response = check_cooktop_selection(factory.get("/", {"selection": json.dumps(selection())}, HTTP_ORIGIN="https://evil.example"), product.code)
+                    self.assertEqual(response.status_code, 400)
+                    self.assertFalse(json.loads(response.content)["valid"])
+                    self.assertNotIn("Access-Control-Allow-Origin", response)
+                    self.assertNotIn(raw_name, response.content.decode())
 
     def test_five_column_layouts_cover_lineal_five_and_central_ten_without_exceeding_twelve_cells(self):
         config = cooktop_fixture()
@@ -283,9 +305,6 @@ class CooktopProductTests(TestCase):
         malformed_module = cooktop_fixture()
         malformed_module["modules"][1]["anchors"] = {"six": [True]}
         invalid_configs.append(malformed_module)
-        malformed_name = cooktop_fixture()
-        malformed_name["layouts"][0]["name"] = json.loads('"\\ud800"')
-        invalid_configs.append(malformed_name)
         for config in invalid_configs:
             with self.subTest(config_type=type(config).__name__):
                 Product.objects.filter(pk=self.product.pk).update(cooktop_config=config)
