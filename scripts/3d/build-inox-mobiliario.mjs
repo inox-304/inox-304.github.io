@@ -36,33 +36,47 @@ function ringPoints(w,d,r,segments=8) {
   return p;
 }
 
-for(const cfg of models) {
+// This revision intentionally writes only the two approved interactive replacements.
+// Existing v1 files and the other five catalogue models are preserved.
+for(const cfg of models.filter(model=>['P23','P29'].includes(model.id))) {
   const {w,d,h}=cfg;
   const root=new THREE.Group();root.name=`INOX304_${cfg.id}`;
   root.userData={
-    productId:cfg.id,revision:'1.0',units:'meters',orientation:'Y up; front +Z',
+    productId:cfg.id,revision:'2.0',units:'meters',orientation:'Y up; front +Z',
     reconstruction:'Visualización 3D aproximada a partir de las fotografías del catálogo del propietario.',
     scaleStatus:'Las dimensiones exteriores son ilustrativas; no son medidas comerciales ni de fabricación.',
     illustrativeOuterScale:{width:w,depth:d,counterOrRackHeight:h},
     verifiedDimensions:cfg.verifiedBasin?{basinWidth:.50,basinDepth:.50,basinHeight:.32}:{},
     source:{document:'INOX304_catalogo_FINAL.pdf',page:cfg.referencePage,photo:`/images/products/${cfg.slug}.${['P27','P28','P29'].includes(cfg.id)?'jpg':'webp'}`},
     manufacturingUse:false,
+    articulation:'Apertura ilustrativa de puertas; recorrido, bisagras e interior no documentados como diseño de fabricación. Cajones fijos.',
   };
   const mats={
-    steel:new THREE.MeshStandardMaterial({name:'Acero_satinado',color:0xbfc7cf,metalness:.80,roughness:.31}),
-    top:new THREE.MeshStandardMaterial({name:'Superficies_acero',color:0xcbd1d6,metalness:.80,roughness:.29}),
-    edge:new THREE.MeshStandardMaterial({name:'Cantos_y_tubos',color:0xd4d9de,metalness:.87,roughness:.24}),
-    basin:new THREE.MeshStandardMaterial({name:'Interior_pozas',color:0x9ea8b2,metalness:.78,roughness:.35,side:THREE.DoubleSide}),
+    steel:new THREE.MeshStandardMaterial({name:'Acero_satinado',color:0xb2bbc2,metalness:.94,roughness:.31}),
+    top:new THREE.MeshStandardMaterial({name:'Superficies_acero',color:0xc0c8ce,metalness:.94,roughness:.29}),
+    edge:new THREE.MeshStandardMaterial({name:'Cantos_y_tubos',color:0xcbd2d7,metalness:.98,roughness:.24}),
+    basin:new THREE.MeshStandardMaterial({name:'Interior_pozas',color:0x9ea8b2,metalness:.90,roughness:.35,side:THREE.DoubleSide}),
     black:new THREE.MeshStandardMaterial({name:'Pies_y_juntas',color:0x161b22,roughness:.70,metalness:.05}),
     drain:new THREE.MeshStandardMaterial({name:'Orificios_desague',color:0x292f36,roughness:.50,metalness:.30}),
     pipe:new THREE.MeshStandardMaterial({name:'Tubo_visible_fotografia',color:0xe8ebee,roughness:.55,metalness:0}),
   };
-  const groups=new Map();
+  const groups=new Map();let parent=root;const tracks=[];
   function add(geo,mat,name,pos=[0,0,0],rot=[0,0,0]) {
-    const mesh=new THREE.Mesh(geo,mat);mesh.position.set(...pos);mesh.rotation.set(...rot);mesh.updateMatrix();geo.applyMatrix4(mesh.matrix);
+    const mesh=new THREE.Mesh(geo,mat);mesh.position.set(...pos);
+    if(parent!==root)mesh.position.sub(parent.position);
+    mesh.rotation.set(...rot);mesh.updateMatrix();geo.applyMatrix4(mesh.matrix);
     const g=geo.index?geo.toNonIndexed():geo;g.deleteAttribute('uv');
-    if(!groups.has(mat.uuid))groups.set(mat.uuid,{mat,geos:[],names:[]});
-    groups.get(mat.uuid).geos.push(g);groups.get(mat.uuid).names.push(name);
+    const key=`${parent.uuid}:${mat.uuid}`;
+    if(!groups.has(key))groups.set(key,{parent,mat,geos:[],names:[]});
+    groups.get(key).geos.push(g);groups.get(key).names.push(name);
+  }
+  function movingDoor(name,hinge,angleDegrees,build) {
+    const group=new THREE.Group();group.name=name;group.position.set(...hinge);
+    group.userData={openingApproximate:true,closedByDefault:true,openingDegrees:angleDegrees};root.add(group);
+    parent=group;build();parent=root;
+    const axis=new THREE.Vector3(0,1,0),values=[];
+    for(const fraction of [0,.08,.5,.92,1])values.push(...new THREE.Quaternion().setFromAxisAngle(axis,THREE.MathUtils.degToRad(angleDegrees)*fraction).toArray());
+    tracks.push(new THREE.QuaternionKeyframeTrack(`${name}.quaternion`,[0,.2,.6,1,1.2],values));
   }
   function box(name,size,pos,mat=mats.steel,r=.002) {add(new RoundedBoxGeometry(...size,2,Math.min(r,...size.map(v=>v/2))),mat,name,pos);}
   function cyl(name,r,length,pos,mat=mats.edge,rot=[0,0,0]) {add(new THREE.CylinderGeometry(r,r,length,24),mat,name,pos,rot);}
@@ -146,9 +160,12 @@ for(const cfg of models) {
     cabinetShell();box('Zocalo_retraido',[w-.080,.070,d-.075],[0,.035,-.017],mats.steel);
     const front=d/2-.010,doorBottom=.075,doorTop=.660;
     for(let i=0;i<4;i++){
-      const x=-w/2+(i+.5)*w/4;
-      box('Puerta_gabinete_cerrada',[w/4-.006,doorTop-doorBottom,.018],[x,(doorTop+doorBottom)/2,front],mats.steel,.002);
-      handle(x+(i%2===0?.113:-.113),.56,front+.010);
+      const x=-w/2+(i+.5)*w/4,width=w/4-.010,leftHinge=i%2===0;
+      movingDoor(`P23_puerta_${i+1}`,[x+(leftHinge?-width/2:width/2),(doorTop+doorBottom)/2,front+.012],leftHinge?-85:85,()=>{
+        box('Hoja_gabinete',[width,doorTop-doorBottom,.018],[x,(doorTop+doorBottom)/2,front],mats.steel,.002);
+        box('Cara_interior_puerta',[width-.020,doorTop-doorBottom-.020,.004],[x,(doorTop+doorBottom)/2,front-.010],mats.steel,.001);
+        handle(x+(leftHinge?.113:-.113),.56,front+.010);
+      });
     }
     box('Faldon_fijo_bajo_poza',[w/2-.008,h-.046-doorTop,.018],[-w/4,(h-.046+doorTop)/2,front],mats.steel,.002);
     for(const x of [w/8,3*w/8]){
@@ -251,8 +268,12 @@ for(const cfg of models) {
     box('Frente_superior_hueco_abierto',[divide-left-.020,.105,.018],[(divide+left)/2,.57,front],mats.steel);
     const doorWidth=(right-divide-.038)/2;
     for(let i=0;i<2;i++){
-      const x=divide+.016+doorWidth*(i+.5)+i*.003;
-      box('Puerta_bar_cerrada',[doorWidth,.690,.018],[x,.450,front],mats.steel,.002);
+      const x=divide+.016+doorWidth*(i+.5)+i*.003,leftHinge=i===0;
+      movingDoor(`P29_puerta_${i+1}`,[x+(leftHinge?-doorWidth/2:doorWidth/2),.450,front+.012],leftHinge?-100:100,()=>{
+        box('Hoja_bar',[doorWidth,.690,.018],[x,.450,front],mats.steel,.002);
+        box('Cara_interior_puerta',[doorWidth-.020,.670,.004],[x,.450,front-.010],mats.steel,.001);
+        box('Labio_agarre_superior',[doorWidth-.008,.008,.025],[x,.791,front-.007],mats.edge,.001);
+      });
     }
     box('Tirador_embutido_bar',[right-divide-.025,.019,.014],[(right+divide)/2,.813,front-.006],mats.drain,.002);
     // Full work surface on the right; left side has four rear pans and two recessed areas.
@@ -270,14 +291,15 @@ for(const cfg of models) {
     backsplash(.080);
   }
 
-  for(const {mat,geos,names} of groups.values()) {
-    const geo=mergeVertices(mergeGeometries(geos,false),1e-6);const mesh=new THREE.Mesh(geo,mat);mesh.name=mat.name;mesh.userData.parts=names;root.add(mesh);
+  for(const {parent,mat,geos,names} of groups.values()) {
+    const geo=mergeVertices(mergeGeometries(geos,false),1e-6);const mesh=new THREE.Mesh(geo,mat);mesh.name=`${parent.name}_${mat.name}`;mesh.userData.parts=names;parent.add(mesh);
   }
   root.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3());
   for(const axis of ['x','y','z'])if(!Number.isFinite(size[axis])||size[axis]<=0)throw new Error(`${cfg.id}: invalid bounds`);
   if(bounds.min.y<-.001)throw new Error(`${cfg.id}: geometry below floor`);
-  const buffer=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true}));
+  const animations=[new THREE.AnimationClip('Abrir_puertas',1.2,tracks)];
+  const buffer=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true,animations}));
   const report=inspectGlb(buffer);if(report.errors.length||report.warnings.length)throw new Error(JSON.stringify(report));
-  const output=`public/models/inox/${cfg.slug}-v1.glb`;await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(output,buffer);
-  console.log(JSON.stringify({id:cfg.id,output,bytes:buffer.length,triangles:report.triangles,extentsIllustrative:size.toArray(),animations:0}));
+  const output=`public/models/inox/${cfg.slug}-v2.glb`;await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(output,buffer);
+  console.log(JSON.stringify({id:cfg.id,output,bytes:buffer.length,triangles:report.triangles,extentsIllustrative:size.toArray(),animations:['Abrir_puertas']}));
 }

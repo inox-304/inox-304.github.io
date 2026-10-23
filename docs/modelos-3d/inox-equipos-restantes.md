@@ -19,7 +19,22 @@ Se inspeccionaron las ocho fotos vigentes de `public/images/products/` y las pá
 | P31 | `licuadora-industrial-con-base` | Vaso cónico, tapa, caja de motor bajo el vaso, bastidor tubular, barra exterior y ruedas rojas como la referencia. La familia enumera 10/15/20 L sin asociar capacidad exacta a la foto. |
 | P32 | `maquina-cremoladera-25-l` | Dos tolvas transparentes vacías, tapas, palancas y boquillas, carcasa ventilada y dos bandejas de goteo perforadas. El PDF dice «25 litros» y «2 tolvas», sin aclarar reparto; no se afirma 25 L por tolva ni 50 L totales. El mecanismo interno tapado por el producto de la foto no se inventa. |
 
-Las fotografías de P12–P15 y P30–P32 tienen extensión `.jpg`; P19 usa `.webp`. Los GLB se encuentran en `public/models/inox/<nombre>-v1.glb`. Mantener las fotografías originales como referencia comercial permite contrastar las aproximaciones del 3D.
+Las fotografías de P12–P15 y P30–P32 tienen extensión `.jpg`; P19 usa `.webp`. Los GLB de la primera revisión se conservan en `public/models/inox/<nombre>-v1.glb`. Mantener las fotografías originales como referencia comercial permite contrastar las aproximaciones del 3D.
+
+## Puertas interactivas v2
+
+La ejecución actual genera únicamente P12, P13, P14 y P19 con sufijo `-v2.glb`, sin sobrescribir ningún v1 ni los otros productos. El clip `Abrir_puertas` dura 1,2 segundos y va de cerrado a abierto. La pose guardada es cerrada; hojas, tiradores, juntas, cristal y cerradura permanecen en el mismo conjunto articulado.
+
+| Código | Archivo | Hojas | Bytes | Triángulos |
+| --- | --- | ---: | ---: | ---: |
+| P12 | `freidora-doble-profesional-v2.glb` | 2 | 2.660.616 | 36.588 |
+| P13 | `freidora-de-papa-profesional-v2.glb` | 1 | 2.259.076 | 31.096 |
+| P14 | `freidora-automatica-de-papas-v2.glb` | 1 | 2.357.444 | 32.448 |
+| P19 | `visicooler-580-litros-v2.glb` | 1 | 3.789.744 | 52.370 |
+
+Cada hoja abre 100°. Es un movimiento de presentación aproximado, no una especificación de bisagra ni recorrido del fabricante. Las freidoras tienen cuerpo hueco, con base, laterales y fondo simplificados; no se inventan quemadores, resistencias, conexiones o elevadores. «Automática» no implica animar las canastillas.
+
+En P19 la fotografía confirma **laterales e interior blancos, marco metálico y base negra**. Se conservan esos acabados: el blanco no es un sustituto genérico del acero. La puerta acristalada se mueve con marco, juntas, uñero y cerradura; las cinco parrillas permanecen en el cuerpo. No se deriva un sistema frigorífico oculto.
 
 ## Generación y presupuesto
 
@@ -28,7 +43,7 @@ node scripts/3d/build-inox-equipos-restantes.mjs
 node scripts/check-models.mjs public/models/inox
 ```
 
-El generador funciona localmente con Three.js y el exportador estándar glTF. Los materiales son PBR, los rótulos y rejillas son geometría y no hay texturas o buffers externos. Las mallas se agrupan por material para reducir llamadas de dibujo. No requiere un servicio de generación ni una suscripción.
+El generador funciona localmente con Three.js y el exportador estándar glTF. Los materiales son PBR, los rótulos y rejillas son geometría y no hay texturas o buffers externos. Las mallas se agrupan por material dentro de cada conjunto rígido para preservar las articulaciones. No requiere un servicio de generación ni una suscripción. La siguiente tabla corresponde a los archivos v1 conservados.
 
 | Código | Bytes | Triángulos | Mallas |
 | --- | ---: | ---: | ---: |
@@ -41,4 +56,4 @@ El generador funciona localmente con Three.js y el exportador estándar glTF. Lo
 | P31 | 605.432 | 8.320 | 6 |
 | P32 | 1.733.712 | 23.960 | 8 |
 
-Todos quedan por debajo del presupuesto de 8 MiB y 300.000 triángulos. No incluyen clips: permiten giro y zoom del visor. Agregar movimientos posteriores exige confirmar la articulación, evitar colisiones y revisar su fidelidad con fotos adicionales o un diseño original. La revisión visual en el catálogo es un paso separado de la comprobación estructural de estos archivos.
+Todos quedan por debajo del presupuesto de 8 MiB y 300.000 triángulos. Los v1 no incluyen clips; los cuatro v2 incorporan solamente la apertura ilustrativa descrita. GLTFLoader comprobó sus poses cerrada, abierta y cerrada de nuevo, la unión de componentes a las hojas y la visibilidad hasta el fondo del gabinete con rayos. Se revisó también la carga y el renderizado en Chrome. Los 32 archivos v1 conservaron sus hashes. Un mecanismo fiel de fabricación exige fotos adicionales o el diseño original; el modelo no sirve como despiece ni receta de materiales.

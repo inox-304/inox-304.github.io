@@ -19,13 +19,15 @@ const models=[
 ];
 function rect(w,h,r,cx=0,cy=0){const s=new THREE.Shape(),x=cx-w/2,y=cy-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;}
 
-for(const cfg of models){
+// v1 is an immutable photographic pose. This generator now writes only the five
+// articulated v2 files; the two grills have no door and remain byte-for-byte v1.
+for(const cfg of models.filter(model=>!['grillHalf','grillFull'].includes(model.kind))){
  const {w,d,h}=cfg,front=d/2;
  const root=new THREE.Group();root.name=`INOX304_${cfg.id}`;
- root.userData={productId:cfg.id,revision:'1.0',units:'meters',orientation:'Y up; front +Z',source:{document:'INOX304_catalogo_FINAL.pdf',page:cfg.page,photo:`/images/products/${cfg.slug}.webp`},description:'Visualización 3D aproximada a partir de fotografías; no es CAD de fabricación.',scaleStatus:'Dimensiones exteriores ilustrativas, no especificaciones comerciales.',illustrativeEnvelope:{width:w,depth:d,height:h},manufacturingUse:false,pose:'Posición estática basada en la fotografía; sin animación ni mecanismo simulado.'};
+ root.userData={productId:cfg.id,revision:'2.0',units:'meters',orientation:'Y up; front +Z',source:{document:'INOX304_catalogo_FINAL.pdf',page:cfg.page,photo:`/images/products/${cfg.slug}.webp`},description:'Visualización 3D aproximada a partir de fotografías; no es CAD de fabricación.',scaleStatus:'Dimensiones exteriores ilustrativas, no especificaciones comerciales.',illustrativeEnvelope:{width:w,depth:d,height:h},manufacturingUse:false,pose:'Puertas interactivas cerradas al cargar; recorrido visual aproximado, no validado para fabricación.',openingLimitations:cfg.kind==='eco'?'La compuerta superior permanece en la pose elevada de la fotografía: no se conoce su mecanismo. Solo se articulan las dos puertas inferiores.':'Bisagras y recorridos ilustrativos; no simulan funcionamiento del equipo.'};
  const m={
-  steel:new THREE.MeshStandardMaterial({name:'Acero_satinado',color:0xc2c9d0,metalness:.77,roughness:.33}),
-  edge:new THREE.MeshStandardMaterial({name:'Acero_pulido',color:0xd4dae0,metalness:.88,roughness:.23}),
+  steel:new THREE.MeshStandardMaterial({name:'Acero_satinado',color:0xb9bfc5,metalness:.86,roughness:.31}),
+  edge:new THREE.MeshStandardMaterial({name:'Acero_pulido',color:0xccd1d6,metalness:.92,roughness:.26}),
   inner:new THREE.MeshStandardMaterial({name:'Interior_acero',color:0x7e8a95,metalness:.65,roughness:.40,side:THREE.DoubleSide}),
   dark:new THREE.MeshStandardMaterial({name:'Cavidades_y_fundicion',color:0x1a2027,metalness:.40,roughness:.62}),
   rubber:new THREE.MeshStandardMaterial({name:'Mandos_y_goma',color:0x0d151d,metalness:.12,roughness:.55}),
@@ -39,12 +41,20 @@ for(const cfg of models){
   wood:new THREE.MeshStandardMaterial({name:'Empunadura_madera',color:0xcda360,metalness:0,roughness:.6}),
   glass:new THREE.MeshPhysicalMaterial({name:'Visor_vidrio',color:cfg.kind==='china'?0x263d48:0x92a9b7,roughness:.11,metalness:.03,transparent:true,opacity:cfg.kind==='china'?.68:.23,depthWrite:false,side:THREE.DoubleSide}),
  };
- const parts=new Map();let transform=new THREE.Matrix4();
+ const parts=new Map(),tracks=[],articulations=[];let transform=new THREE.Matrix4(),target=root;
  function add(g,mat,name,pos=[0,0,0],rot=[0,0,0]){
   const mesh=new THREE.Mesh(g,mat);mesh.position.set(...pos);mesh.rotation.set(...rot);mesh.updateMatrix();g.applyMatrix4(transform.clone().multiply(mesh.matrix));const geo=g.index?g.toNonIndexed():g;geo.deleteAttribute('uv');
-  if(!parts.has(mat.uuid))parts.set(mat.uuid,{mat,geos:[],names:[]});parts.get(mat.uuid).geos.push(geo);parts.get(mat.uuid).names.push(name);
+  const key=`${target.uuid}:${mat.uuid}`;
+  if(!parts.has(key))parts.set(key,{mat,target,geos:[],names:[]});parts.get(key).geos.push(geo);parts.get(key).names.push(name);
  }
  function within(pos,rot,fn){const before=transform;const mat=new THREE.Matrix4().compose(new THREE.Vector3(...pos),new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)),new THREE.Vector3(1,1,1));transform=before.clone().multiply(mat);fn();transform=before;}
+ function moving(name,pivot,axis,angle,fn){
+  const group=new THREE.Group();group.name=name;group.position.set(...pivot);group.userData={purpose:'Puerta o tapa completa',movement:'Recorrido ilustrativo',closedByDefault:true};root.add(group);
+  const previousTarget=target,previousTransform=transform;target=group;transform=new THREE.Matrix4();fn();target=previousTarget;transform=previousTransform;
+  const q0=new THREE.Quaternion(),q1=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...axis),angle);
+  tracks.push(new THREE.QuaternionKeyframeTrack(`${name}.quaternion`,[0,.10,1.10,1.35],[...q0.toArray(),...q0.toArray(),...q1.toArray(),...q1.toArray()]));
+  articulations.push({node:name,pivot,angleDegrees:angle*180/Math.PI});
+ }
  function box(name,size,pos,mat=m.steel,r=.002){add(new RoundedBoxGeometry(...size,2,Math.min(r,...size.map(v=>v/2))),mat,name,pos);}
  function cyl(name,r,len,pos,mat=m.edge,rot=[0,0,0]){add(new THREE.CylinderGeometry(r,r,len,24),mat,name,pos,rot);}
  function bar(name,a,b,r=.006,mat=m.edge){const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),dir=bv.clone().sub(av),geo=new THREE.CylinderGeometry(r,r,dir.length(),12);geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize()));add(geo,mat,name,av.add(bv).multiplyScalar(.5).toArray());}
@@ -89,10 +99,9 @@ for(const cfg of models){
   for(const yy of [.53,.42,.31,.20])knob(.305,yy,front+.003,.024);
   cyl('Piloto_horno',.006,.003,[.305,.146,front+.007],m.red,[Math.PI/2,0,0]);
   pane('Marco_horno',w-.066,.572,.018,[0,.377,front-.004],m.edge,[{w:ovenW,h:ovenTop-ovenLow,x:ovenX,y:.0005}],.003);
-  // Fixed photographed pose, about a right angle open. No moving hinge mechanism is asserted.
-  within([ovenX,ovenLow,front+.016],[Math.PI*.51,0,0],()=>{
-   pane('Puerta_horno_abierta',ovenW+.023,.535,.026,[0,.2675,0],m.edge,[{w:ovenW-.075,h:.420}],.008);
-   box('Vidrio_puerta_abierta',[ovenW-.080,.417,.004],[0,.2675,.027],m.glass,.005);handle(0,.488,.032,ovenW-.070);
+  moving('Puerta_horno',[ovenX,ovenLow,front+.016],[1,0,0],Math.PI*.49,()=>{
+   pane('Hoja_horno',ovenW+.023,.535,.026,[0,.2675,0],m.edge,[{w:ovenW-.075,h:.420}],.008);
+   box('Vidrio_puerta',[ovenW-.080,.417,.004],[0,.2675,.027],m.glass,.005);handle(0,.488,.032,ovenW-.070);
   });
   for(const x of [-w*.40,w*.40])for(const z of [-d*.37,d*.37])cyl('Apoyo',.023,.035,[x,.0175,z],m.rubber);
  } else if(cfg.kind==='multi'){
@@ -100,10 +109,12 @@ for(const cfg of models){
   stand(.125,base,{orange:true});shell(base,top,{bodyW:bw,centerX:bx});
   deck('Techo_horno',bw,d,top,bx,0,m.steel);
   const dh=.825,dy=1.175,windowW=.270,windowH=.575;
-  pane('Puerta_horno_con_visor',bw-.045,dh,.026,[bx,dy,front],m.steel,[{w:windowW,h:windowH,r:.040}],.006);
-  box('Vidrio_visor',[windowW-.003,windowH-.003,.004],[bx,dy,front+.029],m.glass,.016);
+  moving('Puerta_horno_multiuso',[bx-(bw-.045)/2,dy,front],[0,1,0],-Math.PI*.57,()=>{
+   pane('Hoja_horno_con_visor',bw-.045,dh,.026,[(bw-.045)/2,0,0],m.steel,[{w:windowW,h:windowH,r:.040}],.006);
+   box('Vidrio_visor',[windowW-.003,windowH-.003,.004],[(bw-.045)/2,0,.029],m.glass,.016);
+   handle(bw*.35+(bw-.045)/2,1.09-dy,.030,.15,true);
+  });
   for(const yy of [.845,1.045,1.245,1.445])wireRack(bw-.075,d-.090,yy,bx,0,19);
-  handle(bx+bw*.35,1.09,front+.030,.15,true);
   for(const yy of [.800,1.565])box('Bisagra_exterior',[.041,.027,.029],[bx-bw*.43,yy,front+.025],m.edge,.004);
   box('Frente_superior',[bw+.006,.170,.045],[bx,1.665,front+.007],m.steel,.008);
   box('Cajon_inferior',[bw-.040,.125,.027],[bx,.708,front+.005],m.steel,.005);handle(bx+.075,.705,front+.024,.055,true);
@@ -136,9 +147,15 @@ for(const cfg of models){
    box('Vidrio_compuerta',[shutterW-.156,.153,.004],[.035,1.420,front+.036],m.glass,.020);handle(.035,1.294,front+.038,shutterW-.105);
    for(const x of [-w/2+.082,w/2-.032])box('Guia_visible',[.022,.685,.023],[x,1.116,front+.033],m.edge);
    box('Frente_cajon',[w-.085,.170,.025],[.020,.655,front+.012],m.steel);
+   deck('Techo_gabinete_inferior',w-.065,d-.055,.565,0,0,m.inner);
    for(const side of [-1,1]){
-    pane('Puerta_inferior',(w-.100)/2,.370,.018,[.020+side*(w-.100)/4,.375,front+.012],m.steel,Array.from({length:7},(_,i)=>({w:.014,h:.014,r:.007,x:-side*.045,y:(i-3)*.035})),.003);
-    handle(.020+side*(w-.155)/2,.385,front+.033,.105,true);
+    const doorW=(w-.100)/2,pivotX=.020;
+    // Handles are on the outer edges in the source photo. Each leaf pivots at
+    // the shared centre edge; the exact hinge hardware is not inferred.
+    moving(`Puerta_inferior_${side<0?'izquierda':'derecha'}`,[pivotX,.375,front+.012],[0,1,0],-side*Math.PI*.44,()=>{
+     pane('Hoja_inferior',doorW,.370,.018,[side*doorW/2,0,0],m.steel,Array.from({length:7},(_,i)=>({w:.014,h:.014,r:.007,x:-side*.045,y:(i-3)*.035})),.003);
+     handle(side*(w-.155)/2,.010,.021,.105,true);
+    });
    }
    box('Consola_izquierda',[.110,.440,.090],[-w/2+.040,1.280,front+.019],m.steel,.003);
    for(const [yy,mat] of [[1.460,m.red],[1.180,m.red],[1.110,m.green]])cyl('Boton_consola',.012,.016,[-w/2+.040,yy,front+.073],mat,[Math.PI/2,0,0]);
@@ -149,8 +166,8 @@ for(const cfg of models){
    for(const x of [-w/2+.025,w/2-.025])cyl('Columnas_cilindricas',.042,.98,[x,1.16,front-.015],m.edge);
    box('Salida_superior',[.205,.055,.185],[0,1.500,-.075],m.steel);
    const panelLow=.095,panelTop=.74;
-   pane('Frontal_base',w-.040,panelTop-panelLow,.020,[0,(panelTop+panelLow)/2,front],m.steel,[{w:.335,h:.360,x:.225,y:-.086}],.002);
-   box('Puerta_izquierda',[.345,.360,.018],[-.230,.330,front+.021],m.steel);
+   pane('Frontal_base',w-.040,panelTop-panelLow,.020,[0,(panelTop+panelLow)/2,front],m.steel,[{w:.335,h:.360,x:.2425,y:.325-(panelTop+panelLow)/2},{w:.335,h:.350,x:-.230,y:.330-(panelTop+panelLow)/2}],.002);
+   moving('Puerta_inferior_izquierda',[-.0575,.150,front+.021],[0,1,0],Math.PI*.56,()=>box('Hoja_izquierda',[.345,.360,.018],[-.1725,.180,0],m.steel));
    knob(-.295,.625,front+.026,.020);box('Interruptor_rojo',[.025,.025,.010],[-.232,.625,front+.022],m.red);cyl('Piloto_verde',.015,.010,[-.182,.625,front+.023],m.green,[Math.PI/2,0,0]);
    // Only the visible front pulley, belt and motor silhouette are shown; no hidden drive train is inferred.
    const pX=.260,pY=.430,pZ=front-.075;
@@ -161,7 +178,7 @@ for(const cfg of models){
    add(new THREE.TorusGeometry(.022,.004,8,24),m.edge,'Polea_motor',[.120,.260,pZ+.040]);
    bar('Correa_visible',[pX-.067,pY+.045,pZ+.012],[.102,.275,pZ+.044],.004,m.rubber);
    bar('Correa_visible',[pX+.067,pY-.045,pZ+.012],[.138,.245,pZ+.044],.004,m.rubber);
-   within([.410,.145,front+.022],[0,Math.PI*.63,0],()=>box('Puerta_inferior_abierta',[.335,.360,.018],[-.1675,.180,0],m.steel));
+   moving('Puerta_inferior_derecha',[.410,.145,front+.022],[0,1,0],Math.PI*.63,()=>box('Hoja_derecha',[.335,.360,.018],[-.1675,.180,0],m.steel));
   }
  }else if(cfg.kind==='grillHalf'||cfg.kind==='grillFull'){
   const half=cfg.kind==='grillHalf',bodyLow=.43,bodyTop=.72,cookTop=.960;
@@ -186,9 +203,11 @@ for(const cfg of models){
  }else if(cfg.kind==='china'){
   const base=.12,bodyTop=.70;
   wheels({orange:true});shell(base,bodyTop);deck('Fondo_camara',w-.060,d-.050,base+.025,0,0,m.inner);
-  pane('Puerta_frontal_con_visor',w-.040,bodyTop-base,.025,[0,(bodyTop+base)/2,front],m.steel,[{w:w*.60,h:.255,r:.025,y:-.055}],.003);
-  box('Vidrio_frontal',[w*.60-.002,.253,.005],[0,(bodyTop+base)/2-.055,front+.028],m.glass,.014);
-  handle(0,.570,front+.031,.130,true);frame(w,d,bodyTop+.012);
+  moving('Puerta_frontal_caja',[0,base,front],[1,0,0],Math.PI*.44,()=>{
+   pane('Hoja_frontal_con_visor',w-.040,bodyTop-base,.025,[0,(bodyTop-base)/2,0],m.steel,[{w:w*.60,h:.255,r:.025,y:-.055}],.003);
+   box('Vidrio_frontal',[w*.60-.002,.253,.005],[0,(bodyTop-base)/2-.055,.028],m.glass,.014);
+   handle(0,.570-base,.031,.130,true);
+  });frame(w,d,bodyTop+.012);
   // Raised charcoal tray and half grill/half plancha preserve the photographed presentation.
   const trayY=.765,trayD=d-.100,trayW=w-.120;
   deck('Fondo_bandeja_superior',trayW,trayD,trayY,0,0,m.inner);
@@ -200,21 +219,26 @@ for(const cfg of models){
    bar('Asa_lateral',[x,.704,-d*.30],[x,.704,d*.30],.010);
    for(const z of [-d*.30,d*.30])bar('Soporte_asa_lateral',[Math.sign(x)*w/2,.704,z],[x,.704,z],.010);
   }
-  // Open smoking cover, fixed to the pose visible in the reference, without a simulated hinge.
-  within([0,bodyTop+.025,-d/2+.009],[-Math.PI*.04,0,0],()=>{
-   box('Tapa_ahumadora_abierta',[w-.025,.475,.025],[0,.2375,0],m.steel,.007);
-   for(const x of [-w/2+.020,w/2-.020])box('Costado_tapa_abierta',[.018,.475,.095],[x,.2375,.036],m.steel,.003);
-   box('Labio_tapa',[w-.025,.027,.095],[0,.462,.036],m.edge,.004);
+  // The hollow cover clears the raised grill when closed. Its envelope and
+  // angular travel are illustrative; no struts or hidden mechanism are added.
+  moving('Tapa_ahumadora',[0,bodyTop+.025,-d/2+.009],[1,0,0],-Math.PI*.56,()=>{
+   const lidD=d+.012,lidH=.250;
+   box('Cubierta_tapa',[w-.025,.025,lidD],[0,lidH,lidD/2-.007],m.steel,.007);
+   for(const x of [-w/2+.020,w/2-.020])box('Costado_tapa',[.018,lidH,lidD],[x,lidH/2,lidD/2-.007],m.steel,.003);
+   box('Labio_frontal_tapa',[w-.025,lidH,.018],[0,lidH/2,lidD-.014],m.edge,.004);
+   box('Labio_trasero_tapa',[w-.025,lidH,.018],[0,lidH/2,-.007],m.steel,.004);
   });
   bar('Eje_manivela_caja',[w/2,.795,.060],[w/2+.065,.795,.060],.008);
   bar('Manivela_caja',[w/2+.065,.795,.060],[w/2+.065,.700,.200],.006);bar('Mango_manivela',[w/2+.065,.700,.200],[w/2+.125,.700,.200],.010);
  }
 
- for(const {mat,geos,names} of parts.values()){const geo=mergeVertices(mergeGeometries(geos,false),1e-6),mesh=new THREE.Mesh(geo,mat);mesh.name=mat.name;mesh.userData.parts=names;root.add(mesh);}
+ for(const {mat,target:parent,geos,names} of parts.values()){const geo=mergeVertices(mergeGeometries(geos,false),1e-6),mesh=new THREE.Mesh(geo,mat);mesh.name=`${parent===root?'Fijo':parent.name}_${mat.name}`;mesh.userData.parts=names;parent.add(mesh);}
  root.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3());
  if(bounds.min.y<-.002||!size.toArray().every(v=>Number.isFinite(v)&&v>0))throw new Error(`${cfg.id}: invalid floor/bounds ${bounds.min.y}`);
- const bytes=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true})),report=inspectGlb(bytes);
+ root.userData.articulations=articulations;
+ const animations=[new THREE.AnimationClip('Abrir_puertas',1.35,tracks)];
+ const bytes=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true,animations})),report=inspectGlb(bytes);
  if(report.errors.length||report.warnings.length)throw new Error(JSON.stringify(report));
- const output=`public/models/inox/${cfg.slug}-v1.glb`;await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(output,bytes);
- console.log(JSON.stringify({id:cfg.id,output,bytes:bytes.length,triangles:report.triangles,illustrativeExtents:size.toArray(),animations:0}));
+ const output=`public/models/inox/${cfg.slug}-v2.glb`;await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(output,bytes);
+ console.log(JSON.stringify({id:cfg.id,output,bytes:bytes.length,triangles:report.triangles,illustrativeExtents:size.toArray(),animations:animations.map(a=>a.name),articulations}));
 }

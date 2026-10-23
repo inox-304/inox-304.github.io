@@ -1,5 +1,6 @@
 /** Photo-based presentation meshes. Dimensions are illustrative, not fabrication drawings.
- * node scripts/3d/build-inox-cocinas.mjs [P02|P03|P04|P05]
+ * node scripts/3d/build-inox-cocinas.mjs [P04|P05] (default: both v2)
+ * Explicit P02/P03 regenerates that legacy v1 only.
  * See docs/modelos-3d/inox-cocinas.md for source photographs and limitations. */
 import fs from 'node:fs/promises';
 import * as T from 'three';
@@ -19,7 +20,8 @@ function shape(w,h,r,cx=0,cy=0){let p=new T.Shape(),x=cx-w/2,y=cy-h/2;p.moveTo(x
 async function build(s){
  const root=new T.Group();root.name='INOX_'+s.id;root.userData={description:'Visualización aproximada de fotografía del catálogo. Proporciones ilustrativas; medidas finales a confirmar.',dimensionsVerified:false,units:'meters',scale:'illustrative, not a dimension specification',sourceImage:'/images/products/'+s.slug+(s.id==='P02'?'.jpg':'.webp'),orientation:'Y up, front +Z',mechanisms:'No unverified opening or operation is simulated.'};
  const mats={steel:new T.MeshStandardMaterial({name:'Acero_satinado',color:0xbac3c8,metalness:.88,roughness:.31}),edge:new T.MeshStandardMaterial({name:'Acero_bordes',color:0xdde2e4,metalness:.94,roughness:.2}),dark:new T.MeshStandardMaterial({name:'Hierro_fundido',color:0x171b1e,metalness:.47,roughness:.59}),rubber:new T.MeshStandardMaterial({name:'Patas_y_controles',color:0x090d11,roughness:.73}),blue:new T.MeshStandardMaterial({name:'Placas_azules',color:0x153e75,metalness:.22,roughness:.35}),glass:new T.MeshStandardMaterial({name:'Visor_horno',color:0x152029,metalness:.2,roughness:.19}),white:new T.MeshStandardMaterial({name:'Esfera_indicador',color:0xe5e8e5,roughness:.6})};
- const parts=new Map();const add=(g,m,x=0,y=0,z=0,rot)=>{if(g.index)g=g.toNonIndexed();g.deleteAttribute('uv');if(rot)g.applyMatrix4(new T.Matrix4().makeRotationFromEuler(new T.Euler(...rot)));g.translate(x,y,z);if(!parts.has(m))parts.set(m,[]);parts.get(m).push(g);};
+ const parts=new Map(), moving=[];let activeParts=parts;
+ const add=(g,m,x=0,y=0,z=0,rot)=>{if(g.index)g=g.toNonIndexed();g.deleteAttribute('uv');if(rot)g.applyMatrix4(new T.Matrix4().makeRotationFromEuler(new T.Euler(...rot)));g.translate(x,y,z);if(!activeParts.has(m))activeParts.set(m,[]);activeParts.get(m).push(g);};
  const box=(w,h,d,x,y,z,m=mats.steel,r=.003)=>add(r?new RoundedBoxGeometry(w,h,d,2,Math.min(r,w/3,h/3,d/3)):new T.BoxGeometry(w,h,d),m,x,y,z);
  const cyl=(r,h,x,y,z,m=mats.edge,front=false)=>add(new T.CylinderGeometry(r,r,h,32),m,x,y,z,front?[Math.PI/2,0,0]:undefined);
  const torus=(r,t,x,y,z,m=mats.edge,flat=false)=>add(new T.TorusGeometry(r,t,6,40),m,x,y,z,flat?[Math.PI/2,0,0]:undefined);
@@ -72,23 +74,36 @@ async function build(s){
   plate(.048,pd,holes,.004,sepX,top+.1,0,mats.edge,[Math.PI/2,0,0]);
   box(s.w,.092,.025,0,top-.071,front-.012);box(s.w,.048,.032,0,top-.132,front-.016);
   const ovenW=s.w*.65,ovenX=-s.w*.16,bodyH=top-.20;
-  box(ovenW,bodyH,s.d-.025,ovenX,.075+bodyH/2,0); // concealed interior is deliberately not represented
+  // Hollow display enclosure. Interior/hinge proportions remain illustrative.
+  const inner=new T.MeshStandardMaterial({name:'Interior_horno_satinado',color:0x79848c,metalness:.78,roughness:.46});
+  for(const x of [ovenX-ovenW/2+.012,ovenX+ovenW/2-.012])box(.024,bodyH,s.d-.025,x,.075+bodyH/2,0);
+  for(const x of [ovenX-ovenW/2+.0175,ovenX+ovenW/2-.0175])box(.035,bodyH,.03,x,.075+bodyH/2,front-.006);
+  for(const y of [.087,.075+bodyH-.012])box(ovenW-.04,.024,s.d-.025,ovenX,y,0,inner);
+  box(ovenW-.04,bodyH-.03,.025,ovenX,.075+bodyH/2,-front+.025,inner);
+  box(ovenW-.075,.012,s.d-.13,ovenX,.24,-.012,inner);
   const doorW=ovenW-.07,doorH=bodyH-.05,dy=.085+doorH/2;
+  const hinge=new T.Group();hinge.name='Puerta_horno_'+s.id;hinge.position.set(ovenX,.085,front+.004);root.add(hinge);
+  const doorParts=new Map();moving.push({hinge,parts:doorParts});activeParts=doorParts;
   const win=shape(doorW*.58,doorH*.37,.024,0,.015);
   plate(doorW,doorH,[win],.016,ovenX,dy,front+.004,mats.steel);
   box(doorW*.58-.004,doorH*.37-.004,.006,ovenX,dy+.015,front+.012,mats.glass,.019);
   box(doorW*.8,.027,.022,ovenX,dy+doorH*.40,front+.067,mats.edge,.005);
   for(const x of[ovenX-doorW*.39,ovenX+doorW*.39])box(.025,.025,.05,x,dy+doorH*.40,front+.042);
   box(.18,.068,.016,ovenX,dy-doorH*.32,front+.02);box(.008,.044,.016,ovenX-.07,dy-doorH*.32,front+.035,mats.edge);
+  activeParts=parts;
   const shelfX=s.w*.348,sideW=s.w*.26;box(sideW,.026,s.d-.03,shelfX,.092,0);
   for(const z of[-front+.03,front-.03])box(.043,top-.13,.043,s.w/2-.025,(top-.13)/2+.056,z);
   for(const x of[-s.w/2+.06,ovenX+ovenW/2-.04,s.w/2-.03])for(const z of[-front+.05,front-.04]){cyl(.025,.047,x,.04,z);cyl(.025,.022,x,.012,z,mats.rubber);}
   [-s.w*.30,0,s.w*.32].forEach(x=>knob(x,top-.074));
   cyl(.035,.012,-s.w*.42,top-.075,front+.017,mats.edge,true);cyl(.028,.004,-s.w*.42,top-.075,front+.025,mats.white,true);add(new T.BoxGeometry(.003,.034,.002),mats.dark,-s.w*.42+.006,top-.069,front+.029,[0,0,-.45]);
   cyl(.034,.017,-s.w*.16,top-.075,front+.022,mats.rubber,true);torus(.034,.004,-s.w*.16,top-.075,front+.035,mats.edge);box(.006,.023,.009,-s.w*.16,top-.075,front+.04,mats.edge);
-  box(.015,.024,.004,s.w*.13,dy+doorH*.36,front+.027,s.id==='P05'?new T.MeshStandardMaterial({name:'Interruptor_rojo',color:0xa41012,roughness:.5}):mats.rubber);
+  box(.015,.024,.004,ovenX+ovenW/2-.0175,dy+doorH*.36,front+.027,s.id==='P05'?new T.MeshStandardMaterial({name:'Interruptor_rojo',color:0xa41012,roughness:.5}):mats.rubber);
  }
- for(const[material,geometries]of parts){const mesh=new T.Mesh(mergeGeometries(geometries),material);mesh.name=material.name;root.add(mesh);}
- const bytes=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true}));const out='public/models/inox/'+s.slug+'-v1.glb';await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(out,bytes);const info=inspectGlb(bytes);if(info.errors.length)throw Error(info.errors.join(';'));console.log(JSON.stringify({id:s.id,path:out,size:bytes.length,triangles:info.triangleCount??info.triangles,dimensionBasis:'illustrative',warnings:info.warnings}));
+ const merge=(map,parent,offset=new T.Vector3())=>{for(const[material,geometries]of map){const geometry=mergeGeometries(geometries);geometry.translate(-offset.x,-offset.y,-offset.z);const mesh=new T.Mesh(geometry,material);mesh.name=material.name;parent.add(mesh);}};
+ merge(parts,root);for(const item of moving)merge(item.parts,item.hinge,item.hinge.position);
+ const tracks=moving.map(({hinge})=>new T.QuaternionKeyframeTrack(hinge.name+'.quaternion',[0,1.2],[0,0,0,1,...new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.PI*.43).toArray()]));
+ const animations=tracks.length?[new T.AnimationClip('Abrir_puertas',1.2,tracks)]:[];
+ if(animations.length)root.userData.mechanisms='Approximate bottom-hinged oven door for presentation; exact mechanism and interior must be confirmed with owner CAD.';
+ const bytes=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true,animations}));const out='public/models/inox/'+s.slug+(animations.length?'-v2.glb':'-v1.glb');await fs.mkdir('public/models/inox',{recursive:true});await fs.writeFile(out,bytes);const info=inspectGlb(bytes);if(info.errors.length)throw Error(info.errors.join(';'));console.log(JSON.stringify({id:s.id,path:out,size:bytes.length,triangles:info.triangleCount??info.triangles,dimensionBasis:'illustrative',warnings:info.warnings}));
 }
-for(const spec of specs.filter(s=>!arg||arg===s.id))await build(spec);
+for(const spec of specs.filter(s=>arg?arg===s.id:!s.open))await build(spec);

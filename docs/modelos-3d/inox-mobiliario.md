@@ -25,7 +25,8 @@ Las fotografías son del catálogo del propietario, que identifica su procedenci
 - Ninguno de estos siete productos tiene ancho, fondo y alto exterior documentados en esas páginas. Los valores usados por el generador son **escala ilustrativa para la vista 3D**, no medidas comerciales. No se heredan las medidas de la poza P24 a otros lavaderos.
 - El grifo de P23 y P24 se representa porque aparece en sus fotos; su forma y tamaño son aproximados y no acreditan que se incluya con la compra. Las conexiones internas, plomería posterior y fijaciones ocultas no están documentadas.
 - P29 no incorpora las bebidas, alimentos, botellas ni utensilios removibles que aparecen en la fotografía. Sus recipientes se muestran vacíos y sin inventar perforaciones de drenaje.
-- Las puertas y cajones se muestran cerrados, sin clips de movimiento. No se inventa un interior de gabinete ni un mecanismo de apertura.
+- Los archivos v1 conservan la pose cerrada sin movimiento. Las versiones v2 de P23 y P29 permiten abrir sus cuatro y dos hojas, respectivamente, mediante `Abrir_puertas`. Cargan cerradas; cada hoja y su tirador o labio superior comparten un pivote. Los cajones de P23 siguen fijos.
+- La apertura v2 es **ilustrativa**, no una prueba del mecanismo real: la dirección, el ángulo y las bisagras no están acotados. El gabinete muestra costados, fondo y base sencillos, sin un bloque detrás de las puertas y sin inventar instalaciones, tuberías ni equipamiento interno.
 
 Este material no permite calcular consumos de plancha, tubos, accesorios, costos, cortes ni recetas de fabricación. Las recetas reales deben definirse por separado con datos del taller. Para sustituir estas aproximaciones por modelos exactos se necesitan los archivos del diseñador o planos cotados aprobados por el propietario.
 
@@ -37,7 +38,16 @@ Generador: `scripts/3d/build-inox-mobiliario.mjs`.
 & HERRAMIENTAS/node24/node.exe scripts/3d/build-inox-mobiliario.mjs
 ```
 
-Salida en `public/models/inox/`, con el slug existente y sufijo `-v1.glb`:
+La ejecución actual escribe únicamente estos dos reemplazos; no sobrescribe v1 ni los otros cinco modelos:
+
+| Código | Archivo en `public/models/inox/` | Clip | Duración | Hojas | Bytes | Triángulos |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| P23 | `lavatorio-con-repisas-superiores-v2.glb` | `Abrir_puertas` | 1,2 s | 4 | 315.356 | 12.644 |
+| P29 | `estacion-bartender-profesional-v2.glb` | `Abrir_puertas` | 1,2 s | 2 | 230.980 | 8.344 |
+
+El fotograma inicial queda cerrado y el final abierto, para que el visor pueda controlar ambas poses. La apertura de P23 está limitada a 85° por hoja para separar los dos pares contiguos; P29 usa 100°. Estos ángulos no son especificaciones comerciales.
+
+Archivos de la primera revisión que se conservan en `public/models/inox/`:
 
 - `lavatorio-con-repisas-superiores-v1.glb`
 - `lavatorio-de-1-poza-v1.glb`
@@ -47,6 +57,8 @@ Salida en `public/models/inox/`, con el slug existente y sufijo `-v1.glb`:
 - `mesa-central-de-trabajo-v1.glb`
 - `estacion-bartender-profesional-v1.glb`
 
-Cada GLB es autónomo: geometría real, materiales PBR, unidades de escena en metros, suelo en Y=0, vista frontal hacia +Z y cero recursos externos. Las piezas se agrupan por material para reducir peso y llamadas de dibujo. `userData` conserva el código, la página de referencia, la distinción entre medidas verificadas y escala ilustrativa, y `manufacturingUse: false`.
+Cada GLB es autónomo: geometría real, materiales PBR, unidades de escena en metros, suelo en Y=0, vista frontal hacia +Z y cero recursos externos. Las piezas se agrupan por material **dentro de cada conjunto rígido**, preservando los grupos de las puertas. El acero usa reflexión metálica satinada; la iluminación del visor determina sus reflejos. `userData` conserva el código, la página de referencia, la distinción entre medidas verificadas y escala ilustrativa, y `manufacturingUse: false`.
+
+La revisión v2 se comprobó con GLTFLoader en las poses cerrada, abierta y cerrada de nuevo; se verificaron tiradores solidarios, rayos que atraviesan la abertura hasta el fondo y carga/renderizado en Chrome. Los 32 archivos v1 del catálogo mantuvieron sus hashes.
 
 Todos pasan el presupuesto automático de GLB del repositorio, muy por debajo de 8 MiB y 300 000 triángulos. La publicación debe conservar el aviso **«Visualización 3D aproximada a partir de fotografías»**; el archivo no cambia precios, existencias, variantes ni permisos del catálogo.

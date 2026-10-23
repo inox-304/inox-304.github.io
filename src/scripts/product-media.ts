@@ -29,6 +29,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   const host = root.querySelector<HTMLElement>('[data-model-host]')!;
   const button = root.querySelector<HTMLButtonElement>('[data-show-model]')!;
   const help = root.querySelector<HTMLElement>('[data-model-help]')!;
+  const navigationHelp = help.textContent || '';
   const status = root.querySelector<HTMLElement>('[data-media-status]')!;
   let product: MediaProduct | null = null;
   let sources: string[] = [];
@@ -57,6 +58,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         : { open: 'Abrir puertas', close: 'Cerrar puertas' };
     doors.hidden = !animation || !viewer.availableAnimations.includes(animation);
     doors.setAttribute('aria-pressed', 'false'); doors.textContent = animationLabels.open;
+    help.textContent = doors.hidden ? navigationHelp : `${navigationHelp} Pulsa «${animationLabels.open}» para ver el interior y vuelve a pulsar para cerrar.`;
     if (!doors.hidden) { viewer.animationName = animation; viewer.pause(); viewer.currentTime = 0; }
   }
   doors.addEventListener('click', () => {
@@ -73,7 +75,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       const progress = duration ? Math.min(1, (now - began) / duration) : 1;
       element.currentTime = start + (target - start) * (progress * progress * (3 - 2 * progress));
       if (progress < 1) doorFrame = requestAnimationFrame(step);
-      else if (/bisagra/i.test(element.animationName || '')) void element.updateFraming();
+      else void element.updateFraming();
     };
     doorFrame = requestAnimationFrame(step);
     doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? animationLabels.close : animationLabels.open;

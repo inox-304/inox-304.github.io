@@ -1,6 +1,7 @@
 /** Photo reconstructions of remaining catalogue equipment. No manufacturer CAD.
  * All external dimensions are unverified; the normalized envelope is visual only.
- * See docs/modelos-3d/inox-equipos-restantes.md. No motion is inferred from labels.
+ * See docs/modelos-3d/inox-equipos-restantes.md. Door travel is illustrative,
+ * never inferred machinery operation from an automatic-product label.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -26,17 +27,19 @@ const specifications = [
   { code: 'P31', slug: 'licuadora-industrial-con-base', page: 19, type: 'blenderBase' },
   { code: 'P32', slug: 'maquina-cremoladera-25-l', page: 20, type: 'slush' },
 ];
-for (const spec of specifications) {
+// Only approved v2 replacements are emitted. Preserve all v1 and unrelated assets.
+for (const spec of specifications.filter(item => ['P12', 'P13', 'P14', 'P19'].includes(item.code))) {
   const model = new THREE.Group(); model.name = `INOX_${spec.code}_${spec.type}`;
   model.userData = {
-    productCode: spec.code, revision: '1.0', dimensionsVerified: false,
+    productCode: spec.code, revision: '2.0', dimensionsVerified: false,
     scale: 'NORMALIZED_VISUAL_SCALE_NOT_PHYSICAL_DIMENSIONS',
     description: 'Reconstrucción visual de fotografía. Escala, zonas ocultas y formas secundarias aproximadas. No usar como plano, receta de material, capacidad calculada o instalación a escala.',
     reference: `INOX304_datos_y_catalogo.pdf, página ${spec.page}; public/images/products/${spec.slug}.${spec.photoExt || 'jpg'}`,
+    articulation: 'Apertura ilustrativa de las puertas. Bisagras, recorrido e interior simplificados, sin maquinaria oculta ni automatismos de fabricación.',
   };
   const steel = new THREE.MeshStandardMaterial({ name: 'Acero_inoxidable_satinado', color: 0xbfc7cd, metalness: 0.94, roughness: 0.28 });
   const bright = new THREE.MeshStandardMaterial({ name: 'Cantos_y_parrillas', color: 0xd0d7dc, metalness: 0.98, roughness: 0.18 });
-  const white = new THREE.MeshStandardMaterial({ name: 'Acabado_claro', color: 0xe4e8eb, metalness: 0.25, roughness: 0.30 });
+  const white = new THREE.MeshStandardMaterial({ name: 'Pintura_clara_referencia', color: 0xe4e8eb, metalness: 0.03, roughness: 0.40 });
   const black = new THREE.MeshStandardMaterial({ name: 'Marcos_negros', color: 0x131a22, metalness: 0.15, roughness: 0.32 });
   const charcoal = new THREE.MeshStandardMaterial({ name: 'Carcasa_grafito', color: 0x333b43, metalness: 0.40, roughness: 0.36 });
   const seal = new THREE.MeshStandardMaterial({ name: 'Juntas_y_rodadura', color: 0x151b20, metalness: 0, roughness: 0.75 });
@@ -44,9 +47,11 @@ for (const spec of specifications) {
   const green = new THREE.MeshStandardMaterial({ name: 'Mando_verde', color: 0x0d7553, metalness: 0.05, roughness: 0.30 });
   const blue = new THREE.MeshStandardMaterial({ name: 'Rotulo_azul', color: 0x1744b9, metalness: 0.05, roughness: 0.38, emissive: 0x0b1e52, emissiveIntensity: 0.25 });
   const glass = new THREE.MeshPhysicalMaterial({ name: 'Cristales_laterales', color: 0xe4eff7, metalness: 0, roughness: 0.12, transparent: true, opacity: 0.09, depthWrite: false, clearcoat: 0.65, clearcoatRoughness: 0.10, side: THREE.DoubleSide });
-  let parent = model;
+  let parent = model; const tracks = [];
   function add(geometry, material, name, position = [0, 0, 0], rotation = [0, 0, 0]) {
-    const mesh = new THREE.Mesh(geometry, material); mesh.name = name; mesh.position.set(...position); mesh.rotation.set(...rotation); parent.add(mesh); return mesh;
+    const mesh = new THREE.Mesh(geometry, material); mesh.name = name; mesh.position.set(...position);
+    if (parent !== model) mesh.position.sub(parent.position);
+    mesh.rotation.set(...rotation); parent.add(mesh); return mesh;
   }
   function box(name, size, position, material = steel, r = 0.003, rotation = [0, 0, 0]) {
     return add(new RoundedBoxGeometry(...size, 2, Math.min(r, ...size.map(v => v / 2))), material, name, position, rotation);
@@ -97,16 +102,13 @@ for (const spec of specifications) {
     text('--', 0.014, [x - 0.012, y - 0.005, z + 0.006], red);
     if (controls) { box('Interruptor_verde', [0.017, 0.025, 0.005], [x + 0.041, y, z + 0.004], green, 0.001); }
   }
-  function door(name, hingeX, centerY, z, w, h, side, openAngle, mat = steel) {
-    const group = new THREE.Group(); group.name = name; group.position.set(hingeX, centerY, z); group.rotation.y = openAngle; model.add(group); parent = group;
-    const cx = side * w / 2;
-    box('Hoja_puerta', [w, h, 0.033], [cx, 0, 0], mat, 0.004);
-    box('Junta_perimetral', [w - 0.014, h - 0.018, 0.006], [cx, 0, -0.020], seal, 0.003);
-    box('Revestimiento_interior', [w - 0.032, h - 0.040, 0.006], [cx, 0, -0.024], mat, 0.003);
-    const hx = side * (w - 0.022);
-    curve('Tirador_vertical', [[hx, -0.085, 0.025], [hx, -0.058, 0.048], [hx, 0.058, 0.048], [hx, 0.085, 0.025]], 0.006, bright);
-    for (const y of [-h * 0.36, h * 0.36]) cyl('Bisagra_visible', 0.009, 0.009, 0.056, [0, y, 0.002], bright);
-    parent = model;
+  function movingDoor(name, hinge, angleDegrees, build) {
+    const group = new THREE.Group(); group.name = name; group.position.set(...hinge);
+    group.userData = { openingApproximate: true, closedByDefault: true, openingDegrees: angleDegrees };
+    model.add(group); parent = group; build(); parent = model;
+    const values = [], axis = new THREE.Vector3(0, 1, 0);
+    for (const fraction of [0, .08, .5, .92, 1]) values.push(...new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(angleDegrees) * fraction).toArray());
+    tracks.push(new THREE.QuaternionKeyframeTrack(`${name}.quaternion`, [0, .2, .6, 1, 1.2], values));
   }
 
   const yellow = new THREE.MeshStandardMaterial({ name: 'Toldo_amarillo', color: 0xffc900, metalness: 0, roughness: 0.65, side: THREE.DoubleSide });
@@ -197,17 +199,25 @@ for (const spec of specifications) {
     const doorH = top - 0.295, doorY = 0.105 + doorH / 2;
     if (double) {
       for (const x of [-W / 4, W / 4]) {
-        box('Puerta_gabinete', [W / 2 - 0.031, doorH, 0.020], [x, doorY, D / 2 + 0.012], steel, 0.003);
-        const hx = x < 0 ? -0.038 : 0.038;
-        curve('Tirador_vertical_puerta', [[hx, doorY - 0.10, D / 2 + 0.024], [hx, doorY - 0.075, D / 2 + 0.058], [hx, doorY + 0.075, D / 2 + 0.058], [hx, doorY + 0.10, D / 2 + 0.024]], 0.007);
-        for (const y of [doorY - doorH * 0.36, doorY + doorH * 0.36]) cyl('Bisagra_puerta', 0.005, 0.005, 0.055, [Math.sign(x) * (W / 2 - 0.026), y, D / 2 + 0.022], bright);
+        const width = W / 2 - 0.031, leftHinge = x < 0;
+        movingDoor(`${spec.code}_puerta_${leftHinge ? 1 : 2}`, [x + (leftHinge ? -width / 2 : width / 2), doorY, D / 2 + 0.025], leftHinge ? -100 : 100, () => {
+          box('Hoja_puerta_gabinete', [width, doorH, 0.020], [x, doorY, D / 2 + 0.012], steel, 0.003);
+          box('Revestimiento_interior_puerta', [width - .020, doorH - .020, .004], [x, doorY, D / 2], steel, .001);
+          const hx = leftHinge ? -0.038 : 0.038;
+          curve('Tirador_vertical_puerta', [[hx, doorY - 0.10, D / 2 + 0.024], [hx, doorY - 0.075, D / 2 + 0.058], [hx, doorY + 0.075, D / 2 + 0.058], [hx, doorY + 0.10, D / 2 + 0.024]], 0.007);
+          for (const y of [doorY - doorH * 0.36, doorY + doorH * 0.36]) cyl('Bisagra_puerta', 0.005, 0.005, 0.055, [Math.sign(x) * (W / 2 - 0.026), y, D / 2 + 0.022], bright);
+        });
       }
       for (const x of [-0.245, 0.105]) { well('Poza_independiente', 0.296, 0.51, 0.15, x, top + 0.004, -0.020); basket('Canastilla_doble', 0.274, 0.440, 0.200, x, top + 0.025, -0.045); knob(x, top - 0.105, D / 2 + 0.029, 0.044, true); }
       box('Descanso_lateral_derecho', [0.202, 0.014, D - 0.057], [0.374, top + 0.006, 0.005], steel, 0.002);
       cyl('Perno_visible_descanso', 0.006, 0.008, 0.023, [0.365, top + 0.026, 0.110], black);
     } else {
-      box('Puerta_gabinete', [W - 0.047, doorH, 0.021], [0, doorY, D / 2 + 0.014], steel, 0.004);
-      horizontalHandle('Tirador_puerta', -0.135, doorY + doorH * 0.34, D / 2 + 0.027, 0.155);
+      const width = W - 0.047;
+      movingDoor(`${spec.code}_puerta_1`, [width / 2, doorY, D / 2 + .027], 100, () => {
+        box('Hoja_puerta_gabinete', [width, doorH, 0.021], [0, doorY, D / 2 + 0.014], steel, 0.004);
+        box('Revestimiento_interior_puerta', [width - .020, doorH - .020, .004], [0, doorY, D / 2 + .0015], steel, .001);
+        horizontalHandle('Tirador_puerta', -0.135, doorY + doorH * 0.34, D / 2 + 0.027, 0.155);
+      });
       knob(0.035, top - 0.105, D / 2 + 0.028, automatic ? 0.043 : 0.040);
       well('Cuba_freidora', W - 0.085, D - 0.115, 0.165, 0, top + 0.005, 0);
       for (const x of [-0.128, 0.128]) basket('Canastilla', 0.229, 0.460, 0.196, x, top + 0.025, -0.060);
@@ -271,11 +281,20 @@ for (const spec of specifications) {
       shelf('Parrilla_visicooler', 0.688, 0.520, 0, y, 0.014, white);
       box('Frente_claro_parrilla', [0.690, 0.034, 0.013], [0, y, 0.281], white, 0.002);
     }
-    for (const x of [-0.365, 0.365]) box('Marco_puerta_vertical', [0.036, 1.365, 0.034], [x, 1.0375, D / 2 + 0.020], bright, 0.003);
-    for (const y of [insideBottom, insideTop]) box('Marco_puerta_horizontal', [0.762, 0.037, 0.034], [0, y, D / 2 + 0.020], bright, 0.003);
-    add(new THREE.PlaneGeometry(0.698, 1.313), glass, 'Puerta_acristalada_cerrada', [0, 1.0425, D / 2 + 0.019]);
-    box('Unero_inferior_puerta', [0.145, 0.028, 0.025], [0, 0.397, D / 2 + 0.031], white, 0.005);
-    cyl('Cerradura_marco', 0.010, 0.010, 0.007, [-0.225, 1.720, D / 2 + 0.041], bright, [Math.PI / 2, 0, 0]);
+    // The source shows a white painted body: retain it, with a separate metallic door.
+    movingDoor('P19_puerta_1', [.383, 1.0425, D / 2 + .043], 100, () => {
+      for (const x of [-0.365, 0.365]) {
+        box('Junta_vertical_puerta', [.028, 1.365, .008], [x, 1.0375, D / 2 - .001], seal, .002);
+        box('Marco_puerta_vertical', [0.036, 1.365, 0.034], [x, 1.0375, D / 2 + 0.020], bright, 0.003);
+      }
+      for (const y of [insideBottom, insideTop]) {
+        box('Junta_horizontal_puerta', [.730, .028, .008], [0, y, D / 2 - .001], seal, .002);
+        box('Marco_puerta_horizontal', [0.762, 0.037, 0.034], [0, y, D / 2 + 0.020], bright, 0.003);
+      }
+      add(new THREE.PlaneGeometry(0.698, 1.313), glass, 'Cristal_puerta', [0, 1.0425, D / 2 + 0.019]);
+      box('Unero_inferior_puerta', [0.145, 0.028, 0.025], [0, 0.397, D / 2 + 0.031], white, 0.005);
+      cyl('Cerradura_marco', 0.010, 0.010, 0.007, [-0.225, 1.720, D / 2 + 0.041], bright, [Math.PI / 2, 0, 0]);
+    });
     box('Cabecera_negra', [W, 0.284, 0.030], [0, 1.864, D / 2 + 0.016], black, 0.004);
     box('Cartel_azul', [0.718, 0.226, 0.004], [0, 1.874, D / 2 + 0.033], blue, 0.002);
     text('ilumi', 0.144, [0, 1.833, D / 2 + 0.036], white); text('equipamiento comercial', 0.018, [0, 1.795, D / 2 + 0.036], white);
@@ -379,29 +398,30 @@ for (const spec of specifications) {
     }
   }
 
-  // The supplied viewpoints do not prove a travel or hinge for these mechanisms.
-  // Preserve the photographed pose; the model remains orbitable without fabricated clips.
-  model.updateMatrixWorld(true);
-  const buckets = new Map();
-  model.traverse(object => {
-    if (!object.isMesh) return;
-    const geometry = object.geometry.clone().applyMatrix4(object.matrixWorld);
-    const geo = geometry.index ? geometry.toNonIndexed() : geometry; geo.deleteAttribute('uv');
-    if (!buckets.has(object.material.uuid)) buckets.set(object.material.uuid, { material: object.material, geometries: [], parts: [] });
-    buckets.get(object.material.uuid).geometries.push(geo); buckets.get(object.material.uuid).parts.push(object.name);
-  });
-  model.clear();
-  for (const { material, geometries, parts } of buckets.values()) {
-    const geometry = mergeGeometries(geometries, false); if (!geometry) throw new Error(`Could not merge ${spec.code}`);
-    const mesh = new THREE.Mesh(geometry, material); mesh.name = material.name; mesh.userData.parts = parts; model.add(mesh);
+  // Merge within each rigid assembly, never across the animated hinge boundary.
+  for (const container of [...model.children.filter(object => object.isGroup), model]) {
+    const buckets = new Map(), meshes = container.children.filter(object => object.isMesh);
+    for (const object of meshes) {
+      object.updateMatrix();
+      const geometry = object.geometry.clone().applyMatrix4(object.matrix);
+      const geo = geometry.index ? geometry.toNonIndexed() : geometry; geo.deleteAttribute('uv');
+      if (!buckets.has(object.material.uuid)) buckets.set(object.material.uuid, { material: object.material, geometries: [], parts: [] });
+      buckets.get(object.material.uuid).geometries.push(geo); buckets.get(object.material.uuid).parts.push(object.name);
+    }
+    for (const mesh of meshes) container.remove(mesh);
+    for (const { material, geometries, parts } of buckets.values()) {
+      const geometry = mergeGeometries(geometries, false); if (!geometry) throw new Error(`Could not merge ${spec.code}`);
+      const mesh = new THREE.Mesh(geometry, material); mesh.name = `${container.name}_${material.name}`; mesh.userData.parts = parts; container.add(mesh);
+    }
   }
   model.updateMatrixWorld(true);
   const bounds = new THREE.Box3().setFromObject(model), size = bounds.getSize(new THREE.Vector3());
   model.userData.visualEnvelopeApproximate = size.toArray();
-  const bytes = Buffer.from(await new GLTFExporter().parseAsync(model, { binary: true, onlyVisible: true }));
+  const animations = [new THREE.AnimationClip('Abrir_puertas', 1.2, tracks)];
+  const bytes = Buffer.from(await new GLTFExporter().parseAsync(model, { binary: true, onlyVisible: true, animations }));
   const report = inspectGlb(bytes);
   if (report.errors.length || report.warnings.length || bytes.length > 8 * 1024 * 1024) throw new Error(JSON.stringify(report));
-  const output = path.resolve(`public/models/inox/${spec.slug}-v1.glb`); await fs.mkdir(path.dirname(output), { recursive: true }); await fs.writeFile(output, bytes);
-  console.log(JSON.stringify({ code: spec.code, output, bytes: bytes.length, triangles: report.triangles, meshes: model.children.length, dimensionsVerified: false, visualEnvelopeApproximate: size.toArray(), animations: [] }, null, 2));
+  const output = path.resolve(`public/models/inox/${spec.slug}-v2.glb`); await fs.mkdir(path.dirname(output), { recursive: true }); await fs.writeFile(output, bytes);
+  console.log(JSON.stringify({ code: spec.code, output, bytes: bytes.length, triangles: report.triangles, meshes: model.children.length, dimensionsVerified: false, visualEnvelopeApproximate: size.toArray(), animations: ['Abrir_puertas'] }, null, 2));
 }
 

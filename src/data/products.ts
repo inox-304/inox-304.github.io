@@ -41,9 +41,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/cocina-semiindustrial-4-hornillas-horno-electrico.webp",
     "featured": false,
-    "model3d": "/models/inox/cocina-semiindustrial-4-hornillas-horno-electrico-v1.glb",
+    "model3d": "/models/inox/cocina-semiindustrial-4-hornillas-horno-electrico-v2.glb",
     "modelPoster": "/images/products/cocina-semiindustrial-4-hornillas-horno-electrico.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P02",
@@ -97,9 +97,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/cocina-industrial-4-hornillas-tipo-isla-plancha-ho.webp",
     "featured": true,
-    "model3d": "/models/inox/cocina-industrial-4-hornillas-tipo-isla-plancha-ho-v1.glb",
+    "model3d": "/models/inox/cocina-industrial-4-hornillas-tipo-isla-plancha-ho-v2.glb",
     "modelPoster": "/images/products/cocina-industrial-4-hornillas-tipo-isla-plancha-ho.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P05",
@@ -115,9 +115,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/cocina-industrial-tipo-isla-4-parrillas-plancha-ho.webp",
     "featured": false,
-    "model3d": "/models/inox/cocina-industrial-tipo-isla-4-parrillas-plancha-ho-v1.glb",
+    "model3d": "/models/inox/cocina-industrial-tipo-isla-4-parrillas-plancha-ho-v2.glb",
     "modelPoster": "/images/products/cocina-industrial-tipo-isla-4-parrillas-plancha-ho.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P06",
@@ -132,9 +132,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/horno-multiuso.webp",
     "featured": false,
-    "model3d": "/models/inox/horno-multiuso-v1.glb",
+    "model3d": "/models/inox/horno-multiuso-v2.glb",
     "modelPoster": "/images/products/horno-multiuso.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P07",
@@ -149,9 +149,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/horno-ecologico-para-pollo-a-la-brasa.webp",
     "featured": false,
-    "model3d": "/models/inox/horno-ecologico-para-pollo-a-la-brasa-v1.glb",
+    "model3d": "/models/inox/horno-ecologico-para-pollo-a-la-brasa-v2.glb",
     "modelPoster": "/images/products/horno-ecologico-para-pollo-a-la-brasa.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P08",
@@ -166,9 +166,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/horno-pollero-ecologico.webp",
     "featured": false,
-    "model3d": "/models/inox/horno-pollero-ecologico-v1.glb",
+    "model3d": "/models/inox/horno-pollero-ecologico-v2.glb",
     "modelPoster": "/images/products/horno-pollero-ecologico.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P09",
@@ -221,9 +221,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/caja-china-grande.webp",
     "featured": false,
-    "model3d": "/models/inox/caja-china-grande-v1.glb",
+    "model3d": "/models/inox/caja-china-grande-v2.glb",
     "modelPoster": "/images/products/caja-china-grande.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P12",
@@ -241,9 +241,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/freidora-doble-profesional.jpg",
     "featured": true,
-    "model3d": "/models/inox/freidora-doble-profesional-v1.glb",
+    "model3d": "/models/inox/freidora-doble-profesional-v2.glb",
     "modelPoster": "/images/products/freidora-doble-profesional.jpg",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P13",
@@ -260,9 +260,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/freidora-de-papa-profesional.jpg",
     "featured": false,
-    "model3d": "/models/inox/freidora-de-papa-profesional-v1.glb",
+    "model3d": "/models/inox/freidora-de-papa-profesional-v2.glb",
     "modelPoster": "/images/products/freidora-de-papa-profesional.jpg",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P14",
@@ -279,9 +279,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/freidora-automatica-de-papas.jpg",
     "featured": false,
-    "model3d": "/models/inox/freidora-automatica-de-papas-v1.glb",
+    "model3d": "/models/inox/freidora-automatica-de-papas-v2.glb",
     "modelPoster": "/images/products/freidora-automatica-de-papas.jpg",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P15",
@@ -317,9 +317,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/armario-refrigerado-de-2-puertas.webp",
     "featured": true,
-    "model3d": "/models/inox/armario-refrigerado-de-2-puertas-v1.glb",
+    "model3d": "/models/inox/armario-refrigerado-de-2-puertas-v2.glb",
     "modelPoster": "/images/products/armario-refrigerado-de-2-puertas.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P17",
@@ -334,9 +334,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/armarios-frigorificos-camara-frigorifica.webp",
     "featured": false,
-    "model3d": "/models/inox/armarios-frigorificos-camara-frigorifica-v1.glb",
+    "model3d": "/models/inox/armarios-frigorificos-camara-frigorifica-v2.glb",
     "modelPoster": "/images/products/armarios-frigorificos-camara-frigorifica.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P18",
@@ -352,9 +352,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/mesa-fria.webp",
     "featured": false,
-    "model3d": "/models/inox/mesa-fria-v1.glb",
+    "model3d": "/models/inox/mesa-fria-v2.glb",
     "modelPoster": "/images/products/mesa-fria.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P19",
@@ -368,9 +368,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/visicooler-580-litros.webp",
     "featured": false,
-    "model3d": "/models/inox/visicooler-580-litros-v1.glb",
+    "model3d": "/models/inox/visicooler-580-litros-v2.glb",
     "modelPoster": "/images/products/visicooler-580-litros.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P20",
@@ -400,9 +400,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/abatidor-de-temperatura-de-5-bandejas.webp",
     "featured": false,
-    "model3d": "/models/inox/abatidor-de-temperatura-de-5-bandejas-v1.glb",
+    "model3d": "/models/inox/abatidor-de-temperatura-de-5-bandejas-v2.glb",
     "modelPoster": "/images/products/abatidor-de-temperatura-de-5-bandejas.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P22",
@@ -436,9 +436,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/lavatorio-con-repisas-superiores.webp",
     "featured": false,
-    "model3d": "/models/inox/lavatorio-con-repisas-superiores-v1.glb",
+    "model3d": "/models/inox/lavatorio-con-repisas-superiores-v2.glb",
     "modelPoster": "/images/products/lavatorio-con-repisas-superiores.webp",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P24",
@@ -543,9 +543,9 @@ export const products: Product[] = [
     ],
     "image": "/images/products/estacion-bartender-profesional.jpg",
     "featured": false,
-    "model3d": "/models/inox/estacion-bartender-profesional-v1.glb",
+    "model3d": "/models/inox/estacion-bartender-profesional-v2.glb",
     "modelPoster": "/images/products/estacion-bartender-profesional.jpg",
-    "doorAnimation": ""
+    "doorAnimation": "Abrir_puertas"
   },
   {
     "id": "P30",
