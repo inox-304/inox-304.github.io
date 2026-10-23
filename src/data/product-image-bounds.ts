@@ -29,4 +29,15 @@ export const productImageBounds: Record<string, ProductImageBounds> = {
   '/images/products/lavadero-de-2-pozas-con-descanso.webp': { width: 1400, height: 775, bounds: { x: 44, y: 0, width: 1356, height: 768 } },
   // Keep the manufacturer's full photo, including its original labels.
   '/images/products/ilumi-dj-181.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-dj-182.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-dj-183.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-cr-121.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-cr-122.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-cr-123.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-vm-300t.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-vm-400t.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-vm-500t.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-b-10l.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-b-20l.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
+  '/images/products/ilumi-b-30l.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
 };

@@ -50,9 +50,11 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     const material = selectedVariant?.materialVariant || '';
     viewer.variantName = material && viewer.availableVariants.includes(material) ? material : null;
     const animation = selectedVariant?.doorAnimation || product.doorAnimation || '';
-    animationLabels = /(?:^|[\s_-])tapa(?:s)?(?:$|[\s_-])/i.test(animation)
-      ? { open: 'Retirar tapa', close: 'Colocar tapa' }
-      : { open: 'Abrir puertas', close: 'Cerrar puertas' };
+    animationLabels = /bisagra/i.test(animation)
+      ? { open: 'Abrir tapa', close: 'Cerrar tapa' }
+      : /(?:^|[\s_-])tapa(?:s)?(?:$|[\s_-])/i.test(animation)
+        ? { open: 'Retirar tapa', close: 'Colocar tapa' }
+        : { open: 'Abrir puertas', close: 'Cerrar puertas' };
     doors.hidden = !animation || !viewer.availableAnimations.includes(animation);
     doors.setAttribute('aria-pressed', 'false'); doors.textContent = animationLabels.open;
     if (!doors.hidden) { viewer.animationName = animation; viewer.pause(); viewer.currentTime = 0; }
@@ -71,6 +73,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       const progress = duration ? Math.min(1, (now - began) / duration) : 1;
       element.currentTime = start + (target - start) * (progress * progress * (3 - 2 * progress));
       if (progress < 1) doorFrame = requestAnimationFrame(step);
+      else if (/bisagra/i.test(element.animationName || '')) void element.updateFraming();
     };
     doorFrame = requestAnimationFrame(step);
     doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? animationLabels.close : animationLabels.open;
