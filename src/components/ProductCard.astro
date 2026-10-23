@@ -13,7 +13,7 @@ const category = categories.find(item => item.id === product.category);
 const price = formatProductPrice(product);
 const quoteUrl = whatsappUrl(`Hola INOX 304, me interesa ${product.name}. Me gustaría recibir una cotización.`, product.contactId);
 ---
-<article class:list={['product-card', {'product-cutout': product.image.endsWith('.webp') && product.supplyType !== 'distributed', 'product-photo-white': product.supplyType === 'distributed'}]} data-product-id={product.id} data-category={product.category} data-title={product.name} data-catalog-order={index} data-name={catalogSearchText(product, category?.name || '')}>
+<article class="product-card product-photo-white" data-product-id={product.id} data-category={product.category} data-title={product.name} data-catalog-order={index} data-name={catalogSearchText(product, category?.name || '')}>
   <a class="product-card-main" href={href}>
   <div class="product-card-image"><span class="product-index">{String(index + 1).padStart(2, '0')}</span><img src={withBase(product.image)} alt={product.name} loading="lazy" decoding="async" width="640" height="520"/><span class="product-arrow"><Icon name="diagonal" size={22}/></span></div>
   <div class="product-card-info"><div class="product-card-meta"><p class="eyebrow">{category?.shortName}</p><span class="product-card-code" data-card-code>{product.id}</span></div><h3>{product.name}</h3><span class="card-link">Explorar equipo <Icon name="arrow" size={15}/></span></div>
@@ -23,8 +23,3 @@ const quoteUrl = whatsappUrl(`Hola INOX 304, me interesa ${product.name}. Me gus
     <a class="button button-chrome product-card-quote" data-card-quote href={quoteUrl} target="_blank" rel="noopener noreferrer" aria-label={`Cotizar ${product.name}`} hidden={!!price}>Cotizar <Icon name="whatsapp" size={16}/></a>
   </div>
 </article>
-<style>
-  .product-cutout .product-card-image{background:radial-gradient(ellipse at 50% 30%,#fcfeff 0%,#e5e9ef 68%,#d8dce2 100%)}
-  .product-cutout .product-card-image img{mix-blend-mode:normal;filter:drop-shadow(0 14px 12px rgba(30,35,43,.14));padding:32px 30px 36px}
-  @media(max-width:600px){.product-cutout .product-card-image img{padding:25px 14px 30px;filter:drop-shadow(0 7px 6px rgba(30,35,43,.12))}}
-</style>

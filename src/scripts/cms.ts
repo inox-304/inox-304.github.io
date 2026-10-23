@@ -44,8 +44,7 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
   card.dataset.productId = product.id;
   card.dataset.category = product.category; card.dataset.name = catalogSearchText(product, category(product));
   card.dataset.title = product.name; card.dataset.catalogOrder = String(index);
-  card.classList.toggle('product-cutout', getProductStage(product.image).isCutout && product.supplyType !== 'distributed');
-  card.classList.toggle('product-photo-white', product.supplyType === 'distributed');
+  card.classList.add('product-photo-white');
   card.removeAttribute('data-reveal'); card.removeAttribute('style');
   setText('.product-index', String(index + 1).padStart(2, '0'), card);
   setText('.product-card-info .eyebrow', category(product), card);
@@ -105,12 +104,6 @@ function updateDetail(data: CmsData) {
     const expectedSource = new URL(source, location.href).href;
     const applyStage = (natural?: { width: number; height: number }) => {
       const profile = getProductStage(product.image, natural);
-      const studio = profile.isCutout && product.supplyType !== 'distributed';
-      stage.classList.toggle('product-studio', studio);
-      stage.classList.toggle('product-photo-white', product.supplyType === 'distributed');
-      stage.dataset.stageShape = profile.shape;
-      stage.style.cssText = profile.style;
-      stage.querySelectorAll<HTMLElement>('.studio-backdrop, .studio-pedestal, .equipment-shadow').forEach(element => { element.hidden = !studio; });
       image.width = profile.width; image.height = profile.height;
     };
     // Clear placeholder geometry before loading a different product or CMS image.

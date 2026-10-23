@@ -163,7 +163,6 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   }
   function update(next: MediaProduct | null) {
     resetViewer(); message(); product = next; selectedPhoto = 0;
-    root.classList.toggle('product-photo-white', product?.supplyType === 'distributed');
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
     sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
     const variantSelect = document.querySelector<HTMLSelectElement>('[data-product-variant]');
