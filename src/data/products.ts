@@ -1,4 +1,4 @@
-// Product information transcribed from the owner-supplied catalog PDFs.
+// Product information transcribed from owner-supplied catalogs and manufacturer technical sheets.
 // Prices and unspecified warranty terms are intentionally excluded.
 
 import type { ProductCategory } from './categories.ts';
@@ -21,6 +21,7 @@ export type Product = ProductOrigin & {
   technicalSheet?: string;
   model3d?: string;
   modelPoster?: string;
+  doorAnimation?: string;
   gallery?: string[];
 };
 
@@ -498,6 +499,33 @@ export const products: Product[] = [
       "2 tolvas"
     ],
     "image": "/images/products/maquina-cremoladera-25-l.jpg",
+    "featured": false
+  },
+  {
+    "id": "ILUMI-DJ-181",
+    "slug": "ilumi-dj-181",
+    "name": "Dispensador de jugos de 18 L, 1 tolva",
+    "category": "linea-fria",
+    "summary": "Dispensador ILUMI DJ-181 de 18 litros con una tolva y circulación modo lluvia. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Capacidad total: 18 L en 1 tolva",
+      "Medidas: 250 × 386 × 728 mm (ancho × fondo × alto)",
+      "Refrigeración de 2 °C a 10 °C",
+      "Circulación modo lluvia",
+      "220 V / 60 Hz; potencia de 420 W",
+      "Peso neto: 20 kg"
+    ],
+    "image": "/images/products/ilumi-dj-181.webp",
+    "technicalSheet": "/documents/ilumi-dj-181.pdf",
+    "model3d": "/models/ilumi/dj-181-v1.glb",
+    "modelPoster": "/images/products/ilumi-dj-181.webp",
+    "doorAnimation": "Abrir_tapa",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "DJ-181",
+    "equipmentFamily": "dispensadores-jugo",
+    "capacity": "18 L totales; 1 tolva",
+    "showPrice": false,
     "featured": false
   }
 ];

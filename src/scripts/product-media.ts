@@ -38,6 +38,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   let viewer: ModelViewerElement | undefined;
   let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
   let doorFrame: number | undefined;
+  let animationLabels = { open: 'Abrir puertas', close: 'Cerrar puertas' };
   const doors = document.createElement('button');
   doors.type = 'button'; doors.className = 'product-view-button'; doors.hidden = true;
   doors.textContent = 'Abrir puertas'; doors.setAttribute('aria-pressed', 'false');
@@ -49,8 +50,11 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     const material = selectedVariant?.materialVariant || '';
     viewer.variantName = material && viewer.availableVariants.includes(material) ? material : null;
     const animation = selectedVariant?.doorAnimation || product.doorAnimation || '';
+    animationLabels = /(?:^|[\s_-])tapa(?:s)?(?:$|[\s_-])/i.test(animation)
+      ? { open: 'Retirar tapa', close: 'Colocar tapa' }
+      : { open: 'Abrir puertas', close: 'Cerrar puertas' };
     doors.hidden = !animation || !viewer.availableAnimations.includes(animation);
-    doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
+    doors.setAttribute('aria-pressed', 'false'); doors.textContent = animationLabels.open;
     if (!doors.hidden) { viewer.animationName = animation; viewer.pause(); viewer.currentTime = 0; }
   }
   doors.addEventListener('click', () => {
@@ -58,7 +62,8 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     const opening = doors.getAttribute('aria-pressed') !== 'true';
     viewer.pause();
     if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
-    const element = viewer, start = element.currentTime, target = opening ? element.duration : 0;
+    // Seeking to exactly duration can wrap a repeating glTF clip to frame zero.
+    const element = viewer, start = element.currentTime, target = opening ? Math.max(0, element.duration - 0.0001) : 0;
     const began = performance.now();
     const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450;
     const step = (now: number) => {
@@ -68,7 +73,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       if (progress < 1) doorFrame = requestAnimationFrame(step);
     };
     doorFrame = requestAnimationFrame(step);
-    doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? 'Cerrar puertas' : 'Abrir puertas';
+    doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? animationLabels.close : animationLabels.open;
   });
 
   function message(value = '') { status.textContent = value; status.hidden = !value; }
@@ -132,9 +137,9 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       element.setAttribute('shadow-softness', '0.8');
       element.setAttribute('environment-image', 'neutral');
       element.setAttribute('interaction-prompt', 'none');
-      element.setAttribute('camera-orbit', '35deg 72deg auto');
+      element.setAttribute('camera-orbit', '35deg 72deg 120%');
       element.setAttribute('min-camera-orbit', 'auto 10deg auto');
-      element.setAttribute('max-camera-orbit', 'auto 90deg auto');
+      element.setAttribute('max-camera-orbit', 'auto 90deg 140%');
       const poster = imageUrl(product.modelPoster || product.image);
       if (poster) element.setAttribute('poster', withBase(poster));
       element.addEventListener('load', () => {

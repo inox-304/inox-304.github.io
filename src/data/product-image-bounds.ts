@@ -27,4 +27,6 @@ export const productImageBounds: Record<string, ProductImageBounds> = {
   '/images/products/lavatorio-de-1-poza.webp': { width: 1400, height: 991, bounds: { x: 86, y: 0, width: 1304, height: 941 } },
   '/images/products/lavatorio-de-2-pozas-escurridores.webp': { width: 1400, height: 1107, bounds: { x: 61, y: 9, width: 1276, height: 1093 } },
   '/images/products/lavadero-de-2-pozas-con-descanso.webp': { width: 1400, height: 775, bounds: { x: 44, y: 0, width: 1356, height: 768 } },
+  // Keep the manufacturer's full photo, including its original labels.
+  '/images/products/ilumi-dj-181.webp': { width: 720, height: 720, bounds: { x: 0, y: 0, width: 720, height: 720 } },
 };

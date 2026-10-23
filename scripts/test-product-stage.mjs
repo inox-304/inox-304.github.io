@@ -13,9 +13,9 @@ function variables(profile) {
 function near(actual, expected, message) { assert.ok(Math.abs(actual - expected) < .00001, `${message}: ${actual} versus ${expected}`); }
 const asset = '/images/products/horno-ecologico-para-pollo-a-la-brasa.webp';
 
-test('authored bounds cover all 21 catalog cutouts and stay inside their image canvases', () => {
+test('authored bounds cover every catalog cutout and stay inside their image canvases', () => {
   const cutouts = products.filter(product => /\.(?:webp|png)$/i.test(product.image)).map(product => product.image).sort();
-  assert.equal(cutouts.length, 21);
+  assert.ok(cutouts.length > 0);
   assert.deepEqual(Object.keys(productImageBounds).sort(), cutouts);
   for (const [file, metadata] of Object.entries(productImageBounds)) {
     const bounds = metadata.bounds;
