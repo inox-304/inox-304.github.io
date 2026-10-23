@@ -6,7 +6,7 @@ import CategoryIcon from '../components/CategoryIcon.astro';
 import ProductCard from '../components/ProductCard.astro';
 import Services from '../components/Services.astro';
 import { categories } from '../data/products';
-import { featuredProducts } from '../data/catalog';
+import { featuredProducts, visibleProducts } from '../data/catalog';
 import { whatsappUrl } from '../data/site';
 ---
 <Layout home>
@@ -33,7 +33,7 @@ import { whatsappUrl } from '../data/site';
     <div class="shell">
       <div class="section-heading"><div><span class="eyebrow">01 / NUESTRA COLECCIÓN</span><h2>Diseñados para<br/>trabajar <span class="soft-text">en serio.</span></h2></div><div class="section-heading-side"><p>Equipamiento para cocinas profesionales<br/>y negocios que no se detienen.</p><a class="text-link dark-link" href={withBase('/catalogo/')}>Ver todos los equipos <Icon name="diagonal"/></a></div></div>
       <nav class="category-links category-strip" aria-label="Categorías de equipos">{categories.map(category => <a href={withBase(`/catalogo/?categoria=${category.id}`)}><CategoryIcon category={category.id}/><span>{category.shortName}</span><Icon name="diagonal" size={13}/></a>)}</nav>
-      <div class="product-grid" data-cms-products="featured">{featuredProducts.map((product, index) => <ProductCard product={product} index={index}/>)}</div>
+      <div class="product-grid" data-cms-products="featured">{featuredProducts.map((product, index) => <ProductCard product={product} products={visibleProducts} index={index}/>)}</div>
       <div class="collection-bottom"><p>Cada negocio tiene su equipo ideal.<br/><strong>Te ayudamos a encontrar el tuyo.</strong></p><a class="button button-dark" href={withBase('/catalogo/')}>Todo el catálogo <Icon name="arrow"/></a></div>
     </div>
   </section>

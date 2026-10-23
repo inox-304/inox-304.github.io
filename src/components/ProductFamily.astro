@@ -1,0 +1,18 @@
+---
+import type { Product } from '../data/products';
+import { getProductFamily } from '../lib/product-families';
+import '../styles/product-family.css';
+
+interface Props { product?: Product; products?: Product[] }
+const { product, products = [] } = Astro.props;
+const family = product ? getProductFamily(product.id, products) : null;
+const selection = family?.members.find(member => member.product.id === product?.id);
+---
+<div class="product-family" data-product-family hidden={!family}>
+  <label for="product-family-model" data-product-family-heading>{family?.selectorLabel || 'Capacidad / modelo'}</label>
+  <p class="product-family-label" id="product-family-label" data-product-family-label>{family?.selectorLabel === family?.label ? family?.cardSummary : family?.label}</p>
+  <select id="product-family-model" data-product-family-select aria-describedby="product-family-label product-family-selection">
+    {family?.members.map(member => <option value={member.product.id} selected={member.product.id === product?.id}>{member.label} · {member.product.supplierModel || member.product.id}</option>)}
+  </select>
+  <p class="product-family-selection" id="product-family-selection" data-product-family-selection role="status" aria-live="polite">{family && product ? `${family.selectorLabel ? selection?.label : `Modelo ${product.supplierModel || product.id}`} · Código ${product.id}` : ''}</p>
+</div>

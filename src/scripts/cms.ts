@@ -4,6 +4,7 @@ import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
 import { additionalsQuoteSummary, createAdditionalOption, reconcileAdditionalSelection, type AdditionalSelection } from '../lib/product-additionals';
 import { catalogSearchText } from '../lib/catalog-controls';
+import { catalogFamilyProducts, getProductFamily } from '../lib/product-families';
 
 type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
@@ -11,6 +12,7 @@ let payload: Bootstrap | null = null;
 try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { /* An invalid bootstrap is replaced by a fresh public request. */ }
 const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
 let lastApplied = '';
+let currentData: CmsData | undefined;
 let additionalSelection: AdditionalSelection = { productId: '', ids: [] };
 const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLElement>('.product-card') || document.querySelector<HTMLElement>('.product-card');
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
@@ -20,6 +22,8 @@ function route(product: CmsProduct) { return apiMode ? apiProductRoute(product) 
 function category(product: CmsProduct) { return categoryNames[product.category] || product.category; }
 function setText(selector: string, value: string, root: ParentNode = document) { root.querySelectorAll(selector).forEach(element => { element.textContent = value; }); }
 function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElement {
+  const family = getProductFamily(product.id, data.products);
+  const title = family?.name || product.name;
   const card = cardTemplate?.cloneNode(true) as HTMLElement || document.createElement('article');
   if (!cardTemplate) {
     card.className = 'product-card';
@@ -42,13 +46,19 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
   card.hidden = false;
   const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) main.href = route(product);
   card.dataset.productId = product.id;
-  card.dataset.category = product.category; card.dataset.name = catalogSearchText(product, category(product));
-  card.dataset.title = product.name; card.dataset.catalogOrder = String(index);
+  card.dataset.category = product.category;
+  card.dataset.name = family ? [family.name, ...family.members.map(member => `${member.label} ${catalogSearchText(member.product, category(member.product))}`)].join(' ') : catalogSearchText(product, category(product));
+  card.dataset.title = title; card.dataset.catalogOrder = String(index);
   card.classList.add('product-photo-white');
   card.removeAttribute('data-reveal'); card.removeAttribute('style');
   setText('.product-index', String(index + 1).padStart(2, '0'), card);
   setText('.product-card-info .eyebrow', category(product), card);
-  setText('.product-card-info h3', product.name, card);
+  setText('.product-card-info h3', title, card);
+  let familyNote = card.querySelector<HTMLElement>('[data-card-family]');
+  if (!familyNote) { familyNote = document.createElement('p'); familyNote.className = 'product-card-family'; familyNote.dataset.cardFamily = ''; card.querySelector('.product-card-info h3')?.after(familyNote); }
+  familyNote.hidden = !family;
+  familyNote.textContent = family ? family.cardSummary || `${family.members.length} ${family.members.length === 1 ? 'modelo disponible' : 'modelos disponibles'}` : '';
+  setText('[data-card-link-label]', family ? family.cardAction || 'Elegir capacidad / modelo' : 'Explorar equipo', card);
   setText('[data-card-code]', product.id, card);
   const image = card.querySelector('img'); if (image) { image.src = withBase(product.image); image.alt = product.name; image.removeAttribute('srcset'); }
   const price = formatProductPrice(product);
@@ -68,9 +78,9 @@ function fillCards(container: Element, products: CmsProduct[], data: CmsData) {
   container.replaceChildren(fragment);
 }
 
-function updateDetail(data: CmsData) {
+function updateDetail(data: CmsData, selectedProductId?: string) {
   const detail = document.querySelector<HTMLElement>('[data-product-detail]'); if (!detail) return;
-  const productId = payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
+  const productId = selectedProductId || payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
   const slug = apiMode ? catalogSlug(location.pathname) : '';
   const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
   const unavailable = detail.querySelector<HTMLElement>('[data-product-unavailable]');
@@ -90,6 +100,25 @@ function updateDetail(data: CmsData) {
   }
   if (unavailable) unavailable.hidden = true;
   if (grid) grid.hidden = false;
+  detail.dataset.productDetail = product.id;
+  const family = getProductFamily(product.id, data.products);
+  const familyControl = detail.querySelector<HTMLElement>('[data-product-family]');
+  const familySelect = detail.querySelector<HTMLSelectElement>('[data-product-family-select]');
+  if (familyControl && familySelect) {
+    familyControl.hidden = !family;
+    familySelect.replaceChildren(...(family?.members || []).map(member => new Option(`${member.label} · ${member.product.supplierModel || member.product.id}`, member.product.id)));
+    familySelect.value = product.id;
+    setText('[data-product-family-heading]', family?.selectorLabel || 'Capacidad / modelo', detail);
+    setText('[data-product-family-label]', (family?.selectorLabel === family?.label ? family?.cardSummary : family?.label) || '', detail);
+    const selectedLabel = family?.members.find(member => member.product.id === product.id)?.label;
+    setText('[data-product-family-selection]', `${family?.selectorLabel ? selectedLabel : `Modelo ${product.supplierModel || product.id}`} · Código ${product.id}`, detail);
+    familySelect.onchange = () => {
+      const selected = family?.members.find(member => member.product.id === familySelect.value)?.product;
+      if (!selected) return;
+      if (!payload?.preview) history.pushState({}, '', route(selected));
+      updateDetail(data, selected.id);
+    };
+  }
   setText('[data-product-name]', product.name, detail);
   setText('[data-product-summary]', product.summary, detail);
   const origin = detail.querySelector<HTMLElement>('[data-product-origin]');
@@ -129,7 +158,8 @@ function updateDetail(data: CmsData) {
   const variants = detail.querySelector<HTMLSelectElement>('[data-product-variant]');
   const updateQuote = () => {
     const variant = product.variants?.find(item => item.id === variants?.value);
-    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}${variant ? `, variación ${variant.name}` : ''}. Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}\n${new URL(route(product), location.origin).href}`;
+    const configuration = family?.selectorLabel ? family.members.find(member => member.product.id === product.id)?.label : '';
+    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}\n${new URL(route(product), location.origin).href}`;
     detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
       anchor.hidden = !contact;
       if (contact) { anchor.href = contactUrl(contact, message); anchor.dataset.contact = contact.id; }
@@ -208,10 +238,12 @@ function updateDetail(data: CmsData) {
     else technicalSheet.removeAttribute('href');
   }
   const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;
-  const relatedProducts = visibleCmsProducts(data).filter(item => item.category === product.category && item.id !== product.id).slice(0, 3);
+  const familyIds = new Set(family?.members.map(member => member.product.id) || [product.id]);
+  const relatedProducts = catalogFamilyProducts(visibleCmsProducts(data)).filter(item => item.category === product.category && !familyIds.has(item.id)).slice(0, 3);
   if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts, data); }
   document.title = `${product.name} | ${data.settings.empresa}`;
   const description = document.querySelector<HTMLMetaElement>('meta[name="description"]'); if (description) description.content = product.summary;
+  const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]'); if (canonical && !payload?.preview) canonical.href = new URL(route(product), location.origin).href;
   detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', JSON.stringify(product));
   document.dispatchEvent(new CustomEvent('inox:product-updated', { detail: { product } }));
 }
@@ -262,14 +294,23 @@ function updateContacts(data: CmsData) {
   }
 }
 function apply(data: CmsData) {
+  currentData = data;
   const serialized = JSON.stringify(data);
   if (serialized === lastApplied) return;
-  const visible = visibleCmsProducts(data);
-  document.querySelectorAll('[data-cms-products]').forEach(container => { const kind = container.getAttribute('data-cms-products'); fillCards(container, kind === 'featured' ? visible.filter(product => product.featured) : visible, data); });
+  const visible = catalogFamilyProducts(visibleCmsProducts(data));
+  document.querySelectorAll('[data-cms-products]').forEach(container => { const kind = container.getAttribute('data-cms-products'); fillCards(container, kind === 'featured' ? visible.filter(product => product.featured || getProductFamily(product.id, data.products)?.members.some(member => member.product.featured)) : visible, data); });
   updateContacts(data); updateDetail(data);
   lastApplied = serialized;
   document.dispatchEvent(new CustomEvent('inox:catalog-updated', { detail: { count: visible.length } }));
 }
+
+window.addEventListener('popstate', () => {
+  if (!currentData || payload?.preview) return;
+  const id = new URLSearchParams(location.search).get('id');
+  const slug = catalogSlug(location.pathname);
+  const selected = currentData.products.find(product => product.visible && (id ? product.id === id : product.slug === slug));
+  if (selected) updateDetail(currentData, selected.id);
+});
 
 let inFlight: AbortController | undefined;
 let revision = 0;

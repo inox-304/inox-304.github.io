@@ -112,7 +112,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     } else galleryImage.removeAttribute('src');
     photos.querySelectorAll<HTMLButtonElement>('button').forEach((photo, position) => photo.setAttribute('aria-pressed', String(position === index)));
   }
-  async function showModel() {
+  async function showModel(focusViewer = true) {
     if (!product) return;
     const model = modelUrl(selectedVariant?.model3d || product.model3d || '');
     if (!model) return;
@@ -154,7 +154,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         help.hidden = false;
         configureViewer();
         photos.querySelectorAll('button').forEach(photo => photo.setAttribute('aria-pressed', 'false'));
-        element.focus();
+        if (focusViewer) element.focus();
       }, { once: true });
       element.addEventListener('error', event => { console.warn('INOX 360: model loading failed.', event instanceof CustomEvent ? event.detail?.type : event.type); failed(); }, { once: true });
       host.append(element); host.hidden = false;
@@ -162,6 +162,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     } catch (error) { console.warn('INOX 360: viewer initialization failed.', error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error'); failed(); }
   }
   function update(next: MediaProduct | null) {
+    const wasOpen = button.getAttribute('aria-pressed') === 'true';
     resetViewer(); message(); product = next; selectedPhoto = 0;
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
     sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
@@ -176,6 +177,8 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       photo.setAttribute('aria-pressed', String(index === 0));
       photo.addEventListener('click', () => selectPhoto(index)); photos.append(photo);
     });
+    // A capacity change keeps the chosen view, while keyboard focus stays on its selector.
+    if (wasOpen && model) void showModel(false);
   }
   button.addEventListener('click', () => { void showModel(); });
   root.addEventListener('keydown', event => { if (event.key === 'Escape' && viewer) { selectPhoto(selectedPhoto); button.focus(); } });
