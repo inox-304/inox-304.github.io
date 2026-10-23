@@ -32,6 +32,9 @@ class AuthorizationError(Exception):
 def read_client(path):
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+        if data.get("type") == "inox_gmail_oauth_dpapi_v1":
+            protected = base64.b64decode(data["ciphertext"], validate=True)
+            data = json.loads(windows_protect(protected, decrypt=True).decode("utf-8"))
         client = data["installed"]
         client_id, client_secret = client["client_id"], client["client_secret"]
         if "web" in data or not isinstance(client_id, str) or not isinstance(client_secret, str):

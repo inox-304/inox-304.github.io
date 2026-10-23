@@ -109,11 +109,47 @@ class GmailAuthorizationTests(SimpleTestCase):
     def test_desktop_client_requires_fixed_google_endpoints(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "desktop.json"
-            path.write_text(json.dumps({"installed": {**self.client, "token_uri": "https://untrusted.invalid/token"}}))
-            with self.assertRaises(self.module.AuthorizationError):
-                self.module.read_client(path)
+            rejected = (
+                {"installed": {**self.client, "token_uri": "https://untrusted.invalid/token"}},
+                {"installed": {**self.client, "auth_uri": "https://untrusted.invalid/auth"}},
+                {"web": self.client},
+                {"installed": self.client, "web": self.client},
+            )
+            for payload in rejected:
+                with self.subTest(payload_keys=tuple(payload)):
+                    path.write_text(json.dumps(payload))
+                    with self.assertRaises(self.module.AuthorizationError):
+                        self.module.read_client(path)
             path.write_text(json.dumps({"installed": self.client}))
             self.assertEqual(self.module.read_client(path), self.client)
+
+    def test_desktop_client_encrypted_roundtrip_preserves_validation_and_hides_secret(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "desktop-protected.json"
+            self.module.save_credentials(path, {"installed": {
+                **self.client, "auth_uri": self.module.AUTH_ENDPOINT,
+                "token_uri": self.module.TOKEN_ENDPOINT,
+            }})
+            contents = path.read_text()
+            if os.name == "nt":
+                self.assertEqual(json.loads(contents)["type"], "inox_gmail_oauth_dpapi_v1")
+                self.assertNotIn("SYNTHETIC_SECRET", contents)
+                self.assertNotIn(self.client["client_id"], contents)
+            self.assertEqual(self.module.read_client(path), self.client)
+
+            rejected = (
+                {"web": self.client},
+                {"installed": self.client, "web": self.client},
+                {"installed": {**self.client, "token_uri": "https://untrusted.invalid/token"}},
+                {"installed": {**self.client, "auth_uri": "https://untrusted.invalid/auth"}},
+            )
+            for index, payload in enumerate(rejected):
+                with self.subTest(index=index):
+                    invalid_path = Path(directory) / f"invalid-{index}.json"
+                    self.module.save_credentials(invalid_path, payload)
+                    with self.assertRaises(self.module.AuthorizationError) as caught:
+                        self.module.read_client(invalid_path)
+                    self.assertNotIn("SYNTHETIC_SECRET", str(caught.exception))
 
     def test_output_cannot_escape_private_workspace_or_overwrite_existing_file(self):
         with TemporaryDirectory() as directory, patch.object(self.module, "PROJECT_DIR", Path(directory)):

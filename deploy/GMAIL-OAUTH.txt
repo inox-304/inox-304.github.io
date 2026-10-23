@@ -6,8 +6,13 @@ No lee la bandeja, no envia correos, no modifica .env y no publica credenciales.
 
 Preparacion manual en el proyecto Google de INOX:
 1. Habilitar Gmail API y configurar la pantalla de consentimiento.
-2. Crear un cliente OAuth de tipo Desktop y descargar su JSON en una carpeta
-   privada ignorada por Git. El cliente es exclusivo de INOX.
+2. Crear un cliente OAuth de tipo Desktop. El cliente es exclusivo de INOX.
+   read_client(ruta) admite tanto el JSON original de Google como el sobre
+   cifrado DPAPI que produce save_credentials(ruta, {"installed": ...}). Esto
+   permite conservar tambien el secreto del cliente cifrado desde su captura
+   privada. Ambos formatos validan Desktop y endpoints oficiales de Google;
+   nunca se acepta un cliente Web ni se siguen endpoints proporcionados por
+   otro servicio. El archivo debe quedar en una carpeta privada ignorada por Git.
 3. Para una conexion permanente, comprobar que el consentimiento este en
    Production. Google emite refresh tokens de siete dias para aplicaciones
    externas en Testing, salvo permisos basicos de identidad; gmail.send no
