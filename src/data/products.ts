@@ -31,7 +31,7 @@ export const products: Product[] = [
     "slug": "cocina-semiindustrial-4-hornillas-horno-electrico",
     "name": "Cocina semiindustrial 4 hornillas + horno eléctrico",
     "category": "linea-caliente",
-    "summary": "Cocina de cuatro hornillas con horno eléctrico y rostizador para el hogar o el negocio.",
+    "summary": "Cocina de cuatro hornillas con horno eléctrico y rostizador para el hogar o el negocio. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "4 parrillas de fierro fundido",
       "Quemadores de 4\" de fierro fundido",
@@ -40,14 +40,17 @@ export const products: Product[] = [
       "Estructura resistente y excelente acabado"
     ],
     "image": "/images/products/cocina-semiindustrial-4-hornillas-horno-electrico.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/cocina-semiindustrial-4-hornillas-horno-electrico-v1.glb",
+    "modelPoster": "/images/products/cocina-semiindustrial-4-hornillas-horno-electrico.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P02",
     "slug": "cocina-industrial-de-3-hornillas",
     "name": "Cocina industrial de 3 hornillas",
     "category": "linea-caliente",
-    "summary": "Tres hornillas con controles independientes, estructura reforzada y repisa inferior para cocinas profesionales.",
+    "summary": "Tres hornillas con controles independientes, estructura reforzada y repisa inferior para cocinas profesionales. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "3 hornillas de alta potencia con controles independientes",
       "Acero inoxidable AISI 304",
@@ -57,14 +60,17 @@ export const products: Product[] = [
       "Patas antideslizantes; fabricación a medida"
     ],
     "image": "/images/products/cocina-industrial-de-3-hornillas.jpg",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/cocina-industrial-de-3-hornillas-v1.glb",
+    "modelPoster": "/images/products/cocina-industrial-de-3-hornillas.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P03",
     "slug": "cocina-industrial-de-3-parrillas",
     "name": "Cocina industrial de 3 parrillas (CÓD-CIF-03)",
     "category": "linea-caliente",
-    "summary": "Cocina de tres quemadores con superficie amplia de cocción y repisa inferior.",
+    "summary": "Cocina de tres quemadores con superficie amplia de cocción y repisa inferior. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable",
       "3 quemadores de alta potencia",
@@ -72,14 +78,17 @@ export const products: Product[] = [
       "Ideal para restaurantes, cafeterías y cocinas profesionales"
     ],
     "image": "/images/products/cocina-industrial-de-3-parrillas.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/cocina-industrial-de-3-parrillas-v1.glb",
+    "modelPoster": "/images/products/cocina-industrial-de-3-parrillas.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P04",
     "slug": "cocina-industrial-4-hornillas-tipo-isla-plancha-ho",
     "name": "Cocina industrial 4 hornillas tipo isla + plancha + horno (CIH-4P)",
     "category": "linea-caliente",
-    "summary": "Cuatro hornillas, plancha y horno integrados en una cocina de diseño tipo isla.",
+    "summary": "Cuatro hornillas, plancha y horno integrados en una cocina de diseño tipo isla. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "4 hornillas de alta potencia",
       "Plancha incorporada",
@@ -87,14 +96,17 @@ export const products: Product[] = [
       "Diseño tipo isla en acero inoxidable"
     ],
     "image": "/images/products/cocina-industrial-4-hornillas-tipo-isla-plancha-ho.webp",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/cocina-industrial-4-hornillas-tipo-isla-plancha-ho-v1.glb",
+    "modelPoster": "/images/products/cocina-industrial-4-hornillas-tipo-isla-plancha-ho.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P05",
     "slug": "cocina-industrial-tipo-isla-4-parrillas-plancha-ho",
     "name": "Cocina industrial tipo isla 4 parrillas + plancha + horno (CÓD-CHI-04)",
     "category": "linea-caliente",
-    "summary": "Equipo tipo isla con cuatro parrillas, plancha y horno para diferentes preparaciones.",
+    "summary": "Equipo tipo isla con cuatro parrillas, plancha y horno para diferentes preparaciones. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "4 parrillas clásicas",
       "1 plancha",
@@ -102,56 +114,68 @@ export const products: Product[] = [
       "Acero inoxidable"
     ],
     "image": "/images/products/cocina-industrial-tipo-isla-4-parrillas-plancha-ho.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/cocina-industrial-tipo-isla-4-parrillas-plancha-ho-v1.glb",
+    "modelPoster": "/images/products/cocina-industrial-tipo-isla-4-parrillas-plancha-ho.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P06",
     "slug": "horno-multiuso",
     "name": "Horno multiuso (HI-MU)",
     "category": "linea-caliente",
-    "summary": "Horno de uso comercial para panadería, pastelería y otras preparaciones.",
+    "summary": "Horno de uso comercial para panadería, pastelería y otras preparaciones. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Cocción uniforme",
       "Funcionamiento continuo por horas",
       "Uso comercial / pastelería / panadería"
     ],
     "image": "/images/products/horno-multiuso.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/horno-multiuso-v1.glb",
+    "modelPoster": "/images/products/horno-multiuso.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P07",
     "slug": "horno-ecologico-para-pollo-a-la-brasa",
     "name": "Horno ecológico para pollo a la brasa",
     "category": "linea-caliente",
-    "summary": "Horno para pollo a la brasa construido en acero inoxidable AISI 304.",
+    "summary": "Horno para pollo a la brasa construido en acero inoxidable AISI 304. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Bajo mantenimiento y fácil limpieza",
       "Menos humo y menor consumo de carbón",
       "Construcción resistente y duradera en AISI 304"
     ],
     "image": "/images/products/horno-ecologico-para-pollo-a-la-brasa.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/horno-ecologico-para-pollo-a-la-brasa-v1.glb",
+    "modelPoster": "/images/products/horno-ecologico-para-pollo-a-la-brasa.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P08",
     "slug": "horno-pollero-ecologico",
     "name": "Horno pollero ecológico (CÓD-HPE-1)",
     "category": "linea-caliente",
-    "summary": "Horno pollero con interior de ladrillos refractarios y estructura de acero inoxidable.",
+    "summary": "Horno pollero con interior de ladrillos refractarios y estructura de acero inoxidable. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Ladrillos refractarios interiores",
       "Acero inoxidable",
       "Diseño ecológico"
     ],
     "image": "/images/products/horno-pollero-ecologico.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/horno-pollero-ecologico-v1.glb",
+    "modelPoster": "/images/products/horno-pollero-ecologico.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P09",
     "slug": "parrilla-premium-plancha-y-parrilla-a-carbon",
     "name": "Parrilla premium / Plancha y parrilla a carbón",
     "category": "linea-caliente",
-    "summary": "Parrilla con elevación del carbón y encendido a gas, disponible en medidas personalizadas.",
+    "summary": "Parrilla con elevación del carbón y encendido a gas, disponible en medidas personalizadas. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable 304",
       "Sistema de elevación del carbón",
@@ -161,14 +185,17 @@ export const products: Product[] = [
       "Envíos a todo el país"
     ],
     "image": "/images/products/parrilla-premium-plancha-y-parrilla-a-carbon.webp",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/parrilla-premium-plancha-y-parrilla-a-carbon-v1.glb",
+    "modelPoster": "/images/products/parrilla-premium-plancha-y-parrilla-a-carbon.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P10",
     "slug": "parrilla-grande",
     "name": "Parrilla grande (CÓD-PGI-1)",
     "category": "linea-caliente",
-    "summary": "Parrilla con sistema de elevación, ladrillos refractarios y ruedas para traslado.",
+    "summary": "Parrilla con sistema de elevación, ladrillos refractarios y ruedas para traslado. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Sistema de elevación",
       "Ladrillos refractarios",
@@ -176,28 +203,34 @@ export const products: Product[] = [
       "Ruedas para traslado"
     ],
     "image": "/images/products/parrilla-grande.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/parrilla-grande-v1.glb",
+    "modelPoster": "/images/products/parrilla-grande.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P11",
     "slug": "caja-china-grande",
     "name": "Caja china grande (CÓD-CC-1T1V)",
     "category": "linea-caliente",
-    "summary": "Caja china de acero inoxidable con tapa ahumadora y puerta con visor de vidrio.",
+    "summary": "Caja china de acero inoxidable con tapa ahumadora y puerta con visor de vidrio. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Tapa ahumadora",
       "Puerta con visor de vidrio",
       "Acero inoxidable"
     ],
     "image": "/images/products/caja-china-grande.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/caja-china-grande-v1.glb",
+    "modelPoster": "/images/products/caja-china-grande.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P12",
     "slug": "freidora-doble-profesional",
     "name": "Freidora doble profesional",
     "category": "linea-caliente",
-    "summary": "Freidora de doble poza con controles independientes, gabinete inferior y ruedas industriales.",
+    "summary": "Freidora de doble poza con controles independientes, gabinete inferior y ruedas industriales. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "Doble poza, 2 canastillas",
@@ -207,14 +240,17 @@ export const products: Product[] = [
       "Ideal para pollerías, fast food, restaurantes y hoteles"
     ],
     "image": "/images/products/freidora-doble-profesional.jpg",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/freidora-doble-profesional-v1.glb",
+    "modelPoster": "/images/products/freidora-doble-profesional.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P13",
     "slug": "freidora-de-papa-profesional",
     "name": "Freidora de papa profesional (2 canastillas)",
     "category": "linea-caliente",
-    "summary": "Freidora de dos canastillas con control de temperatura y formato compacto con ruedas.",
+    "summary": "Freidora de dos canastillas con control de temperatura y formato compacto con ruedas. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "2 canastillas con mangos de fácil agarre",
@@ -223,14 +259,17 @@ export const products: Product[] = [
       "Equipada con ruedas"
     ],
     "image": "/images/products/freidora-de-papa-profesional.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/freidora-de-papa-profesional-v1.glb",
+    "modelPoster": "/images/products/freidora-de-papa-profesional.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P14",
     "slug": "freidora-automatica-de-papas",
     "name": "Freidora automática de papas",
     "category": "linea-caliente",
-    "summary": "Freidora automática en acero inoxidable para negocios de alta producción.",
+    "summary": "Freidora automática en acero inoxidable para negocios de alta producción. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable Inox 304",
       "Funcionamiento automático",
@@ -239,14 +278,17 @@ export const products: Product[] = [
       "Fácil limpieza y mantenimiento"
     ],
     "image": "/images/products/freidora-automatica-de-papas.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/freidora-automatica-de-papas-v1.glb",
+    "modelPoster": "/images/products/freidora-automatica-de-papas.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P15",
     "slug": "modulo-de-comida-4-en-1",
     "name": "Módulo de comida 4 en 1 (carrito salchipapero)",
     "category": "linea-caliente",
-    "summary": "Broastera, freidora, conservadora y plancha integradas en un módulo para comida rápida.",
+    "summary": "Broastera, freidora, conservadora y plancha integradas en un módulo para comida rápida. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Broastera de pollo",
       "Freidora de papas",
@@ -255,14 +297,17 @@ export const products: Product[] = [
       "Mayor potencia de calor"
     ],
     "image": "/images/products/modulo-de-comida-4-en-1.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/modulo-de-comida-4-en-1-v1.glb",
+    "modelPoster": "/images/products/modulo-de-comida-4-en-1.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P16",
     "slug": "armario-refrigerado-de-2-puertas",
     "name": "Armario refrigerado de 2 puertas",
     "category": "linea-fria",
-    "summary": "Armario de dos puertas con control digital de temperatura y niveles regulables.",
+    "summary": "Armario de dos puertas con control digital de temperatura y niveles regulables. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "2 puertas / gran capacidad",
@@ -271,28 +316,34 @@ export const products: Product[] = [
       "Diseño higiénico, fácil de limpiar"
     ],
     "image": "/images/products/armario-refrigerado-de-2-puertas.webp",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/armario-refrigerado-de-2-puertas-v1.glb",
+    "modelPoster": "/images/products/armario-refrigerado-de-2-puertas.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P17",
     "slug": "armarios-frigorificos-camara-frigorifica",
     "name": "Armarios frigoríficos / Cámara frigorífica",
     "category": "linea-fria",
-    "summary": "Armarios de acero inoxidable AISI 304 para congelación y conservación, en diferentes capacidades.",
+    "summary": "Armarios de acero inoxidable AISI 304 para congelación y conservación, en diferentes capacidades. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Uso profesional",
       "Diferentes capacidades y modelos",
       "Envíos a nivel nacional"
     ],
     "image": "/images/products/armarios-frigorificos-camara-frigorifica.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/armarios-frigorificos-camara-frigorifica-v1.glb",
+    "modelPoster": "/images/products/armarios-frigorificos-camara-frigorifica.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P18",
     "slug": "mesa-fria",
     "name": "Mesa fría",
     "category": "linea-fria",
-    "summary": "Mesa refrigerada de acero inoxidable 304 para conservar o congelar alimentos.",
+    "summary": "Mesa refrigerada de acero inoxidable 304 para conservar o congelar alimentos. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Eficiencia energética",
       "Diseño compacto y funcional",
@@ -300,67 +351,82 @@ export const products: Product[] = [
       "Íntegramente en acero inoxidable 304"
     ],
     "image": "/images/products/mesa-fria.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/mesa-fria-v1.glb",
+    "modelPoster": "/images/products/mesa-fria.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P19",
     "slug": "visicooler-580-litros",
     "name": "Visicooler 580 litros",
     "category": "linea-fria",
-    "summary": "Visicooler para bebidas con capacidad de 580 litros y sistema fan cooling.",
+    "summary": "Visicooler para bebidas con capacidad de 580 litros y sistema fan cooling. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Capacidad 580 L",
       "Fan cooling"
     ],
     "image": "/images/products/visicooler-580-litros.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/visicooler-580-litros-v1.glb",
+    "modelPoster": "/images/products/visicooler-580-litros.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P20",
     "slug": "vitrina-refrigerada",
     "name": "Vitrina refrigerada (CÓD-VRC-1)",
     "category": "linea-fria",
-    "summary": "Vitrina para almacenar y exhibir carnes, embutidos y lácteos con refrigeración.",
+    "summary": "Vitrina para almacenar y exhibir carnes, embutidos y lácteos con refrigeración. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Exhibición refrigerada",
       "Ideal para carnes, embutidos y lácteos"
     ],
     "image": "/images/products/vitrina-refrigerada.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/vitrina-refrigerada-v1.glb",
+    "modelPoster": "/images/products/vitrina-refrigerada.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P21",
     "slug": "abatidor-de-temperatura-de-5-bandejas",
     "name": "Abatidor de temperatura de 5 bandejas",
     "category": "linea-fria",
-    "summary": "Equipo de cinco bandejas para enfriar o congelar alimentos rápidamente.",
+    "summary": "Equipo de cinco bandejas para enfriar o congelar alimentos rápidamente. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "5 bandejas",
       "Acero inoxidable"
     ],
     "image": "/images/products/abatidor-de-temperatura-de-5-bandejas.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/abatidor-de-temperatura-de-5-bandejas-v1.glb",
+    "modelPoster": "/images/products/abatidor-de-temperatura-de-5-bandejas.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P22",
     "slug": "exhibidor-refrigerado-abierto",
     "name": "Exhibidor refrigerado abierto",
     "category": "linea-fria",
-    "summary": "Exhibidor abierto de 116 cm de ancho con cuatro repisas para bebidas.",
+    "summary": "Exhibidor abierto de 116 cm de ancho con cuatro repisas para bebidas. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "116 cm de ancho",
       "4 repisas",
       "Tipo open cooler"
     ],
     "image": "/images/products/exhibidor-refrigerado-abierto.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/exhibidor-refrigerado-abierto-v1.glb",
+    "modelPoster": "/images/products/exhibidor-refrigerado-abierto.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P23",
     "slug": "lavatorio-con-repisas-superiores",
     "name": "Lavatorio con repisas superiores",
     "category": "linea-neutra",
-    "summary": "Lavatorio con almacenamiento superior, fabricado según los requerimientos del espacio.",
+    "summary": "Lavatorio con almacenamiento superior, fabricado según los requerimientos del espacio. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Diseño funcional",
       "Alta resistencia",
@@ -369,14 +435,17 @@ export const products: Product[] = [
       "Fabricación según requerimiento"
     ],
     "image": "/images/products/lavatorio-con-repisas-superiores.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/lavatorio-con-repisas-superiores-v1.glb",
+    "modelPoster": "/images/products/lavatorio-con-repisas-superiores.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P24",
     "slug": "lavatorio-de-1-poza",
     "name": "Lavatorio de 1 poza",
     "category": "linea-neutra",
-    "summary": "Lavatorio de una poza profunda con escurridor derecho, respaldo y repisa inferior.",
+    "summary": "Lavatorio de una poza profunda con escurridor derecho, respaldo y repisa inferior. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "1 poza profunda 50 x 50 x 32 cm",
@@ -385,14 +454,17 @@ export const products: Product[] = [
       "Repisa inferior"
     ],
     "image": "/images/products/lavatorio-de-1-poza.webp",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/lavatorio-de-1-poza-v1.glb",
+    "modelPoster": "/images/products/lavatorio-de-1-poza.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P25",
     "slug": "lavatorio-de-2-pozas-escurridores",
     "name": "Lavatorio de 2 pozas + escurridores (L2P-EVPC)",
     "category": "linea-neutra",
-    "summary": "Lavatorio de dos pozas con escurridores para vasos, platos y cubiertos.",
+    "summary": "Lavatorio de dos pozas con escurridores para vasos, platos y cubiertos. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "2 pozas",
       "Escurridor de vasos",
@@ -400,14 +472,17 @@ export const products: Product[] = [
       "Acero inoxidable 304"
     ],
     "image": "/images/products/lavatorio-de-2-pozas-escurridores.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/lavatorio-de-2-pozas-escurridores-v1.glb",
+    "modelPoster": "/images/products/lavatorio-de-2-pozas-escurridores.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P26",
     "slug": "lavadero-de-2-pozas-con-descanso",
     "name": "Lavadero de 2 pozas con descanso (CÓD-LVD-2)",
     "category": "linea-neutra",
-    "summary": "Lavadero de dos pozas con un descanso y división, fabricado en acero inoxidable.",
+    "summary": "Lavadero de dos pozas con un descanso y división, fabricado en acero inoxidable. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "2 pozas",
       "1 descanso",
@@ -415,14 +490,17 @@ export const products: Product[] = [
       "Acero inoxidable"
     ],
     "image": "/images/products/lavadero-de-2-pozas-con-descanso.webp",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/lavadero-de-2-pozas-con-descanso-v1.glb",
+    "modelPoster": "/images/products/lavadero-de-2-pozas-con-descanso.webp",
+    "doorAnimation": ""
   },
   {
     "id": "P27",
     "slug": "estante-de-5-niveles",
     "name": "Estante de 5 niveles",
     "category": "mobiliario",
-    "summary": "Estante de cinco niveles en acero inoxidable AISI 304, con fabricación a medida.",
+    "summary": "Estante de cinco niveles en acero inoxidable AISI 304, con fabricación a medida. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "5 niveles de almacenamiento",
@@ -430,27 +508,33 @@ export const products: Product[] = [
       "Fabricación a medida"
     ],
     "image": "/images/products/estante-de-5-niveles.jpg",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/estante-de-5-niveles-v1.glb",
+    "modelPoster": "/images/products/estante-de-5-niveles.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P28",
     "slug": "mesa-central-de-trabajo",
     "name": "Mesa central de trabajo (CÓD-MT-1D)",
     "category": "mobiliario",
-    "summary": "Mesa central de acero inoxidable con una división inferior para organizar el trabajo.",
+    "summary": "Mesa central de acero inoxidable con una división inferior para organizar el trabajo. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "1 división inferior",
       "100% acero inoxidable"
     ],
     "image": "/images/products/mesa-central-de-trabajo.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/mesa-central-de-trabajo-v1.glb",
+    "modelPoster": "/images/products/mesa-central-de-trabajo.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P29",
     "slug": "estacion-bartender-profesional",
     "name": "Estación bartender profesional",
     "category": "mobiliario",
-    "summary": "Estación de acero inoxidable para bares, restaurantes y hoteles, con fabricación a medida.",
+    "summary": "Estación de acero inoxidable para bares, restaurantes y hoteles, con fabricación a medida. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "Área para hielo, botellas e insumos",
@@ -458,14 +542,17 @@ export const products: Product[] = [
       "Fabricación a medida"
     ],
     "image": "/images/products/estacion-bartender-profesional.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/estacion-bartender-profesional-v1.glb",
+    "modelPoster": "/images/products/estacion-bartender-profesional.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P30",
     "slug": "licuadora-industrial",
     "name": "Licuadora industrial",
     "category": "linea-neutra",
-    "summary": "Licuadora industrial de acero inoxidable AISI 304 disponible en cuatro capacidades.",
+    "summary": "Licuadora industrial de acero inoxidable AISI 304 disponible en cuatro capacidades. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Acero inoxidable AISI 304",
       "Capacidades: 10, 15, 20 y 25 litros",
@@ -473,33 +560,42 @@ export const products: Product[] = [
       "Fácil limpieza y mantenimiento"
     ],
     "image": "/images/products/licuadora-industrial.jpg",
-    "featured": true
+    "featured": true,
+    "model3d": "/models/inox/licuadora-industrial-v1.glb",
+    "modelPoster": "/images/products/licuadora-industrial.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P31",
     "slug": "licuadora-industrial-con-base",
     "name": "Licuadora industrial (modelo con base)",
     "category": "linea-neutra",
-    "summary": "Licuadora industrial con base de acero inoxidable 304 disponible en tres capacidades.",
+    "summary": "Licuadora industrial con base de acero inoxidable 304 disponible en tres capacidades. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "Capacidades: 10, 15 y 20 L",
       "Ideal para juguerías, restaurantes y panaderías"
     ],
     "image": "/images/products/licuadora-industrial-con-base.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/licuadora-industrial-con-base-v1.glb",
+    "modelPoster": "/images/products/licuadora-industrial-con-base.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "P32",
     "slug": "maquina-cremoladera-25-l",
     "name": "Máquina cremoladera 25 L",
     "category": "linea-fria",
-    "summary": "Máquina para cremoladas de 25 litros con dos tolvas.",
+    "summary": "Máquina para cremoladas de 25 litros con dos tolvas. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
     "features": [
       "25 litros",
       "2 tolvas"
     ],
     "image": "/images/products/maquina-cremoladera-25-l.jpg",
-    "featured": false
+    "featured": false,
+    "model3d": "/models/inox/maquina-cremoladera-25-l-v1.glb",
+    "modelPoster": "/images/products/maquina-cremoladera-25-l.jpg",
+    "doorAnimation": ""
   },
   {
     "id": "ILUMI-DJ-181",
@@ -838,6 +934,467 @@ export const products: Product[] = [
     "supplierModel": "B-30L",
     "equipmentFamily": "batidoras",
     "capacity": "Bowl 30 L; hasta 9,6 kg de masa por lote.",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHA-16S",
+    "slug": "ilumi-mha-16s",
+    "name": "Máquina de helado artesanal ILUMI MHA-16S · 16 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado artesanal ILUMI MHA-16S, con producción máxima declarada de 16 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 16 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 500 × 650 × 800 mm (ancho × fondo × alto)",
+      "Tipo: artesanal; sobremesa",
+      "Potencia: 1000 W",
+      "Refrigerante: R410",
+      "Alimentación: 220 V / 60 Hz",
+      "Peso neto: 100 kg",
+      "Base con topes"
+    ],
+    "image": "/images/products/ilumi-mha-16s.webp",
+    "technicalSheet": "/documents/ilumi-mha-16s.pdf",
+    "model3d": "/models/ilumi/mha-16s-v1.glb",
+    "modelPoster": "/images/products/ilumi-mha-16s.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHA-16S",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 16 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHA-20S",
+    "slug": "ilumi-mha-20s",
+    "name": "Máquina de helado artesanal ILUMI MHA-20S · 20 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado artesanal ILUMI MHA-20S, con producción máxima declarada de 20 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 20 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 535 × 535 × 840 mm (ancho × fondo × alto)",
+      "Tipo: artesanal; sobremesa",
+      "Potencia: 1400 W",
+      "Refrigerante: R404a",
+      "Alimentación: 220–240 V / 60 Hz",
+      "Peso neto: 55 kg",
+      "Estructura de acero inoxidable"
+    ],
+    "image": "/images/products/ilumi-mha-20s.webp",
+    "technicalSheet": "/documents/ilumi-mha-20s.pdf",
+    "model3d": "/models/ilumi/mha-20s-v1.glb",
+    "modelPoster": "/images/products/ilumi-mha-20s.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHA-20S",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 20 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHA-20",
+    "slug": "ilumi-mha-20",
+    "name": "Máquina de helado artesanal ILUMI MHA-20 · 20 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado artesanal ILUMI MHA-20, con producción máxima declarada de 20 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 20 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 535 × 535 × 1370 mm (ancho × fondo × alto)",
+      "Tipo: artesanal; de piso con ruedas y freno",
+      "Potencia: 1600 W",
+      "Refrigerante: R404a",
+      "Alimentación: 220–240 V / 60 Hz",
+      "Peso neto: 100 kg"
+    ],
+    "image": "/images/products/ilumi-mha-20.webp",
+    "technicalSheet": "/documents/ilumi-mha-20.pdf",
+    "model3d": "/models/ilumi/mha-20-v1.glb",
+    "modelPoster": "/images/products/ilumi-mha-20.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHA-20",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 20 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHS-25",
+    "slug": "ilumi-mhs-25",
+    "name": "Máquina de helado soft ILUMI MHS-25 · 25 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado soft ILUMI MHS-25, con producción máxima declarada de 25 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 25 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 540 × 575 × 1370 mm (ancho × fondo × alto)",
+      "Tipo: soft; de piso con ruedas y freno",
+      "Potencia: 2000 W",
+      "Refrigerante: R404a",
+      "Alimentación: 220–240 V / 60 Hz",
+      "Peso neto: 119 kg"
+    ],
+    "image": "/images/products/ilumi-mhs-25.webp",
+    "technicalSheet": "/documents/ilumi-mhs-25.pdf",
+    "model3d": "/models/ilumi/mhs-25-v1.glb",
+    "modelPoster": "/images/products/ilumi-mhs-25.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHS-25",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 25 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHS-25PC",
+    "slug": "ilumi-mhs-25pc",
+    "name": "Máquina de helado soft ILUMI MHS-25PC · 25 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado soft ILUMI MHS-25PC con Pre Cooling, con producción máxima declarada de 25 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 25 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 540 × 735 × 1430 mm (ancho × fondo × alto)",
+      "Tipo: soft; Pre Cooling",
+      "2 compresores",
+      "Control digital y descongelamiento automático",
+      "Ruedas con freno",
+      "Potencia: 2050 W",
+      "Refrigerante: R410",
+      "Alimentación: 220 V / 60 Hz",
+      "Peso neto: 100 kg"
+    ],
+    "image": "/images/products/ilumi-mhs-25pc.webp",
+    "technicalSheet": "/documents/ilumi-mhs-25pc.pdf",
+    "model3d": "/models/ilumi/mhs-25pc-v1.glb",
+    "modelPoster": "/images/products/ilumi-mhs-25pc.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHS-25PC",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 25 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHS-30S",
+    "slug": "ilumi-mhs-30s",
+    "name": "Máquina de helado soft ILUMI MHS-30S · 30 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado soft ILUMI MHS-30S, con producción máxima declarada de 30 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 30 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 540 × 615 × 780 mm (ancho × fondo × alto)",
+      "Tipo: soft; sobremesa",
+      "Control digital",
+      "Potencia: 2000 W",
+      "Refrigerante: R404a",
+      "Alimentación: 220–240 V / 60 Hz",
+      "Peso neto: 100 kg"
+    ],
+    "image": "/images/products/ilumi-mhs-30s.webp",
+    "technicalSheet": "/documents/ilumi-mhs-30s.pdf",
+    "model3d": "/models/ilumi/mhs-30s-v1.glb",
+    "modelPoster": "/images/products/ilumi-mhs-30s.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHS-30S",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 30 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-MHS-30PC",
+    "slug": "ilumi-mhs-30pc",
+    "name": "Máquina de helado soft ILUMI MHS-30PC · 30 L/h",
+    "category": "linea-fria",
+    "summary": "Máquina de helado soft ILUMI MHS-30PC con Pre Cooling, con producción máxima declarada de 30 L/h. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Producción máxima declarada: 30 L/h",
+      "La cifra de L/h corresponde a producción, no al volumen del depósito",
+      "Medidas de producto: 540 × 735 × 1430 mm (ancho × fondo × alto)",
+      "Tipo: soft; Pre Cooling",
+      "2 compresores",
+      "Control digital y descongelamiento automático",
+      "Ruedas con freno",
+      "Potencia: 2050 W",
+      "Refrigerante: R410",
+      "Alimentación: 220 V / 60 Hz",
+      "Peso neto: 115 kg"
+    ],
+    "image": "/images/products/ilumi-mhs-30pc.webp",
+    "technicalSheet": "/documents/ilumi-mhs-30pc.pdf",
+    "model3d": "/models/ilumi/mhs-30pc-v1.glb",
+    "modelPoster": "/images/products/ilumi-mhs-30pc.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "MHS-30PC",
+    "equipmentFamily": "maquinas-helado",
+    "capacity": "Producción máxima declarada: 30 L/h",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-OJM-01AI",
+    "slug": "ilumi-ojm-01ai",
+    "name": "Extractor de naranjas ILUMI OJM-01AI",
+    "category": "linea-fria",
+    "summary": "Extractor ILUMI OJM-01AI con rendimiento declarado de 22–25 naranjas por minuto, para fruta de 40–80 mm. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Rendimiento declarado: 22–25 naranjas por minuto",
+      "Diámetro de fruta: 40–80 mm",
+      "Medidas de producto: 470 × 490 × 880 mm (ancho × fondo × alto)",
+      "Potencia: 500 W",
+      "Peso neto: 46 kg",
+      "Canastillo superior y protector frontal transparente"
+    ],
+    "image": "/images/products/ilumi-ojm-01ai.webp",
+    "technicalSheet": "/documents/ilumi-ojm-01ai.pdf",
+    "model3d": "/models/ilumi/ojm-01ai-v1.glb",
+    "modelPoster": "/images/products/ilumi-ojm-01ai.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "OJM-01AI",
+    "equipmentFamily": "extractores-naranja",
+    "capacity": "22–25 naranjas por minuto; fruta de 40–80 mm",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-AMA-15M",
+    "slug": "ilumi-ama-15m",
+    "name": "Amasadora ILUMI AMA-15M · bowl de 45 L",
+    "category": "linea-neutra",
+    "summary": "Amasadora ILUMI AMA-15M con bowl de 45 L; la ficha declara hasta 16 kg de masa o 10 kg de harina con hidratación del 60 %. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Bowl de 45 L en acero inoxidable",
+      "Masa máxima según ficha: 16 kg por amasado",
+      "Harina máxima: 10 kg con hidratación del 60 %",
+      "Medidas de producto: 700 × 530 × 800 mm (ancho × fondo × alto)",
+      "Alimentación monofásica de 220 V",
+      "Modos lento, rápido y reversa; parada de emergencia",
+      "Rejilla de seguridad con parada automática",
+      "Estructura de hierro fundido; peso neto: 110 kg"
+    ],
+    "image": "/images/products/ilumi-ama-15m.webp",
+    "technicalSheet": "/documents/ilumi-ama-15m.pdf",
+    "model3d": "/models/ilumi/ama-15m-v1.glb",
+    "modelPoster": "/images/products/ilumi-ama-15m.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "AMA-15M",
+    "equipmentFamily": "amasadoras",
+    "capacity": "Bowl de 45 L; hasta 16 kg de masa o 10 kg de harina con hidratación del 60 %",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-AMA-25M",
+    "slug": "ilumi-ama-25m",
+    "name": "Amasadora ILUMI AMA-25M · bowl de 68 L",
+    "category": "linea-neutra",
+    "summary": "Amasadora ILUMI AMA-25M con bowl de 68 L, hasta 25 kg de masa o 15 kg de harina con hidratación del 60–65 %. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Bowl de 68 L en acero inoxidable",
+      "Masa máxima según ficha: 25 kg por amasado",
+      "Harina máxima: 15 kg con hidratación del 60–65 %",
+      "Medidas de producto: 880 × 590 × 940 mm (ancho × fondo × alto)",
+      "Alimentación monofásica de 220 V",
+      "Modos lento, rápido y reversa; parada de emergencia",
+      "Rejilla de seguridad con parada automática",
+      "Estructura de hierro fundido; peso neto: 200 kg"
+    ],
+    "image": "/images/products/ilumi-ama-25m.webp",
+    "technicalSheet": "/documents/ilumi-ama-25m.pdf",
+    "model3d": "/models/ilumi/ama-25m-v1.glb",
+    "modelPoster": "/images/products/ilumi-ama-25m.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "AMA-25M",
+    "equipmentFamily": "amasadoras",
+    "capacity": "Bowl de 68 L; hasta 25 kg de masa o 15 kg de harina con hidratación del 60–65 %",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-B-7LRE",
+    "slug": "ilumi-b-7lre",
+    "name": "Batidora ILUMI B-7LRE · bowl de 7 L",
+    "category": "linea-neutra",
+    "summary": "Batidora ILUMI B-7LRE con bowl de 7 L, hasta 0,8 kg de masa o 0,5 kg de harina por lote y velocidad variable. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Bowl de 7 L en acero inoxidable",
+      "Capacidad máxima: 0,8 kg de masa; 0,5 kg de harina",
+      "Medidas de producto: 410 × 230 × 441 mm (ancho × fondo × alto)",
+      "Potencia: 370 W; alimentación: 220 V / 60 Hz",
+      "Velocidad variable: 0–1050 rpm",
+      "Cubierta de seguridad; transmisión por engranajes",
+      "Accesorios: globo, paleta y gancho",
+      "Modelo representado en rojo"
+    ],
+    "image": "/images/products/ilumi-b-7lre.webp",
+    "technicalSheet": "/documents/ilumi-b-7lre.pdf",
+    "model3d": "/models/ilumi/b-7lre-v1.glb",
+    "modelPoster": "/images/products/ilumi-b-7lre.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "B-7LRE",
+    "equipmentFamily": "batidoras",
+    "capacity": "Bowl de 7 L; hasta 0,8 kg de masa o 0,5 kg de harina",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-BIT-270",
+    "slug": "ilumi-bit-270",
+    "name": "Batidora de inmersión ILUMI BIT-270 · 270 W",
+    "category": "linea-neutra",
+    "summary": "Batidora de inmersión ILUMI BIT-270 de 270 W, con brazo de 226 mm y volumen máximo de mezclado declarado de 10 L. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Potencia: 270 W; alimentación: 220 V / 60 Hz",
+      "Volumen máximo de mezclado: 10 L",
+      "Longitud del brazo: 226 mm; diámetro publicado: 28 mm",
+      "Velocidad variable: 4000–20000 rpm",
+      "Brazo de acero inoxidable y mango ergonómico",
+      "Batidor globo opcional vendido por separado"
+    ],
+    "image": "/images/products/ilumi-bit-270.webp",
+    "technicalSheet": "/documents/ilumi-bit-270.pdf",
+    "model3d": "/models/ilumi/bit-270-v1.glb",
+    "modelPoster": "/images/products/ilumi-bit-270.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "BIT-270",
+    "equipmentFamily": "batidoras",
+    "capacity": "Volumen máximo de mezclado: 10 L",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-BIT-350",
+    "slug": "ilumi-bit-350",
+    "name": "Batidora de inmersión ILUMI BIT-350 · 350 W",
+    "category": "linea-neutra",
+    "summary": "Batidora de inmersión ILUMI BIT-350 de 350 W, con brazo de 300 mm y volumen máximo de mezclado declarado de 30 L. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Potencia: 350 W; alimentación: 220 V / 60 Hz",
+      "Volumen máximo de mezclado: 30 L",
+      "Longitud del brazo: 300 mm; diámetro publicado: 35 mm",
+      "Velocidad variable: 4000–16000 rpm",
+      "Brazo de acero inoxidable y mango ergonómico",
+      "Batidor globo opcional vendido por separado"
+    ],
+    "image": "/images/products/ilumi-bit-350.webp",
+    "technicalSheet": "/documents/ilumi-bit-350.pdf",
+    "model3d": "/models/ilumi/bit-350-v1.glb",
+    "modelPoster": "/images/products/ilumi-bit-350.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "BIT-350",
+    "equipmentFamily": "batidoras",
+    "capacity": "Volumen máximo de mezclado: 30 L",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-BIT-500",
+    "slug": "ilumi-bit-500",
+    "name": "Batidora de inmersión ILUMI BIT-500 · 500 W",
+    "category": "linea-neutra",
+    "summary": "Batidora de inmersión ILUMI BIT-500 de 500 W, con brazo de 400 mm y volumen máximo de mezclado declarado de 100 L. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Potencia: 500 W; alimentación: 220 V / 60 Hz",
+      "Volumen máximo de mezclado: 100 L",
+      "Longitud del brazo: 400 mm; diámetro publicado: 35 mm",
+      "Velocidad variable: 4000–16000 rpm",
+      "Brazo de acero inoxidable y mango ergonómico",
+      "Batidor globo opcional vendido por separado"
+    ],
+    "image": "/images/products/ilumi-bit-500.webp",
+    "technicalSheet": "/documents/ilumi-bit-500.pdf",
+    "model3d": "/models/ilumi/bit-500-v1.glb",
+    "modelPoster": "/images/products/ilumi-bit-500.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "BIT-500",
+    "equipmentFamily": "batidoras",
+    "capacity": "Volumen máximo de mezclado: 100 L",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-BIT-750",
+    "slug": "ilumi-bit-750",
+    "name": "Batidora de inmersión ILUMI BIT-750 · 750 W",
+    "category": "linea-neutra",
+    "summary": "Batidora de inmersión ILUMI BIT-750 de 750 W, con brazo de 500 mm y volumen máximo de mezclado declarado de 200 L. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Potencia: 750 W; alimentación: 220 V / 60 Hz",
+      "Volumen máximo de mezclado: 200 L",
+      "Longitud del brazo: 500 mm; diámetro publicado: 35 mm",
+      "Velocidad variable: 8000–18000 rpm",
+      "Brazo de acero inoxidable y mango ergonómico",
+      "Batidor globo opcional vendido por separado"
+    ],
+    "image": "/images/products/ilumi-bit-750.webp",
+    "technicalSheet": "/documents/ilumi-bit-750.pdf",
+    "model3d": "/models/ilumi/bit-750-v1.glb",
+    "modelPoster": "/images/products/ilumi-bit-750.webp",
+    "doorAnimation": "",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "BIT-750",
+    "equipmentFamily": "batidoras",
+    "capacity": "Volumen máximo de mezclado: 200 L",
+    "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "ILUMI-VM-200T",
+    "slug": "ilumi-vm-200t",
+    "name": "Envasadora al vacío ILUMI VM-200T",
+    "category": "linea-neutra",
+    "summary": "Envasadora al vacío ILUMI VM-200T con sellado de 260 × 8 mm, manómetro y tapa transparente articulada. Visualización 3D aproximada a partir de fotografías; diseño fijo del fabricante.",
+    "features": [
+      "Longitud y ancho de sellado: 260 × 8 mm",
+      "Medidas de producto: 500 × 340 × 360 mm (ancho × fondo × alto)",
+      "Tapa transparente con bisagra",
+      "Manómetro de vacío y panel frontal de control",
+      "Potencia de vacío: 0,375 kW; potencia de sellado: 0,1 kW",
+      "Peso neto: 27 kg"
+    ],
+    "image": "/images/products/ilumi-vm-200t.webp",
+    "technicalSheet": "/documents/ilumi-vm-200t.pdf",
+    "model3d": "/models/ilumi/vm-200t-v1.glb",
+    "modelPoster": "/images/products/ilumi-vm-200t.webp",
+    "doorAnimation": "Abrir_tapa_bisagra",
+    "supplyType": "distributed",
+    "brand": "ILUMI",
+    "supplierModel": "VM-200T",
+    "equipmentFamily": "envasadoras-vacio",
+    "capacity": "Sellado de 260 × 8 mm",
     "showPrice": false,
     "featured": false
   }
