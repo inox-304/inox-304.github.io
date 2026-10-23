@@ -3,12 +3,12 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=3">
 {% endblock %}
 
 {% block extrahead %}
   {{ block.super }}
-  <script defer src="{% static 'inox/product-editor.js' %}?v=2"></script>
+  <script defer src="{% static 'inox/product-editor.js' %}?v=3"></script>
   <script defer src="{% static 'inox/model-inspector.js' %}"></script>
 {% endblock %}
 
@@ -31,6 +31,7 @@
         <li><button type="button" data-inox-go-step="media"><span aria-hidden="true">2</span>Fotos y archivos</button></li>
         <li><button type="button" data-inox-go-step="variants"><span aria-hidden="true">3</span>Variaciones</button></li>
         <li><button type="button" data-inox-go-step="additionals"><span aria-hidden="true">4</span>Adicionales</button></li>
+        {% if adminform.form.cooktop_config %}<li><button type="button" data-inox-go-step="configurator"><span aria-hidden="true">5</span>Configurador</button></li>{% endif %}
         <li><button type="button" data-inox-go-step="pricing"><span aria-hidden="true">5</span>Precio</button></li>
         <li><button type="button" data-inox-go-step="review"><span aria-hidden="true">6</span>Revisar y guardar</button></li>
       </ol>
@@ -45,7 +46,7 @@
     </div>
   </div>
   <aside class="inox-editor-notice inox-step inox-step-variants">{% if original.supply_type == 'distributed' %}Agrupa solo versiones confirmadas por el fabricante. Cada capacidad o modelo puede tener su propia ficha y GLB; no uses el código de fabricación para una referencia de compra.{% else %}En fabricación propia, una variación cambia el equipo completo: gas / eléctrica, tamaño o refrigeración. Puedes asignarle su propio GLB, PDF y código de fabricación. Su receta reemplaza la principal. En productos distribuidos, registra únicamente versiones oficiales del fabricante.{% endif %}</aside>
-  <aside class="inox-editor-notice inox-step inox-step-additionals">{% if original.supply_type == 'distributed' %}Añade únicamente accesorios u opciones compatibles confirmados por el fabricante. No prometas cambios de medidas o componentes del equipo. Los datos existentes se conservan.{% else %}En fabricación propia, los adicionales son opciones que se agregan: una plancha, un quemador wok o una repisa. Su código de fabricación permite definir componentes y trabajo. En equipos distribuidos, ofrece solo accesorios compatibles confirmados. La geometría combinada del 3D requiere modelos preparados.{% endif %}</aside>
+  <aside class="inox-editor-notice inox-step inox-step-additionals">{% if original.supply_type == 'distributed' %}Añade únicamente accesorios u opciones compatibles confirmados por el fabricante. No prometas cambios de medidas o componentes del equipo. Los datos existentes se conservan.{% else %}En fabricación propia, los adicionales son accesorios que se agregan, como ruedas o repisas. Plancha, wok y parrilla que sustituyen hornillas se definen en Configurador. Su código de fabricación permite definir componentes y trabajo. En equipos distribuidos, ofrece solo accesorios compatibles confirmados. La geometría combinada del 3D requiere modelos preparados.{% endif %}</aside>
   <noscript><p class="inox-editor-notice">Todos los apartados se muestran a continuación. Los botones de guardar funcionan sin JavaScript.</p></noscript>
 {% endblock %}
 
@@ -63,6 +64,7 @@
       <div><dt>Fotos adicionales</dt><dd data-inox-summary="gallery">Sin fotos adicionales</dd></div>
       <div><dt>Variaciones</dt><dd data-inox-summary="variants">Sin variaciones</dd></div>
       <div><dt>Adicionales</dt><dd data-inox-summary="additionals">Sin adicionales</dd></div>
+      {% if adminform.form.cooktop_config %}<div><dt>Configurador</dt><dd data-inox-summary="configurator">Sin configurador</dd></div>{% endif %}
       <div><dt>Publicación</dt><dd data-inox-summary="publication">Borrador</dd></div>
     </dl>
     <p class="inox-review-note">Los archivos pendientes no impiden guardar un borrador. Revisa la visibilidad y pulsa Guardar para conservar los cambios. Los archivos elegidos se enviarán al guardar.</p>

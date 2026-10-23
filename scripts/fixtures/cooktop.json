@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "kind": "cooktop",
+  "enabled": true,
+  "energies": [
+    "gas",
+    "electric"
+  ],
+  "defaultModuleId": "burner",
+  "layouts": [
+    {
+      "id": "six",
+      "name": "Cocina de seis posiciones",
+      "rows": 2,
+      "columns": 3
+    },
+    {
+      "id": "four",
+      "name": "Cocina de cuatro posiciones",
+      "rows": 2,
+      "columns": 2
+    }
+  ],
+  "modules": [
+    {
+      "id": "burner",
+      "name": "Hornilla común",
+      "kind": "burner",
+      "width": 1,
+      "height": 1,
+      "energies": [
+        "gas",
+        "electric"
+      ],
+      "allowedLayouts": [
+        "six",
+        "four"
+      ],
+      "maxQuantity": 12,
+      "anchors": {
+        "six": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "four": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "id": "wok",
+      "name": "Wok",
+      "kind": "wok",
+      "width": 1,
+      "height": 1,
+      "energies": [
+        "gas"
+      ],
+      "allowedLayouts": [
+        "six"
+      ],
+      "maxQuantity": 1,
+      "anchors": {
+        "six": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "plate",
+      "name": "Plancha",
+      "kind": "griddle",
+      "width": 1,
+      "height": 2,
+      "energies": [
+        "gas",
+        "electric"
+      ],
+      "allowedLayouts": [
+        "six",
+        "four"
+      ],
+      "maxQuantity": 1,
+      "anchors": {
+        "six": [
+          0
+        ],
+        "four": [
+          0
+        ]
+      }
+    },
+    {
+      "id": "grill",
+      "name": "Parrilla",
+      "kind": "grill",
+      "width": 1,
+      "height": 2,
+      "energies": [
+        "gas"
+      ],
+      "allowedLayouts": [
+        "six"
+      ],
+      "maxQuantity": 1,
+      "anchors": {
+        "six": [
+          1,
+          2
+        ]
+      }
+    }
+  ]
+}

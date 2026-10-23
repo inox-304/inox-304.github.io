@@ -1,4 +1,5 @@
 from uuid import uuid4
+from copy import deepcopy
 
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -9,6 +10,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 from django.views.decorators.http import require_safe
+from security.passkeys import is_owner
 
 from .audit import TRACKED_MODELS, audit_context
 from .forms import GalleryInlineFormSet, ProductAdminForm, ProductAdditionalForm, ProductImageForm, ProductVariantForm, persist_uploads
@@ -109,6 +111,7 @@ class ProductAdmin(AuditedAdmin):
         ("Datos del equipo", {"description": "Empieza por el nombre y la línea. Los archivos y las variaciones pueden completarse después.", "fields": ("name", "category", "description", "characteristics"), "classes": ("inox-step", "inox-step-details")}),
         ("Origen, marca y capacidad", {"description": "En productos distribuidos conserva las capacidades y opciones oficiales del fabricante. Cambiar de modelo no significa fabricar a medida. La foto, el PDF y el 3D pueden añadirse después.", "fields": ("supply_type", "brand", "supplier_model", "equipment_family", "capacity", "source_url"), "classes": ("inox-step", "inox-step-details")}),
         ("Identificadores", {"description": "Se crean automáticamente en un equipo nuevo y se conservan al editarlo.", "fields": ("code", "slug"), "classes": ("collapse", "inox-step", "inox-step-details")}),
+        ("Configurador de cocina", {"description": "Define las opciones y posiciones que puedes fabricar. El borrador se prepara solo cuando lo solicitas; habilítalo después de revisarlo.", "fields": ("cooktop_config",), "classes": ("inox-step", "inox-step-configurator")}),
         ("Foto principal", {"fields": ("image_upload", "image_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Ficha técnica", {"fields": ("technical_upload", "technical_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Modelo 3D", {"description": "Sube el modelo principal. Cada variación puede tener otro GLB y otra ficha. Abrir puertas requiere un clip animado dentro del archivo; el botón aparece cuando el visor lo reconoce.", "fields": ("model_upload", "model_current", "poster_upload", "poster_current", "door_animation"), "classes": ("inox-step", "inox-step-media")}),
@@ -121,6 +124,28 @@ class ProductAdmin(AuditedAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return self.readonly_fields + (("code", "slug") if obj else ())
+
+    def get_fieldsets(self, request, obj=None):
+        can_edit = is_owner(request.user) and (self.has_change_permission(request, obj) if obj else self.has_add_permission(request))
+        return tuple(fieldset for fieldset in super().get_fieldsets(request, obj) if can_edit or "cooktop_config" not in fieldset[1]["fields"])
+
+    def get_form(self, request, obj=None, **kwargs):
+        base_form = super().get_form(request, obj, **kwargs)
+        can_edit_cooktop = is_owner(request.user)
+
+        class RequestProductForm(base_form):
+            def __init__(self, *args, **form_kwargs):
+                form_kwargs["can_edit_cooktop"] = can_edit_cooktop
+                super().__init__(*args, **form_kwargs)
+
+        return RequestProductForm
+
+    def save_model(self, request, obj, form, change):
+        if not is_owner(request.user):
+            previous = Product.objects.only("cooktop_config").get(pk=obj.pk).cooktop_config if change else {}
+            if obj.cooktop_config != previous:
+                raise PermissionDenied("Solo el propietario puede modificar el configurador de cocina.")
+        super().save_model(request, obj, form, change)
 
     def render_change_form(self, request, context, *args, **kwargs):
         context["is_nav_sidebar_enabled"] = False
@@ -173,7 +198,7 @@ class ProductAdmin(AuditedAdmin):
         product = get_object_or_404(catalog_product_queryset(), pk=product_id)
         if not self.has_view_or_change_permission(request, product):
             raise PermissionDenied
-        item = public_product(product)
+        item = public_product(product, preview=True)
         for field, asset in (("image", product.image_asset), ("technicalSheet", product.technical_asset), ("model3d", product.model_asset), ("modelPoster", product.poster_asset)):
             if asset:
                 item[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
@@ -211,6 +236,8 @@ class ProductAdmin(AuditedAdmin):
                 token = uuid4().hex[:8]
                 values = {field.attname: getattr(source, field.attname) for field in source._meta.concrete_fields if not field.primary_key and field.name not in ("created_at", "updated_at")}
                 values.update(code=f"{source.code[:53]}-C-{token}", slug=f"{source.slug[:134]}-copia-{token}", name=f"{source.name[:242]} (copia)", is_published=False)
+                if source.cooktop_config:
+                    values["cooktop_config"] = {**deepcopy(source.cooktop_config), "enabled": False}
                 copy = Product.objects.create(**values)
                 for model, items in ((ProductVariant, source.variants.all()), (ProductAdditional, source.additionals.all()), (ProductImage, source.gallery_images.all())):
                     for item in items:

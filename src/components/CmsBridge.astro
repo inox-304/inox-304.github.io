@@ -8,6 +8,7 @@ import { site } from '../data/site';
 import { withBase } from '../lib/paths';
 const payload = apiMode ? { mode: 'api', apiUrl: '/api/catalog/', routes: {}, data: emptyCmsData() } : {
   mode: 'static',
+  cooktopOrigin: (() => { try { const url = new URL(import.meta.env.PUBLIC_ADMIN_URL || ''); return url.protocol === 'https:' && !url.username && !url.password ? url.origin : ''; } catch { return ''; } })(),
   routes: Object.fromEntries(products.map(product => [product.id, withBase(`/catalogo/${product.slug}/`)])),
   data: buildCmsData || {
     products: products.map((product, index) => ({ currency: 'PEN', showPrice: false, technicalSheet: '', model3d: '', modelPoster: '', gallery: [], ...product, visible: true, featured: featuredProducts.some(item => item.id === product.id), order: index, contactId: 'ventas' })),

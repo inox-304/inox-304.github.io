@@ -6,6 +6,8 @@ from uuid import uuid4
 
 from .models import MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 from .validators import clean_upload
+from .cooktop import CooktopValidationError, validate_cooktop_config
+from .widgets import CooktopConfigWidget
 
 
 UPLOAD_FIELDS = {"image_upload": ("image_asset", "image"), "technical_upload": ("technical_asset", "pdf"), "model_upload": ("model_asset", "glb"), "poster_upload": ("poster_asset", "image")}
@@ -20,10 +22,13 @@ class ProductAdminForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = "__all__"
-        widgets = {"description": forms.Textarea(attrs={"rows": 4}), "characteristics": forms.Textarea(attrs={"rows": 5}), "internal_notes": forms.Textarea(attrs={"rows": 4})}
+        widgets = {"description": forms.Textarea(attrs={"rows": 4}), "characteristics": forms.Textarea(attrs={"rows": 5}), "internal_notes": forms.Textarea(attrs={"rows": 4}), "cooktop_config": CooktopConfigWidget()}
 
     def __init__(self, *args, **kwargs):
+        self.can_edit_cooktop = kwargs.pop("can_edit_cooktop", False)
         super().__init__(*args, **kwargs)
+        if not self.can_edit_cooktop:
+            self.fields.pop("cooktop_config", None)
         for name in ("code", "slug"):
             if name in self.fields:
                 self.fields[name].required = False
@@ -55,6 +60,8 @@ class ProductAdminForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        if not self.can_edit_cooktop and "cooktop_config" in self.data:
+            self.add_error(None, "Solo el propietario puede modificar el configurador de cocina.")
         if "code" in self.fields and "code" not in self.errors and not data.get("code"):
             data["code"] = self.instance.code or self._new_identifier("code", "EQ")
         if "slug" in self.fields and "slug" not in self.errors and not data.get("slug"):
@@ -68,6 +75,15 @@ class ProductAdminForm(forms.ModelForm):
                 except ValidationError as exc:
                     self.add_error(field, exc)
         return data
+
+    def clean_cooktop_config(self):
+        try:
+            value = self.cleaned_data.get("cooktop_config")
+            if self.data.get(self.add_prefix("cooktop_config")) in (None, ""):
+                value = {}
+            return validate_cooktop_config(value)
+        except CooktopValidationError as exc:
+            raise ValidationError(str(exc)) from exc
 
 
 class ProductAdditionalForm(forms.ModelForm):

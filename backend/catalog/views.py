@@ -1,21 +1,74 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+import json
 
 from django.core.exceptions import SuspiciousFileOperation
 from django.db.models import Q
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils.cache import patch_vary_headers
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_safe
 
 from .models import MediaAsset, Product, ProductVariant
-from .serializers import public_catalog_data, public_product_queryset
+from .serializers import public_catalog_data, public_cooktop_config, public_product_queryset
 from .storage import open_private_file
+from .cooktop import CooktopValidationError, cooktop_selection_summary, validate_cooktop_selection
 
 
 @never_cache
 @require_GET
 def catalog_api(request):
     return JsonResponse(public_catalog_data(), json_dumps_params={"ensure_ascii": False})
+
+
+def _cooktop_response(request, data, *, status=200):
+    response = JsonResponse(data, status=status, json_dumps_params={"ensure_ascii": False})
+    patch_vary_headers(response, ("Origin",))
+    if request.headers.get("Origin") == "https://inox-304.github.io":
+        response["Access-Control-Allow-Origin"] = "https://inox-304.github.io"
+    return response
+
+
+def _cooktop_product(code):
+    return get_object_or_404(Product.objects.only("code", "cooktop_config", "supply_type", "category", "equipment_family"), code=code, is_active=True, is_published=True)
+
+
+@never_cache
+@require_GET
+def public_cooktop(request, code):
+    product = _cooktop_product(code)
+    return _cooktop_response(request, {"productId": product.code, "cooktopConfig": public_cooktop_config(product)})
+
+
+def _unique_json_object(pairs):
+    data = {}
+    for key, value in pairs:
+        if key in data:
+            raise ValueError("Repeated JSON key")
+        data[key] = value
+    return data
+
+
+@never_cache
+@require_GET
+def check_cooktop_selection(request, code):
+    product = _cooktop_product(code)
+    config = public_cooktop_config(product)
+    raw = request.GET.get("selection", "")
+    if not config:
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": "Este configurador no está habilitado."}, status=400)
+    if len(request.GET.getlist("selection")) != 1 or not raw or len(raw) > 6000:
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": "Envíe una selección de hasta 6000 caracteres."}, status=400)
+    try:
+        selection = json.loads(raw, object_pairs_hook=_unique_json_object)
+    except (ValueError, RecursionError):
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": "La selección no tiene un formato válido."}, status=400)
+    try:
+        selection = validate_cooktop_selection(config, selection)
+        summary = cooktop_selection_summary(config, selection)
+    except CooktopValidationError as exc:
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": str(exc)}, status=400)
+    return _cooktop_response(request, {"productId": product.code, "valid": True, "selection": selection, "summary": summary})
 
 
 @never_cache

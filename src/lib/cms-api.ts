@@ -1,4 +1,5 @@
 import { categoryNames, normalizeWhatsapp, safeHttps, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet, type CmsAdditional, type CmsData, type CmsProduct } from './cms.ts';
+import { parseCooktopConfig } from './cooktop-config.ts';
 
 const settingKeys = ['empresa', 'direccion', 'referencia_direccion', 'facebook', 'instagram', 'tiktok', 'horarios', 'contacto_principal', 'contacto_instalaciones', 'contacto_medida', 'contacto_formulario', 'hero_title', 'hero_description', 'home_text'];
 export function emptyCmsData(): CmsData {
@@ -74,10 +75,13 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
     unique(variants.map(item => item.id)); unique(additionalCharges.map(item => item.id)); unique(additionals.map(item => item.id));
     const supplyType = string(item.supplyType ?? '', 16) as CmsProduct['supplyType'];
     if (!['', 'manufactured', 'distributed'].includes(supplyType || '')) throw new Error('Invalid product supply type');
+    const cooktopConfig = parseCooktopConfig(item.cooktopConfig);
+    if (cooktopConfig && (supplyType !== 'manufactured' || category !== 'linea-caliente' || item.equipmentFamily !== 'cocinas' || (!cooktopConfig.enabled && !preview))) throw new Error('Unauthorized cooktop configuration');
     return {
       id: identifier(item.id), slug, name: string(item.name, 250), category, summary: string(item.summary, 10000),
       supplyType, brand: string(item.brand ?? '', 120), supplierModel: string(item.supplierModel ?? '', 120),
       equipmentFamily: string(item.equipmentFamily ?? '', 32), capacity: string(item.capacity ?? '', 180),
+      cooktopConfig,
       features: list(item.features, 50).map(value => string(value)), image: asset(item.image, imageUrl, true),
       visible: true, featured: boolean(item.featured), order: item.order,
       contactId: item.contactId ? identifier(item.contactId) : '', price: amount(item.price), currency: item.currency,

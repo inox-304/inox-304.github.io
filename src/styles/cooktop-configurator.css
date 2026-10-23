@@ -1,0 +1,35 @@
+.product-detail-copy:has(.cooktop-configurator) { min-width: 0; }
+.cooktop-configurator { min-width: 0; margin: 24px 0; padding: clamp(16px, 2vw, 24px); border: 1px solid #c7d4de; border-radius: 14px; background: #fff; color: #18354c; }
+.cooktop-configurator[hidden] { display: none; }
+.cooktop-configurator h2 { margin: 0 0 10px; font-size: 1.25rem; letter-spacing: -.02em; }
+.cooktop-intro, .cooktop-note { font-size: .79rem; line-height: 1.65; color: #526b7d; margin: 0 0 18px; }
+.cooktop-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cooktop-controls label { display: grid; gap: 7px; font-size: .75rem; font-weight: 600; }
+.cooktop-controls select { width: 100%; min-width: 0; border: 1px solid #bfcbd6; border-radius: 7px; padding: 10px; font: inherit; color: #16334a; background: #fff; }
+.cooktop-surface { background: #eaf0f4; border: 1px solid #c5d0d9; border-radius: 10px; padding: 10px; margin: 18px 0; overflow-x: auto; }
+.cooktop-direction { font-size: .6rem; letter-spacing: .12em; text-align: center; margin: 4px 0 10px; color: #526575; }
+.cooktop-direction:last-child { margin: 10px 0 4px; }
+.cooktop-grid { display: grid; gap: 6px; }
+.cooktop-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 14px 4px 8px; border-radius: 6px; border: 1px solid #a9bac9; background: #fcfdfe; color: #18354c; min-width: 0; cursor: pointer; font: inherit; }
+.cooktop-cell strong { font-size: .65rem; overflow-wrap: anywhere; }
+.cooktop-cell[aria-pressed=true] { outline: 2px solid #285975; outline-offset: 0; background: #e0eff6; }
+.cooktop-position { position: absolute; left: 6px; top: 3px; font-size: .57rem; color: #526b7d; }
+.cooktop-module-symbol { width: 28px; height: 28px; border: 5px double #4b6271; border-radius: 50%; }
+.cooktop-kind-wok .cooktop-module-symbol { border-width: 7px; box-shadow: 0 0 0 2px #9faeba; width: 32px; height: 32px; }
+.cooktop-kind-griddle .cooktop-module-symbol, .cooktop-kind-grill .cooktop-module-symbol { border-radius: 3px; width: 65%; height: 45px; border: 2px solid #526b7d; background: #b9c7d1; }
+.cooktop-kind-grill .cooktop-module-symbol { background: repeating-linear-gradient(90deg,#516875 0 3px,#c3ced6 3px 8px); }
+.cooktop-options { margin: 0; border: 0; padding: 0; }
+.cooktop-options legend { font-size: .8rem; font-weight: 600; margin-bottom: 10px; }
+.cooktop-module-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.cooktop-module-option { display: grid; gap: 4px; border: 1px solid #c5d0d9; border-radius: 7px; padding: 10px; text-align: left; color: #18354c; background: #fff; font: inherit; cursor: pointer; }
+.cooktop-module-option strong { font-size: .76rem; }
+.cooktop-module-option span, .cooktop-module-option small { font-size: .66rem; line-height: 1.5; }
+.cooktop-module-option[aria-pressed=true] { border-color: #285975; background: #edf6fa; }
+.cooktop-module-option:disabled { background: #f4f6f7; color: #697985; cursor: not-allowed; }
+.cooktop-summary { margin: 18px 0 12px; padding: 12px; background: #edf5f2; color: #254b41; font-size: .82rem; font-weight: 600; border-radius: 7px; }
+.cooktop-reset { border: 0; background: transparent; padding: 6px 0; text-decoration: underline; text-underline-offset: 3px; color: #285975; cursor: pointer; font: inherit; font-size: .75rem; }
+.cooktop-status { font-size: .76rem; line-height: 1.6; color: #254b41; }
+.cooktop-note { margin: 12px 0 0; border-top: 1px solid #dae2e8; padding-top: 12px; }
+.cooktop-draft { background: #fff4d9; padding: 10px; font-size: .75rem; border-radius: 6px; }
+.cooktop-configurator button:focus-visible, .cooktop-configurator select:focus-visible { outline: 3px solid #296686; outline-offset: 3px; }
+@media(max-width:420px) { .cooktop-controls { grid-template-columns: 1fr; } .cooktop-cell strong { font-size: .6rem; } }

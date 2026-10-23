@@ -35,7 +35,7 @@ jobs:
       - run: npm run build:server
       - name: Frontend integration and media budgets
         run: |
-          node --test src/lib/cms-api.test.ts src/lib/product-additionals.test.ts scripts/test-product-families.mjs scripts/test-product-family-ui.mjs
+          node --test src/lib/cms-api.test.ts src/lib/product-additionals.test.ts scripts/test-product-families.mjs scripts/test-product-family-ui.mjs scripts/test-cooktop.mjs scripts/test-cooktop-editor.mjs scripts/test-cooktop-ui.mjs
           node scripts/test-product-stage.mjs
           node scripts/test-model-budget.mjs
           node scripts/test-passkeys.mjs

@@ -1,6 +1,7 @@
 from django.db.models import Prefetch
 
 from .models import BusinessSettings, Contact, Product, ProductAdditional, ProductImage, ProductVariant
+from .cooktop import CooktopValidationError, validate_product_cooktop_config
 
 
 def catalog_product_queryset():
@@ -15,13 +16,22 @@ def _amount(value):
     return float(value) if value is not None else None
 
 
-def public_product(product):
+def public_cooktop_config(product, *, preview=False):
+    try:
+        config = validate_product_cooktop_config(product.cooktop_config, supply_type=product.supply_type, category=product.category, equipment_family=product.equipment_family)
+    except CooktopValidationError:
+        return None
+    return config if config and (config["enabled"] or preview is True) else None
+
+
+def public_product(product, *, preview=False):
     return {
         "id": product.code, "slug": product.slug, "name": product.name,
         "category": product.category, "summary": product.description,
         "supplyType": product.supply_type, "brand": product.brand,
         "supplierModel": product.supplier_model, "equipmentFamily": product.equipment_family,
         "capacity": product.capacity,
+        "cooktopConfig": public_cooktop_config(product, preview=preview),
         "features": [line.strip() for line in product.characteristics.splitlines() if line.strip()],
         "image": product.image_asset.public_url if product.image_asset_id else (product.image or "/images/brand/inox304-logo.webp"),
         "visible": True, "featured": product.featured, "order": product.order,

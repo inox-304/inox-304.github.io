@@ -20,7 +20,7 @@ import { withBase } from '../lib/paths';
   @media(prefers-reduced-motion:reduce){.flame-glow{opacity:.16}}
 </style>
 <script>
-  // Owner's corrected HTML: red outer flame, blue snowflake, silver lettering.
+  // Red outer flame, sky-blue inner drop and snowflake, silver lettering.
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   function makeCanvas(width: number, height: number) {
     const canvas = document.createElement('canvas');
@@ -80,6 +80,8 @@ import { withBase } from '../lib/paths';
       const seen = new Uint8Array(width * height);
       const queue = new Int32Array(width * height);
       let largest: Int32Array<ArrayBufferLike> = new Int32Array(0);
+      let innerDrop: Int32Array<ArrayBufferLike> = new Int32Array(0);
+      const innerSeed = Math.round(height * (300 / 560)) * width + Math.round(width * (194 / 1400));
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < limit; x++) {
           const start = y * width + x;
@@ -88,10 +90,15 @@ import { withBase } from '../lib/paths';
           let tail = 1;
           queue[0] = start;
           seen[start] = 1;
+          let containsInnerSeed = false;
+          let componentX0 = width, componentY0 = height, componentX1 = 0, componentY1 = 0;
           while (head < tail) {
             const position = queue[head++];
             const px = position % width;
             const py = Math.floor(position / width);
+            containsInnerSeed ||= position === innerSeed;
+            componentX0 = Math.min(componentX0, px); componentY0 = Math.min(componentY0, py);
+            componentX1 = Math.max(componentX1, px); componentY1 = Math.max(componentY1, py);
             const adjacent = [px > 0 ? position - 1 : -1, px + 1 < limit ? position + 1 : -1,
               py > 0 ? position - width : -1, py + 1 < height ? position + width : -1];
             for (const next of adjacent) {
@@ -101,6 +108,9 @@ import { withBase } from '../lib/paths';
             }
           }
           if (tail > largest.length) largest = queue.slice(0, tail);
+          // The complete inner drop is a separate alpha component from the flame.
+          if (containsInnerSeed && componentX0 >= width * .08 && componentX1 <= width * .2 &&
+            componentY0 >= height * .43 && componentY1 <= height * .83) innerDrop = queue.slice(0, tail);
         }
       }
       if (!largest.length) return;
@@ -144,37 +154,21 @@ import { withBase } from '../lib/paths';
       tintContext.fillRect(0, 0, drawWidth, drawHeight);
       tintContext.globalCompositeOperation = 'destination-in';
       tintContext.drawImage(mask, 0, 0);
-      // Reproduce the supplied connected-relief mask; do not tint the metal plate.
+      // Cover the entire inner drop, including its rim and snowflake relief.
       const iceMask = makeCanvas(width, height);
       const iceMaskContext = iceMask.getContext('2d')!;
       const iceData = iceMaskContext.createImageData(width, height);
-      const iceMember = new Uint8Array(width * height);
       const iceCx = width * (193.6 / 1400), iceCy = height * (381.7 / 560);
-      const iceRx = width * (48 / 1400), iceRy = height * (51 / 560);
-      const iceStart = Math.round(iceCy) * width + Math.round(iceCx);
-      let iceHead = 0, iceTail = 1;
-      queue[0] = iceStart; iceMember[iceStart] = 1;
-      const iceLight = (p: number) => (pixels[p * 4] + pixels[p * 4 + 1] + pixels[p * 4 + 2]) / 3;
-      const inIce = (p: number) => ((p % width - iceCx) / iceRx) ** 2 + ((Math.floor(p / width) - iceCy) / iceRy) ** 2 < 1;
-      while (iceHead < iceTail) {
-        const p = queue[iceHead++], px = p % width, py = Math.floor(p / width);
-        for (const n of [px > 0 ? p - 1 : -1, px + 1 < width ? p + 1 : -1, py > 0 ? p - width : -1, py + 1 < height ? p + width : -1]) {
-          if (n < 0 || iceMember[n] || !inIce(n) || pixels[n * 4 + 3] < 64 || iceLight(n) < 120) continue;
-          iceMember[n] = 1; queue[iceTail++] = n;
-        }
-      }
-      for (let k = 0; k < iceTail; k++) {
-        const p = queue[k], x = p % width, y = Math.floor(p / width), i = p * 4;
-        const radial = Math.sqrt(((x - iceCx) / iceRx) ** 2 + ((y - iceCy) / iceRy) ** 2);
-        const coverage = smooth(116, 157, iceLight(p)) * (1 - smooth(.975, 1, radial));
+      for (const position of innerDrop) {
+        const i = position * 4;
         iceData.data[i] = iceData.data[i + 1] = iceData.data[i + 2] = 255;
-        iceData.data[i + 3] = Math.round(pixels[i + 3] * coverage);
+        iceData.data[i + 3] = pixels[i + 3];
       }
       iceMaskContext.putImageData(iceData, 0, 0);
       const iceSurface = makeCanvas(drawWidth, drawHeight), ic = iceSurface.getContext('2d')!;
       ic.drawImage(original, 0, 0, drawWidth, drawHeight);
-      const iceBlue = ic.createLinearGradient(iceCx * scale, (iceCy + iceRy) * scale, iceCx * scale, (iceCy - iceRy) * scale);
-      iceBlue.addColorStop(0, '#0755cf'); iceBlue.addColorStop(.47, '#078ced'); iceBlue.addColorStop(1, '#1cb8ff');
+      const iceBlue = ic.createLinearGradient(iceCx * scale, height * (453 / 560) * scale, iceCx * scale, height * (252 / 560) * scale);
+      iceBlue.addColorStop(0, '#168dcc'); iceBlue.addColorStop(.47, '#39b9ed'); iceBlue.addColorStop(1, '#89deff');
       ic.globalCompositeOperation = 'multiply'; ic.globalAlpha = .86;
       ic.fillStyle = iceBlue; ic.fillRect(0, 0, drawWidth, drawHeight);
       ic.globalCompositeOperation = 'screen'; ic.globalAlpha = .38;

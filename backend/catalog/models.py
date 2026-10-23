@@ -7,6 +7,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator, RegexVa
 from django.db import models
 
 from .validators import clean_upload, validate_https, validate_public_url
+from .cooktop import CooktopValidationError, validate_product_cooktop_config
 
 
 MONEY_VALIDATORS = [MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100000000"))]
@@ -108,6 +109,7 @@ class Product(ValidatedModel):
         SLUSH_MACHINES = "cremoladeras", "Máquinas de cremoladas"
         ICE_CREAM_MACHINES = "maquinas-helado", "Máquinas de helado"
         JUICE_DISPENSERS = "dispensadores-jugo", "Dispensadores de jugo"
+        COOKTOPS = "cocinas", "Cocinas"
 
     class Category(models.TextChoices):
         COLD = "linea-fria", "Línea fría"
@@ -135,6 +137,7 @@ class Product(ValidatedModel):
     supplier_model = models.CharField("modelo del fabricante", max_length=120, blank=True, default="", help_text="Conserve la referencia oficial. Es distinta del código interno de INOX.")
     equipment_family = models.CharField("familia de equipos", max_length=32, choices=EquipmentFamily, blank=True, default="", help_text="Agrupa equipos similares dentro de su línea. Déjelo vacío si no corresponde a estas familias.")
     capacity = models.CharField("capacidad", max_length=180, blank=True, default="", help_text="Escriba la capacidad y su unidad tal como las confirma el fabricante, por ejemplo litros de recipiente o kg de masa. No son equivalentes.")
+    cooktop_config = models.JSONField("configurador de cocina", default=dict, blank=True, help_text="Opciones de fabricación definidas por el propietario para esta cocina. Se publica solo al habilitarlo.")
     source_url = models.URLField("fuente del fabricante (privada)", max_length=1000, blank=True, default="", validators=[validate_https], help_text="Enlace HTTPS de la ficha oficial para verificar datos. No se publica en la web.")
     description = models.TextField("descripción", max_length=5000, blank=True)
     characteristics = models.TextField("características", max_length=5000, blank=True, help_text="Una característica por línea.")
@@ -174,6 +177,12 @@ class Product(ValidatedModel):
     def clean(self):
         super().clean()
         errors = {}
+        try:
+            self.cooktop_config = validate_product_cooktop_config(self.cooktop_config, supply_type=self.supply_type, category=self.category, equipment_family=self.equipment_family)
+        except CooktopValidationError as exc:
+            # This field is excluded for nonowner editors; a nonfield error also
+            # handles an attempted reclassification of an already configured unit.
+            errors["__all__"] = str(exc)
         if self.charge_unit == self.ChargeUnit.CUSTOM and not self.custom_unit.strip():
             errors["custom_unit"] = "Indique la unidad de cobro."
         if self.show_price and self.price is None:

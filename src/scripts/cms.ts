@@ -5,14 +5,17 @@ import { getProductStage } from '../lib/product-stage';
 import { additionalsQuoteSummary, createAdditionalOption, reconcileAdditionalSelection, type AdditionalSelection } from '../lib/product-additionals';
 import { catalogSearchText } from '../lib/catalog-controls';
 import { catalogFamilyProducts, getProductFamily } from '../lib/product-families';
+import { parseCooktopConfig, type CooktopConfig } from '../lib/cooktop-config';
+import { renderCooktop } from './cooktop-ui';
 
-type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
+type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; cooktopOrigin?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
 let payload: Bootstrap | null = null;
 try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { /* An invalid bootstrap is replaced by a fresh public request. */ }
 const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
 let lastApplied = '';
 let currentData: CmsData | undefined;
+let cooktopRequest: AbortController | undefined;
 let additionalSelection: AdditionalSelection = { productId: '', ids: [] };
 const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLElement>('.product-card') || document.querySelector<HTMLElement>('.product-card');
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
@@ -80,6 +83,7 @@ function fillCards(container: Element, products: CmsProduct[], data: CmsData) {
 
 function updateDetail(data: CmsData, selectedProductId?: string) {
   const detail = document.querySelector<HTMLElement>('[data-product-detail]'); if (!detail) return;
+  cooktopRequest?.abort();
   const productId = selectedProductId || payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
   const slug = apiMode ? catalogSlug(location.pathname) : '';
   const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
@@ -156,15 +160,24 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   const contact = resolveContact(data, product.contactId);
   additionalSelection = reconcileAdditionalSelection(product, additionalSelection);
   const variants = detail.querySelector<HTMLSelectElement>('[data-product-variant]');
+  let configuredSurface = '';
+  let cooktopRules: CooktopConfig | null = null;
+  try { if (product.supplyType === 'manufactured' && product.category === 'linea-caliente' && product.equipmentFamily === 'cocinas') cooktopRules = parseCooktopConfig(product.cooktopConfig); } catch { /* Invalid rules must never create options. */ }
+  const cooktopRoot = detail.querySelector<HTMLElement>('[data-cooktop-root]');
   const updateQuote = () => {
     const variant = product.variants?.find(item => item.id === variants?.value);
     const configuration = family?.selectorLabel ? family.members.find(member => member.product.id === product.id)?.label : '';
-    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}\n${new URL(route(product), location.origin).href}`;
+    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}\n${new URL(route(product), location.origin).href}`;
     detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
       anchor.hidden = !contact;
       if (contact) { anchor.href = contactUrl(contact, message); anchor.dataset.contact = contact.id; }
       else anchor.removeAttribute('href');
     });
+  };
+  const updateCooktop = () => {
+    if (!cooktopRoot) return;
+    // A different SKU/variant has not inherited approval for this base's modules.
+    renderCooktop(cooktopRoot, variants?.value ? null : cooktopRules, product.id, text => { configuredSurface = text; updateConfiguredPrice(); updateQuote(); }, payload?.preview === true);
   };
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? productQuoteNote(product) : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);
@@ -177,6 +190,16 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
   const unit = detail.querySelector<HTMLElement>('[data-product-unit]');
   if (unit) { unit.textContent = product.unitLabel || product.chargeUnit || ''; unit.hidden = !price || !unit.textContent; }
+  const updateConfiguredPrice = () => {
+    const variant = product.variants?.find(item => item.id === variants?.value);
+    const amount = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
+    if (priceNode) { priceNode.textContent = configuredSurface ? 'A cotizar' : amount; priceNode.hidden = !configuredSurface && !amount; }
+    if (unit) unit.hidden = !!configuredSurface || !amount || !unit.textContent;
+    if (quoteNote) quoteNote.textContent = !contact ? 'Por el momento no hay un contacto de cotización disponible.' : configuredSurface ? 'Configuración a cotizar. Confirmaremos el precio y las medidas de las opciones elegidas.' : productQuoteNote(product);
+    styleQuote(configuredSurface ? '' : amount);
+    const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]');
+    if (commerce && configuredSurface) commerce.hidden = false;
+  };
   const availability = detail.querySelector<HTMLElement>('[data-product-availability]');
   if (availability) { availability.textContent = formatAvailability(product.availability); availability.hidden = !availability.textContent; }
   if (variants) {
@@ -200,6 +223,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
       const sheetLink = detail.querySelector<HTMLAnchorElement>('[data-product-technical-sheet]');
       if (sheetLink) { sheetLink.href = selectedSheet ? withBase(selectedSheet) : ''; sheetLink.hidden = !selectedSheet; }
       document.dispatchEvent(new CustomEvent('inox:configuration-updated', { detail: { productId: product.id, variant } }));
+      updateCooktop();
       updateQuote();
     };
     variants.onchange = selectVariant; selectVariant();
@@ -221,6 +245,27 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     };
   }
   updateExtraSummary(); updateQuote();
+  updateCooktop();
+  // Pages stays static, but owner-approved rules come directly from the hosted panel.
+  // This endpoint exposes public configuration only and never receives a session cookie.
+  const cooktopCandidate = product.category === 'linea-caliente' && product.supplyType !== 'distributed';
+  if (!apiMode && payload?.cooktopOrigin && cooktopRoot && !payload.preview && cooktopCandidate) {
+    const controller = new AbortController(); cooktopRequest = controller;
+    const timer = window.setTimeout(() => controller.abort(), 65000);
+    try {
+      const origin = new URL(payload.cooktopOrigin);
+      if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/') throw new Error('Invalid configuration origin');
+      void fetch(new URL(`/api/catalog/${encodeURIComponent(product.id)}/cooktop/`, origin), { credentials: 'omit', cache: 'no-store', signal: controller.signal })
+        .then(response => { if (!response.ok) throw new Error('Unavailable rules'); return response.json(); })
+        .then(value => {
+          if (controller.signal.aborted || !cooktopCandidate || detail.dataset.productDetail !== product.id || value.productId !== product.id) return;
+          const config = parseCooktopConfig(value.cooktopConfig);
+          cooktopRules = config?.enabled ? config : null; updateCooktop();
+        })
+        .catch(() => { if (!controller.signal.aborted && detail.dataset.productDetail === product.id) { cooktopRules = null; updateCooktop(); } })
+        .finally(() => window.clearTimeout(timer));
+    } catch { window.clearTimeout(timer); cooktopRules = null; updateCooktop(); }
+  }
   const charges = detail.querySelector<HTMLElement>('[data-product-charges]');
   if (charges) {
     charges.replaceChildren(...(product.additionalCharges || []).map(charge => {
@@ -237,7 +282,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     if (sheet) technicalSheet.href = withBase(sheet);
     else technicalSheet.removeAttribute('href');
   }
-  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;
+  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !configuredSurface && !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;
   const familyIds = new Set(family?.members.map(member => member.product.id) || [product.id]);
   const relatedProducts = catalogFamilyProducts(visibleCmsProducts(data)).filter(item => item.category === product.category && !familyIds.has(item.id)).slice(0, 3);
   if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts, data); }

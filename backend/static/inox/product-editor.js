@@ -10,9 +10,10 @@
     { id: 'media', title: 'Fotos y archivos', description: 'Selecciona los archivos que tengas listos. Puedes añadir o reemplazar los demás más adelante.' },
     { id: 'variants', title: 'Variaciones', description: 'Añade las versiones que ofrecerás de este equipo. Si todavía no las tienes, continúa sin añadir ninguna.' },
     { id: 'additionals', title: 'Adicionales', description: 'Añade las opciones que el cliente puede solicitar con este equipo. Cada una puede tener su tarifa por unidad o medida, o quedar a cotizar. Los costos internos son privados; la ubicación en el modelo 3D se definirá con tus diseños.' },
+    { id: 'configurator', title: 'Configurador', description: 'Define las posiciones, energías y módulos compatibles de esta cocina. Puedes conservarlo deshabilitado para revisarlo antes de ofrecerlo.' },
     { id: 'pricing', title: 'Precio', description: 'Define cómo se cobra este equipo y si mostrarás su precio al público.' },
     { id: 'review', title: 'Revisar y guardar', description: 'Revisa lo que has preparado y decide si lo conservas como borrador o lo publicas.' },
-  ];
+  ].filter(step => step.id !== 'configurator' || form.querySelector('.inox-step-configurator'));
   const sections = [];
   const seen = new Set();
   form.querySelectorAll('.inox-step').forEach(section => {
@@ -34,6 +35,8 @@
   const next = document.getElementById('inox-step-next');
   const showAll = document.getElementById('inox-show-all');
   const navButtons = [...flow.querySelectorAll('[data-inox-go-step]')];
+  navButtons.forEach(button => { const number = button.querySelector('span'); if (number) number.textContent = String(steps.findIndex(step => step.id === button.dataset.inoxGoStep) + 1); });
+  flow.style.setProperty('--inox-step-count', String(steps.length));
   let currentIndex = 0;
   let allVisible = false;
 
@@ -189,6 +192,10 @@
     setSummary('variants', variants ? `${variants} ${variants === 1 ? 'variación' : 'variaciones'}` : 'Sin variaciones');
     const additionals = countInlineRows('additionals', 'name');
     setSummary('additionals', additionals ? `${additionals} ${additionals === 1 ? 'adicional preparado' : 'adicionales preparados'}` : 'Sin adicionales');
+    try {
+      const config = JSON.parse(valueOf('cooktop_config') || '{}');
+      setSummary('configurator', config.kind === 'cooktop' ? `${config.enabled ? 'Habilitado' : 'Borrador deshabilitado'} · ${config.layouts.length} distribución(es)` : 'Sin configurador');
+    } catch { setSummary('configurator', 'Revisa la configuración antes de guardar'); }
     const gallery = [...uploadCards.entries()].filter(([input, card]) => {
       if (!input.name.endsWith('-upload')) return false;
       const prefix = input.name.slice(0, -'upload'.length);
