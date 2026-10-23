@@ -13,6 +13,7 @@ export type Product = ProductOrigin & {
   summary: string;
   features: string[];
   image: string;
+  visible?: boolean;
   featured: boolean;
   contactId?: string;
   price?: number;
@@ -358,6 +359,7 @@ export const products: Product[] = [
   },
   {
     "id": "P19",
+    "visible": false,
     "slug": "visicooler-580-litros",
     "name": "Visicooler 580 litros",
     "category": "linea-fria",
@@ -390,6 +392,7 @@ export const products: Product[] = [
   },
   {
     "id": "P21",
+    "visible": false,
     "slug": "abatidor-de-temperatura-de-5-bandejas",
     "name": "Abatidor de temperatura de 5 bandejas",
     "category": "linea-fria",
@@ -406,6 +409,7 @@ export const products: Product[] = [
   },
   {
     "id": "P22",
+    "visible": false,
     "slug": "exhibidor-refrigerado-abierto",
     "name": "Exhibidor refrigerado abierto",
     "category": "linea-fria",

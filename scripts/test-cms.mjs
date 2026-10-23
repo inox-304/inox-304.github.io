@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { parseCsv, parseCms, normalizeWhatsapp, safeImage, safeHttps, safeTechnicalSheet, safeModel, formatProductPrice, validatePublishedUrl, resolveContact, visibleCmsProducts, cmsProductRoute } from '../src/lib/cms.ts';
@@ -124,6 +124,48 @@ test('project deployment keeps stable and new CMS product links under its base e
   assert.equal(cmsProductRoute({id:'P02'},routes,'/inox304/'),'/inox304/catalogo/segundo-equipo/');
   assert.equal(cmsProductRoute({id:'P99'},routes,'/inox304/'),'/inox304/equipo/?id=P99');
   assert.equal(cmsProductRoute({id:'P99'},routes,'/'),'/equipo/?id=P99');
+});
+
+test('bundled publication hides only the retired three SKUs while retaining every record and asset', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'inox-publication-test-'));
+  try {
+    const result = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+      const { products } = await import(${JSON.stringify(new URL('../src/data/products.ts', import.meta.url).href)});
+      const { visibleProducts, catalogProducts, featuredProducts } = await import(${JSON.stringify(new URL('../src/data/catalog.ts', import.meta.url).href)});
+      console.log(JSON.stringify({ products, visible: visibleProducts.map(p => p.id), cards: catalogProducts.map(p => p.id), featured: featuredProducts.map(p => p.id) }));
+    `], { cwd: directory, encoding: 'utf8' }));
+    const hidden = ['P19', 'P21', 'P22'];
+    assert.equal(result.products.length, 60);
+    assert.deepEqual(result.products.filter(product => product.visible === false).map(product => product.id), hidden);
+    assert.deepEqual(result.visible, result.products.filter(product => !hidden.includes(product.id)).map(product => product.id));
+    assert.equal(result.visible.length, 57); assert.equal(result.cards.length, 38);
+    assert.equal(result.visible.filter(id => id.startsWith('ILUMI-')).length, 28);
+    assert.ok(result.visible.includes('P32'));
+    for (const id of hidden) {
+      assert.ok(!result.cards.includes(id)); assert.ok(!result.featured.includes(id));
+      const product = result.products.find(product => product.id === id);
+      for (const asset of [product.image, product.model3d, product.modelPoster]) {
+        assert.ok(asset, `${id} retains its media path`);
+        assert.ok(existsSync(new URL(`../public${asset}`, import.meta.url)), `${id} retains ${asset}`);
+      }
+    }
+  } finally {
+    assert.ok(resolve(directory).startsWith(resolve(tmpdir()) + sep));
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('the supplied CSV keeps retired rows unpublished and preserves the remaining original products', () => {
+  const rows = parseCsv(readFileSync(new URL('../public/cms/plantillas/Catalogo.csv', import.meta.url), 'utf8'));
+  const [header, ...values] = rows;
+  const records = values.map(row => Object.fromEntries(header.map((name, index) => [name, row[index]])));
+  assert.equal(records.length, 32);
+  assert.deepEqual(records.filter(row => row.publicar === 'FALSE').map(row => row.id), ['P19', 'P21', 'P22']);
+  assert.equal(records.find(row => row.id === 'P32').publicar, 'TRUE');
+  for (const id of ['P19', 'P21', 'P22']) {
+    const row = records.find(record => record.id === id);
+    assert.ok(row.slug); assert.ok(row.nombre); assert.ok(row.imagen); assert.equal(row.destacado, 'FALSE');
+  }
 });
 
 test('build snapshot adds new products, retires bundled products and allows an empty published catalog', () => {

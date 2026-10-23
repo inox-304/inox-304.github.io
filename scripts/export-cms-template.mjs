@@ -10,10 +10,10 @@ const csvCell = value => {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 const csv = rows => '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
-const featured = new Set(['P01', 'P16', 'P24', 'P03', 'P09', 'P21']);
+const featured = new Set(['P01', 'P16', 'P24', 'P03', 'P09']);
 const catalog = csv([
   ['id','slug','nombre','categoria','descripcion','caracteristicas','imagen','publicar','destacado','orden','contacto_id','precio','moneda','mostrar_precio','ficha_tecnica','modelo_3d','poster_3d','galeria'],
-  ...products.map((product, index) => [product.id, product.slug, product.name, product.category, product.summary, product.features.join(' | '), product.image, 'TRUE', featured.has(product.id) ? 'TRUE' : 'FALSE', index + 1, 'ventas', product.price ?? '', product.currency || 'PEN', product.showPrice ? 'TRUE' : 'FALSE', product.technicalSheet || '', product.model3d || '', product.modelPoster || '', (product.gallery || []).join(' | ')]),
+  ...products.map((product, index) => [product.id, product.slug, product.name, product.category, product.summary, product.features.join(' | '), product.image, product.visible !== false ? 'TRUE' : 'FALSE', product.visible !== false && featured.has(product.id) ? 'TRUE' : 'FALSE', index + 1, 'ventas', product.price ?? '', product.currency || 'PEN', product.showPrice ? 'TRUE' : 'FALSE', product.technicalSheet || '', product.model3d || '', product.modelPoster || '', (product.gallery || []).join(' | ')]),
 ]);
 const contacts = csv([
   ['id','nombre','whatsapp','telefono','correo','mensaje','activo'],
