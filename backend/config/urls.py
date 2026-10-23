@@ -18,5 +18,6 @@ urlpatterns = [
     path('catalogo/', views.frontend, name='catalog'),
     path('contacto/', views.frontend, name='contact'),
     path('equipo/', views.frontend, name='product-fallback'),
+    path('privacidad-acceso/', views.frontend, name='access-privacy'),
     re_path(r'^(?P<asset>(?:_astro|images|fonts|media|models|vendor)/.+|favicon\.svg)$', views.asset, name='frontend-asset'),
 ]

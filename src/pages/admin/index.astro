@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
 import { adminEntryUrl } from '../../lib/admin-entry';
+import { withBase } from '../../lib/paths';
 
 const remoteUrl = import.meta.env.PUBLIC_ADMIN_URL || '';
 const panelUrl = remoteUrl.trim()
@@ -14,10 +15,12 @@ const remote = Boolean(remoteUrl.trim());
     <span class="eyebrow">INOX 304 / ADMINISTRACIÓN</span>
     <h1>Tu espacio de trabajo.</h1>
     <div class="access-card">
-      <h2>Administrar el catálogo</h2>
+      <h2>Catálogo e inventario</h2>
+      <p>Gestiona equipos, fotos, fichas técnicas y archivos 3D. Consulta existencias y consumos de fabricación según los permisos de tu cuenta.</p>
       <p>Ingresa con tu correo y contraseña. Después confirma el código de seguridad de tu cuenta para abrir el panel.</p>
       <a class="button button-chrome" href={panelUrl}>Continuar al panel <Icon name="diagonal" size={18}/></a>
       {!remote && <p class="access-note">El acceso por Internet aún no está habilitado. Este botón abre el panel local si está iniciado en esta computadora.</p>}
+      <p class="privacy-note"><a href={withBase('/privacidad-acceso/')}>Privacidad del acceso y permisos de Google</a></p>
     </div>
   </section>
 </Layout>
@@ -30,5 +33,7 @@ const remote = Boolean(remoteUrl.trim());
   .access-card p{color:#526176;font-size:14px;line-height:1.8;max-width:580px;margin:0 0 24px}
   .access-card .button{font-size:13px;gap:16px}
   .access-card .access-note{font-size:12px;margin:18px 0 0}
+  .access-card .privacy-note{font-size:12px;margin:22px 0 0;padding-top:18px;border-top:1px solid #d9e1eb}
+  .privacy-note a{color:#31597d;text-decoration:underline;text-underline-offset:3px}
   @media(max-width:700px){.admin-access{padding-block:42px 60px}.access-card{padding:26px 22px;border-radius:12px}}
 </style>

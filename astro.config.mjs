@@ -9,7 +9,7 @@ export default defineConfig({
   base: process.env.PUBLIC_SITE_BASE_PATH || '/',
   output: 'static',
   devToolbar: { enabled: false },
-  integrations: [sitemap({ filter: page => !new URL(page).pathname.match(/\/admin(?:\/|$)/) })],
+  integrations: [sitemap({ filter: page => !new URL(page).pathname.match(/\/(?:admin|privacidad-acceso)(?:\/|$)/) })],
   vite: { optimizeDeps: { include: ['@google/model-viewer'] } },
   trailingSlash: 'always',
 });

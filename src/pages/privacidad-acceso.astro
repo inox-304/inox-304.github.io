@@ -1,0 +1,71 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { withBase } from '../lib/paths';
+---
+<Layout title="Privacidad del acceso administrativo" description="Uso de datos y permisos de Google en el panel administrativo de INOX 304." noindex>
+  <section class="privacy-page shell">
+    <a class="back-link" href={withBase('/admin/')}>← Volver al acceso administrativo</a>
+    <span class="eyebrow">INOX 304 / ACCESO ADMINISTRATIVO</span>
+    <h1>Privacidad de tu acceso.</h1>
+    <p class="intro">Cómo utiliza el panel los datos de sus cuentas autorizadas y las conexiones con Google.</p>
+    <article class="privacy-card">
+      <p class="updated">Actualizado el 23 de octubre de 2026</p>
+      <section aria-labelledby="scope-title">
+        <h2 id="scope-title">Para qué sirve el panel</h2>
+        <p>INOX 304 utiliza este espacio privado para administrar su catálogo, imágenes, fichas técnicas y archivos 3D, y consultar el inventario y los consumos de fabricación. El propietario decide qué cuentas pueden entrar y qué funciones puede utilizar cada una.</p>
+        <p>Este aviso se refiere al acceso administrativo y sus conexiones con Google. La disponibilidad por Internet requiere publicar el panel en un servidor; esta página informativa no activa el servicio.</p>
+      </section>
+      <section aria-labelledby="gmail-title">
+        <h2 id="gmail-title">Google: envío de códigos de seguridad</h2>
+        <p>La persona que administra el correo remitente puede autorizar a INOX 304 para enviar mensajes mediante Gmail. La conexión OAuth solicita únicamente el permiso <code>gmail.send</code>. El servidor lo utiliza para enviar códigos de inicio de sesión y de confirmación de operaciones de seguridad a las cuentas autorizadas del panel.</p>
+        <p>Esta conexión no solicita lectura de la bandeja de entrada, contactos ni archivos de Drive. Gmail recibe el remitente, el destinatario y el contenido del mensaje para realizar el envío. Autorizar el remitente no crea una cuenta administrativa ni concede acceso al catálogo o al inventario.</p>
+        <p>Las credenciales de la conexión se conservan en la configuración privada del servidor. No se incluyen en las páginas públicas ni se entregan al navegador de los visitantes.</p>
+      </section>
+      <section aria-labelledby="sheets-title">
+        <h2 id="sheets-title">Google Sheets: consulta del inventario</h2>
+        <p>El inventario utiliza una conexión separada de solo lectura con la hoja que INOX 304 ha compartido expresamente con el servidor. Consulta artículos, movimientos, recetas de fabricación y costos para mostrar existencias, análisis y gráficos dentro del panel.</p>
+        <p>El servidor conserva la última copia válida de esas tablas para mantener la consulta cuando una actualización falla. Esa copia y los costos internos requieren acceso autorizado; no se publican en el catálogo. Esta conexión no modifica la hoja. Los permisos para editarla se administran por separado mediante las opciones de compartir de Google Sheets.</p>
+      </section>
+      <section aria-labelledby="accounts-title">
+        <h2 id="accounts-title">Cuentas, sesiones y verificación</h2>
+        <p>El panel conserva el correo y los permisos de cada cuenta, registros de sesión y eventos de seguridad y cambios administrativos. Guarda las contraseñas mediante valores derivados de verificación (<em>hashes</em>), no como contraseñas legibles. Los códigos de correo tienen vencimiento y un solo uso; en la base se guarda su valor de verificación, no el código original.</p>
+        <p>Cuando se registra una llave de acceso, el panel conserva su identificador y clave pública para verificarla. No recibe el PIN del dispositivo ni sus datos biométricos. La inscripción de llaves requiere que la función esté habilitada en el dominio del panel y que la persona complete la confirmación en su dispositivo.</p>
+        <p>El navegador utiliza una cookie de sesión para mantener el acceso y una protección para validar las solicitudes de cambio. Los permisos del panel y las autorizaciones de Google son independientes.</p>
+      </section>
+      <section aria-labelledby="hosting-title">
+        <h2 id="hosting-title">Dónde se procesa la información</h2>
+        <p>Google procesa el envío de correo y las consultas a la hoja. Para el alojamiento externo del panel se ha preparado Render para ejecutar la aplicación y Neon para conservar la base de datos y los archivos privados. El traslado a esos servicios se realiza como parte de la publicación del panel; una instalación local sigue utilizando los datos guardados en su equipo.</p>
+        <p>El acceso al panel se limita a las cuentas autorizadas. Los archivos de un producto solo se entregan públicamente cuando están vinculados a un producto activo y publicado; los borradores se revisan desde el acceso privado.</p>
+      </section>
+      <section aria-labelledby="control-title">
+        <h2 id="control-title">Cómo retirar un acceso</h2>
+        <p>El titular del correo remitente puede quitar la conexión de INOX 304 desde las conexiones con terceros de su Cuenta de Google. Al revocar ese permiso, el servidor deja de poder realizar nuevos envíos mediante esa autorización. Puedes consultar las <a href="https://support.google.com/accounts/answer/13533235?hl=es" target="_blank" rel="noopener noreferrer">instrucciones de Google para quitar una conexión</a>.</p>
+        <p>Para detener futuras lecturas del inventario, el propietario de la hoja puede retirar el permiso de lectura de la cuenta de servicio desde Google Sheets. Para retirar el acceso a la administración o revocar una llave, el propietario utiliza la gestión de cuentas y llaves del panel.</p>
+        <p>Revocar una conexión o desactivar una cuenta no borra automáticamente los registros, las copias de inventario ni los respaldos ya existentes. Para consultar qué información se conserva o solicitar su revisión, corrección o eliminación, contacta con INOX 304.</p>
+      </section>
+      <section class="contact-section" aria-labelledby="contact-title">
+        <h2 id="contact-title">Contacto</h2>
+        <p>Consultas sobre el acceso administrativo y el uso de sus datos: <a href="mailto:inoxweb304@gmail.com">inoxweb304@gmail.com</a>.</p>
+        <p class="contact-note">No envíes contraseñas, códigos de verificación ni claves privadas por correo.</p>
+      </section>
+    </article>
+  </section>
+</Layout>
+<style>
+  .privacy-page{max-width:960px;padding-block:48px 86px}
+  .back-link{display:inline-block;margin-bottom:34px;color:#c3d4e7;font-size:13px;text-decoration:none}
+  .back-link:hover{text-decoration:underline}
+  .eyebrow{display:block;color:#b6c8e0}
+  h1{font-size:clamp(34px,5vw,52px);line-height:1.1;letter-spacing:-.04em;margin:20px 0 14px}
+  .intro{max-width:660px;color:#c3d4e7;font-size:16px;line-height:1.75;margin:0 0 30px}
+  .privacy-card{background:#f3f6fa;color:#192b40;border:1px solid #d9e1eb;border-radius:18px;padding:38px 42px}
+  .updated{color:#697a8c;font-size:12px;margin:0 0 28px}
+  .privacy-card section+section{border-top:1px solid #dce4ec;margin-top:28px;padding-top:28px}
+  h2{font-size:21px;line-height:1.35;letter-spacing:-.02em;margin:0 0 12px}
+  .privacy-card section p{font-size:14px;line-height:1.85;color:#485d72;margin:12px 0 0}
+  .privacy-card a{color:#174e7a;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+  .privacy-card code{font-size:13px;background:#e7edf4;padding:2px 5px;border-radius:4px}
+  .privacy-card .contact-note{font-size:12px;color:#687c90}
+  a:focus-visible{outline:3px solid #7eb2d9;outline-offset:5px;border-radius:3px}
+  @media(max-width:700px){.privacy-page{padding-block:30px 56px}.back-link{margin-bottom:26px}.privacy-card{padding:28px 22px;border-radius:12px}h2{font-size:19px}}
+</style>
