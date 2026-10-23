@@ -26,6 +26,9 @@
 .product-card-price { margin: 0; font-size: 1rem; font-weight: 600; color: var(--ink); }
 .product-card-quote { min-height: 44px; padding: 10px 18px; gap: 22px; font-size: .75rem; }
 .product-card [hidden] { display: none !important; }
+.product-card.product-photo-white .product-card-image { background: #fff; border: 1px solid #e0e5eb; }
+.product-card.product-photo-white:hover .product-card-image { background: #fff; }
+.product-card.product-photo-white .product-card-image img { mix-blend-mode: normal; filter: none; }
 @media (max-width: 900px) { .related-products .product-grid > .product-card:nth-child(3) { display: none; } }
 @media (max-width: 600px) {
   .product-card-commerce { margin-top: 12px; }

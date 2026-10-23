@@ -2,7 +2,7 @@ import { safeImage, safeModel, safePreviewAsset, type CmsProduct } from '../lib/
 import { withBase } from '../lib/paths';
 import type { ModelViewerElement } from '@google/model-viewer';
 
-type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
+type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'supplyType' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
 let viewerModule: Promise<typeof import('@google/model-viewer')> | undefined;
 let closeActiveViewer: (() => void) | undefined;
 let privatePreview = false;
@@ -158,6 +158,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   }
   function update(next: MediaProduct | null) {
     resetViewer(); message(); product = next; selectedPhoto = 0;
+    root.classList.toggle('product-photo-white', product?.supplyType === 'distributed');
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
     sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
     const variantSelect = document.querySelector<HTMLSelectElement>('[data-product-variant]');

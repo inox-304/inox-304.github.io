@@ -5,18 +5,20 @@ import type { Product } from '../data/products';
 interface Props { product: Product; category: string }
 const { product, category } = Astro.props;
 const stage = getProductStage(product.image);
+const whitePhoto = product.supplyType === 'distributed';
+const studio = stage.isCutout && !whitePhoto;
 ---
-<div class:list={['product-detail-photo', { 'product-studio': stage.isCutout }]} data-stage-shape={stage.shape} style={stage.style}>
-  <div class="studio-backdrop" aria-hidden="true" hidden={!stage.isCutout}>
+<div class:list={['product-detail-photo', { 'product-studio': studio, 'product-photo-white': whitePhoto }]} data-stage-shape={stage.shape} style={stage.style}>
+  <div class="studio-backdrop" aria-hidden="true" hidden={!studio}>
     <img src={withBase('/images/brand/stone-texture.webp')} alt="" width="1672" height="941"/>
     <span class="studio-spotlight"></span>
     <span class="studio-floor-light"></span>
   </div>
   <span class="eyebrow" data-product-id-label>INOX 304 / {product.id}</span>
-  <div class="studio-pedestal" aria-hidden="true" hidden={!stage.isCutout}>
+  <div class="studio-pedestal" aria-hidden="true" hidden={!studio}>
     <div class="pedestal-surface"><img src={withBase('/images/brand/marble-plinth.webp')} alt="" width="1916" height="821"/></div>
   </div>
-  <span class="equipment-shadow" aria-hidden="true" hidden={!stage.isCutout}></span>
+  <span class="equipment-shadow" aria-hidden="true" hidden={!studio}></span>
   <div class="equipment-crop">
     <img class="equipment-image" src={withBase(product.image)} alt={product.name} width={stage.width} height={stage.height} fetchpriority="high"/>
   </div>
@@ -24,6 +26,19 @@ const stage = getProductStage(product.image);
 </div>
 <style>
   .equipment-crop { display: contents; }
+  .product-detail-photo.product-photo-white {
+    background: #fff; aspect-ratio: 1; min-height: 0; width: 100%; overflow: hidden;
+    display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 12px; padding: clamp(18px, 4.5%, 30px);
+    border: 1px solid #e0e5eb;
+  }
+  .product-photo-white .equipment-crop { display: block; min-height: 0; height: 100%; }
+  .product-photo-white .equipment-image {
+    width: 100%; height: 100%; max-height: none; aspect-ratio: auto;
+    object-fit: contain; padding: 0; mix-blend-mode: normal; filter: none;
+  }
+  .product-photo-white > .eyebrow, .product-photo-white > .photo-caption { color: #536372; }
+  .product-photo-white > .photo-caption { border-color: #e0e5eb; }
   .product-detail-photo.product-studio {
     --pedestal-height: 20%;
     --pedestal-bottom: 14%;

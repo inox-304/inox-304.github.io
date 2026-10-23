@@ -6,9 +6,9 @@ import '../styles/product-media.css';
 
 interface Props { product: Product & Partial<CmsProduct>; category: string }
 const { product, category } = Astro.props;
-const media = { id: product.id, name: product.name, image: product.image, gallery: product.gallery || [], model3d: product.model3d || '', modelPoster: product.modelPoster || '', doorAnimation: product.doorAnimation || '' };
+const media = { id: product.id, name: product.name, supplyType: product.supplyType, image: product.image, gallery: product.gallery || [], model3d: product.model3d || '', modelPoster: product.modelPoster || '', doorAnimation: product.doorAnimation || '' };
 ---
-<div class="product-media" data-product-media data-initial-product={JSON.stringify(media)}>
+<div class:list={['product-media', {'product-photo-white': product.supplyType === 'distributed'}]} data-product-media data-initial-product={JSON.stringify(media)}>
   <div class="product-media-frame">
     <ProductStage product={product} category={category}/>
     <div class="product-gallery-photo" data-gallery-photo hidden>
