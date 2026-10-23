@@ -26,12 +26,15 @@ Ejecucion desde la raiz, con el Python que tiene requests instalado:
 
 python scripts/authorize-gmail.py --client-file .work/gmail-oauth/desktop.json --sender REMITENTE --output .work/gmail-oauth/autorizacion.json
 
-El proceso imprime la URL oficial de consentimiento y espera hasta cinco
+El proceso imprime la URL oficial de consentimiento y espera hasta quince
 minutos. Solo escucha en 127.0.0.1 y elige un puerto libre. El propietario abre
 la URL y elige la cuenta remitente: login_hint facilita la seleccion, pero no
 demuestra su identidad. Como gmail.send no permite leer el perfil, el archivo
 indica expresamente que la identidad no se ha comprobado mediante la API.
 No ampliar permisos solo para averiguar la identidad.
+Esta espera permite completar el segundo factor de Google. No modifica la
+caducidad de los codigos de acceso al panel ni la vigencia que Google aplica
+a sus codigos OAuth. Un proceso ya iniciado conserva su plazo original.
 
 La respuesta debe incluir exactamente gmail.send y un refresh token. El helper
 valida state mediante comparacion constante y PKCE S256, rechaza rutas o scopes

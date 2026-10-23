@@ -22,7 +22,7 @@ AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 CALLBACK_PATH = "/oauth/callback"
-WAIT_SECONDS = 300
+WAIT_SECONDS = 900
 
 
 class AuthorizationError(Exception):
@@ -269,7 +269,7 @@ def run(args):
     state, verifier = secrets.token_urlsafe(32), secrets.token_urlsafe(64)
     with CallbackServer(state) as server:
         redirect_uri = f"http://{server.expected_host}{CALLBACK_PATH}"
-        print("El propietario debe abrir esta URL y consentir personalmente en Google. Tiempo: 5 minutos.", flush=True)
+        print(f"El propietario debe abrir esta URL y consentir personalmente en Google. Tiempo: {WAIT_SECONDS // 60} minutos.", flush=True)
         print(authorization_url(client["client_id"], redirect_uri, state, verifier, sender), flush=True)
         deadline = time.monotonic() + WAIT_SECONDS
         while server.result is None and time.monotonic() < deadline:

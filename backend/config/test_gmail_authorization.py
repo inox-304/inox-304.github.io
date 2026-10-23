@@ -170,7 +170,7 @@ class GmailAuthorizationTests(SimpleTestCase):
                 self.assertNotIn("SYNTHETIC_SECRET", contents)
                 self.assertEqual(json.loads(contents)["type"], "inox_gmail_oauth_dpapi_v1")
 
-    def test_five_minute_timeout_does_not_exchange_or_write_credentials(self):
+    def test_fifteen_minute_timeout_does_not_exchange_or_write_credentials(self):
         fake_server = MagicMock()
         fake_server.expected_host = "127.0.0.1:1234"
         fake_server.result = None
@@ -178,13 +178,13 @@ class GmailAuthorizationTests(SimpleTestCase):
              patch.object(self.module, "read_client", return_value=self.client), \
              patch.object(self.module, "restrict_directory"), \
              patch.object(self.module, "CallbackServer") as constructor, \
-             patch.object(self.module.time, "monotonic", side_effect=[0, 301]), \
+             patch.object(self.module.time, "monotonic", side_effect=[0, 901]), \
              patch.object(self.module, "exchange_code") as exchange, \
              patch.object(self.module, "save_credentials") as save, \
              redirect_stdout(StringIO()):
             constructor.return_value.__enter__.return_value = fake_server
             with self.assertRaises(self.module.AuthorizationError):
                 self.module.run(SimpleNamespace(output="unused", client_file="unused", sender="owner@example.com"))
-        self.assertEqual(self.module.WAIT_SECONDS, 300)
+        self.assertEqual(self.module.WAIT_SECONDS, 900)
         exchange.assert_not_called()
         save.assert_not_called()
