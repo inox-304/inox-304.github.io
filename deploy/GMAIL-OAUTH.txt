@@ -1,0 +1,60 @@
+Autorizacion privada del correo HTTPS de INOX
+
+El helper scripts/authorize-gmail.py solicita exclusivamente gmail.send. El
+propietario debe elegir y consentir personalmente la cuenta remitente en Google.
+No lee la bandeja, no envia correos, no modifica .env y no publica credenciales.
+
+Preparacion manual en el proyecto Google de INOX:
+1. Habilitar Gmail API y configurar la pantalla de consentimiento.
+2. Crear un cliente OAuth de tipo Desktop y descargar su JSON en una carpeta
+   privada ignorada por Git. El cliente es exclusivo de INOX.
+3. Para una conexion permanente, comprobar que el consentimiento este en
+   Production. Google emite refresh tokens de siete dias para aplicaciones
+   externas en Testing, salvo permisos basicos de identidad; gmail.send no
+   pertenece a esa excepcion. Production evita esa caducidad propia de Testing,
+   pero no impide revocacion del usuario ni otras causas de invalidacion.
+
+Referencia oficial de caducidad:
+https://developers.google.com/identity/protocols/oauth2#expiration
+
+Ejecucion desde la raiz, con el Python que tiene requests instalado:
+
+python scripts/authorize-gmail.py --client-file .work/gmail-oauth/desktop.json --sender REMITENTE --output .work/gmail-oauth/autorizacion.json
+
+El proceso imprime la URL oficial de consentimiento y espera hasta cinco
+minutos. Solo escucha en 127.0.0.1 y elige un puerto libre. El propietario abre
+la URL y elige la cuenta remitente: login_hint facilita la seleccion, pero no
+demuestra su identidad. Como gmail.send no permite leer el perfil, el archivo
+indica expresamente que la identidad no se ha comprobado mediante la API.
+No ampliar permisos solo para averiguar la identidad.
+
+La respuesta debe incluir exactamente gmail.send y un refresh token. El helper
+valida state mediante comparacion constante y PKCE S256, rechaza rutas o scopes
+inesperados y no sigue redirecciones del endpoint de tokens. Los mensajes de
+error nunca imprimen respuestas de Google, codigos, tokens ni secretos. No usar
+capturas o registros de la URL callback, que contiene un codigo temporal.
+
+El archivo nuevo se guarda exclusivamente en una subcarpeta de .work. En Windows
+su contenido queda cifrado mediante DPAPI para el usuario Windows actual; no
+se guardan tokens legibles aunque la carpeta tenga permisos heredados. En POSIX
+usa directorio 0700 y archivo 0600. Nunca sobrescribe una credencial existente.
+Solo guarda client_id, client_secret, refresh_token y metadatos necesarios; no
+conserva el access token temporal. La funcion read_credentials(ruta) del helper
+descifra y devuelve los datos solamente en memoria, desde ese mismo usuario
+Windows. No imprimir su resultado; el operador debe transferir los valores por
+el canal privado del proveedor. El archivo cifrado no funciona directamente
+como JSON de Google ni se descifra en Linux. El operador trasladara esos valores a
+GMAIL_API_CLIENT_ID, GMAIL_API_CLIENT_SECRET y GMAIL_API_REFRESH_TOKEN. Configurar
+GMAIL_API_SENDER y DEFAULT_FROM_EMAIL con la cuenta consentida. No leer ni pegar
+el archivo completo en mensajes, capturas, commits o registros de construccion.
+El proceso necesita el perfil Windows del usuario para usar DPAPI. Comprueba
+ese acceso antes de mostrar el consentimiento; un sandbox sin acceso al perfil
+no puede realizar esta autorizacion, aunque los tests de protocolo funcionen.
+
+El helper no marca el correo como operativo: todavia hay que comprobar la
+entrega real desde un inicio de sesion autorizado en el servidor definitivo.
+Evitar repetir consentimientos sin necesidad: Google limita refresh tokens y
+la emision de muchos puede invalidar otros anteriores.
+
+Flujo Desktop, loopback y PKCE oficiales:
+https://developers.google.com/identity/protocols/oauth2/native-app

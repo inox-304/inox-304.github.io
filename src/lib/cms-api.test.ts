@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { apiProductRoute, catalogSlug, emptyCmsData, parsePublicCatalog } from './cms-api.ts';
-import { formatAvailability, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet } from './cms.ts';
+import { formatAvailability, productOriginLabel, productQuoteNote, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet } from './cms.ts';
 import { getProductStage } from './product-stage.ts';
 
 function catalog() {
@@ -26,6 +26,22 @@ test('accepts database media, final server prices, variants and live slug routes
 
 test('allows an empty catalog without reviving contacts or products', () => {
   assert.deepEqual(parsePublicCatalog(emptyCmsData()), emptyCmsData());
+});
+
+test('keeps distributor identity without exposing internal source or inventing a 3D model', () => {
+  const input = catalog();
+  Object.assign(input.products[0], { supplyType: 'distributed', brand: 'ILUMI', supplierModel: 'B-20L', equipmentFamily: 'batidoras', capacity: 'Bowl 20 L', model3d: '', source_url: 'https://ilumiperu.com/products/example', internal_notes: 'Privado' });
+  const product = parsePublicCatalog(input).products[0];
+  assert.equal(product.supplyType, 'distributed');
+  assert.equal(product.supplierModel, 'B-20L');
+  assert.equal(product.model3d, '');
+  assert.equal(productOriginLabel(product), 'ILUMI · B-20L · Bowl 20 L');
+  assert.match(productQuoteNote(product), /medidas y diseño corresponden al modelo/);
+  assert.equal(Object.hasOwn(product, 'source_url'), false);
+  assert.equal(Object.hasOwn(product, 'internal_notes'), false);
+  Object.assign(input.products[0], { supplyType: 'invented' });
+  assert.throws(() => parsePublicCatalog(input));
+  assert.equal(productOriginLabel({}), '');
 });
 
 test('validates variant models and PDFs while excluding manufacturing and private costs', () => {

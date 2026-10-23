@@ -1,4 +1,4 @@
-import { categoryNames, cmsProductRoute, contactUrl, formatAvailability, formatProductPrice, resolveContact, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
+import { categoryNames, cmsProductRoute, contactUrl, formatAvailability, formatProductPrice, productOriginLabel, productQuoteNote, resolveContact, visibleCmsProducts, type CmsData, type CmsProduct } from '../lib/cms';
 import { apiProductRoute, catalogSlug, emptyCmsData, parsePublicCatalog } from '../lib/cms-api';
 import { withBase } from '../lib/paths';
 import { getProductStage } from '../lib/product-stage';
@@ -92,6 +92,8 @@ function updateDetail(data: CmsData) {
   if (grid) grid.hidden = false;
   setText('[data-product-name]', product.name, detail);
   setText('[data-product-summary]', product.summary, detail);
+  const origin = detail.querySelector<HTMLElement>('[data-product-origin]');
+  if (origin) { origin.textContent = productOriginLabel(product); origin.hidden = !origin.textContent; }
   setText('[data-product-category]', category(product), detail);
   setText('[data-product-id-label]', `${data.settings.empresa} / ${product.id}`, detail);
   setText('[data-product-caption]', category(product).toUpperCase(), detail);
@@ -138,7 +140,7 @@ function updateDetail(data: CmsData) {
       else anchor.removeAttribute('href');
     });
   };
-  const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? 'Consulta medidas, disponibilidad y opciones para tu negocio.' : 'Por el momento no hay un contacto de cotización disponible.';
+  const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? productQuoteNote(product) : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);
   const styleQuote = (amount: string) => detail.querySelectorAll<HTMLElement>('[data-product-quote]').forEach(anchor => {
     anchor.classList.toggle('button-chrome', !amount);
@@ -152,6 +154,9 @@ function updateDetail(data: CmsData) {
   const availability = detail.querySelector<HTMLElement>('[data-product-availability]');
   if (availability) { availability.textContent = formatAvailability(product.availability); availability.hidden = !availability.textContent; }
   if (variants) {
+    const variantLabel = product.supplyType === 'distributed' ? 'Opción del fabricante' : 'Variación';
+    setText('[data-product-variant-label]', variantLabel, detail);
+    variants.setAttribute('aria-label', variantLabel);
     const selected = variants.dataset.productId === product.id ? variants.value : '';
     variants.dataset.productId = product.id;
     const options = [new Option('Configuración principal', ''), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];

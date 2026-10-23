@@ -96,10 +96,10 @@ class ProductAdmin(AuditedAdmin):
     change_form_template = "admin/catalog/product/change_form.html"
     change_list_template = "admin/catalog/product/change_list.html"
     inlines = (ProductVariantInline, ProductAdditionalInline, ProductImageInline)
-    list_display = ("code", "name", "category", "is_published", "is_active", "featured", "order", "availability", "public_price", "preview_link")
+    list_display = ("code", "name", "category", "supply_type", "brand", "equipment_family", "is_published", "is_active", "featured", "order", "availability", "public_price", "preview_link")
     list_editable = ("is_published", "is_active", "featured", "order", "availability")
-    list_filter = ("category", "is_published", "is_active", "featured", "availability", "charge_unit")
-    search_fields = ("code", "name", "description")
+    list_filter = ("supply_type", "brand", "equipment_family", "category", "is_published", "is_active", "featured", "availability", "charge_unit")
+    search_fields = ("code", "name", "description", "brand", "supplier_model", "equipment_family", "capacity")
     autocomplete_fields = ("contact", "image_asset", "technical_asset", "model_asset", "poster_asset")
     readonly_fields = ("public_price", "created_at", "updated_at", "preview_link", "image_current", "technical_current", "model_current", "poster_current")
     save_on_top = False
@@ -107,6 +107,7 @@ class ProductAdmin(AuditedAdmin):
     actions = ("duplicate_products", "hide_products", "publish_products")
     fieldsets = (
         ("Datos del equipo", {"description": "Empieza por el nombre y la línea. Los archivos y las variaciones pueden completarse después.", "fields": ("name", "category", "description", "characteristics"), "classes": ("inox-step", "inox-step-details")}),
+        ("Origen, marca y capacidad", {"description": "En productos distribuidos conserva las capacidades y opciones oficiales del fabricante. Cambiar de modelo no significa fabricar a medida. La foto, el PDF y el 3D pueden añadirse después.", "fields": ("supply_type", "brand", "supplier_model", "equipment_family", "capacity", "source_url"), "classes": ("inox-step", "inox-step-details")}),
         ("Identificadores", {"description": "Se crean automáticamente en un equipo nuevo y se conservan al editarlo.", "fields": ("code", "slug"), "classes": ("collapse", "inox-step", "inox-step-details")}),
         ("Foto principal", {"fields": ("image_upload", "image_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Ficha técnica", {"fields": ("technical_upload", "technical_current"), "classes": ("inox-step", "inox-step-media")}),

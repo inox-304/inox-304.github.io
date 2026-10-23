@@ -15,16 +15,12 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from security.models import EmailDevice, EnrollmentPermission, RecoveryDevice, SecurityState
 from security.services import audit, revoke_sessions
-from security.smtp_backend import SUPPORTED_SMTP_BACKENDS
+from security.mail_config import mail_transport_ready
 
 
 def mail_configuration_ready():
-    """Inspect configuration only; SMTP reachability/delivery are not tested."""
-    return bool(settings.SECURITY_EMAIL_ENABLED
-                and settings.EMAIL_BACKEND in SUPPORTED_SMTP_BACKENDS
-                and settings.EMAIL_HOST and settings.DEFAULT_FROM_EMAIL
-                and (settings.EMAIL_USE_TLS or settings.EMAIL_USE_SSL)
-                and bool(settings.EMAIL_HOST_USER) == bool(settings.EMAIL_HOST_PASSWORD))
+    """Inspect configuration only; reachability and delivery are not tested."""
+    return bool(settings.SECURITY_EMAIL_ENABLED and mail_transport_ready(settings))
 
 
 def has_confirmed_device(user):

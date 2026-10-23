@@ -5,7 +5,19 @@ export type CmsContact = { id: string; name: string; whatsapp: string; phone: st
 export type CmsVariant = { id: string; name: string; price?: number; availability: string; model3d?: string; technicalSheet?: string; materialVariant?: string; doorAnimation?: string };
 export type CmsAdditionalCharge = { id: string; name: string; price?: number };
 export type CmsAdditional = { id: string; name: string; description: string; price: number | null; chargeUnit: 'unit' | 'm' | 'm2' | 'custom'; unitLabel: string };
-export type CmsProduct = { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; doorAnimation?: string; gallery: string[]; chargeUnit?: string; unitLabel?: string; availability?: string; variants?: CmsVariant[]; additionalCharges?: CmsAdditionalCharge[]; additionals?: CmsAdditional[] };
+export type ProductOrigin = { supplyType?: '' | 'manufactured' | 'distributed'; brand?: string; supplierModel?: string; equipmentFamily?: string; capacity?: string };
+export type CmsProduct = ProductOrigin & { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; doorAnimation?: string; gallery: string[]; chargeUnit?: string; unitLabel?: string; availability?: string; variants?: CmsVariant[]; additionalCharges?: CmsAdditionalCharge[]; additionals?: CmsAdditional[] };
+
+export function productOriginLabel(product: ProductOrigin): string {
+  if (product.supplyType === 'distributed') return [product.brand, product.supplierModel, product.capacity].filter(Boolean).join(' · ') || 'Equipo de distribución';
+  return product.supplyType === 'manufactured' ? 'Fabricación propia INOX 304' : '';
+}
+
+export function productQuoteNote(product: ProductOrigin): string {
+  return product.supplyType === 'distributed'
+    ? 'Equipo de distribución. Consulta disponibilidad y capacidades del fabricante; sus medidas y diseño corresponden al modelo elegido.'
+    : 'Consulta medidas, disponibilidad y opciones para tu negocio.';
+}
 export type CmsData = { products: CmsProduct[]; contacts: CmsContact[]; settings: Record<string, string> };
 export const categoryNames: Record<string, string> = Object.fromEntries(categories.map(category => [category.id, category.name]));
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();

@@ -1,0 +1,92 @@
+INOX 304 - despliegue en Render Free
+
+El archivo render.yaml define exclusivamente un servicio web Docker Free. No
+crea una base Render de prueba (caduca a los 30 dias), discos, trabajos ni
+servicios de pago. Los despliegues automaticos quedan desactivados para poder
+verificar cambios de esquema y transferencias antes de arrancar una version.
+La creacion del Blueprint inicia un primer despliegue: configurar y preparar
+las dependencias persistentes ANTES de crearlo. No declarar alojado el panel
+hasta verificar el servicio publico, sus datos y el acceso real.
+
+Requisitos antes del primer despliegue
+
+1. PostgreSQL externo persistente y TLS. Migrar el esquema vacio de destino
+   con el mismo codigo que se publicara, mediante una operacion explicita del
+   operador. Render Free no incluye pre-deploy commands ni shell. Esta tarea
+   puede ejecutarse desde una consola local contra el destino configurado.
+2. Almacenamiento privado de objetos para archivos. El disco del contenedor
+   es efimero: no debe ser la unica copia de modelos, fotos o fichas. La copia
+   del inventario y su control de sincronizacion deben persistir en la base.
+3. Transporte de correo HTTPS. Render Free bloquea SMTP en 25, 465 y 587.
+   Debe comprobarse la entrega antes de depender del correo para entrar.
+4. Restauracion verificada de la instalacion existente, nunca seed ni nuevas
+   cuentas sustitutivas. Conservar su clave Django efectiva, cuentas, hashes,
+   segundo factor, permisos, auditoria, catalogo y medios. La credencial de
+   Google Sheets se traslada por separado y conserva acceso de solo lectura.
+
+Variables y secretos
+
+Introducir en Render los valores solicitados por sync:false, fuera de Git.
+DJANGO_SECRET_KEY debe ser el secreto efectivo de esta instalacion existente;
+no generar otro al trasladarla. DATABASE_URL usa PostgreSQL con TLS. Configurar
+DJANGO_ALLOWED_HOSTS con el hostname exacto asignado al servicio y PUBLIC_SITE_URL
+con su origen https://. El propietario del panel se define con
+SECURITY_OWNER_USERNAME, independientemente de los miembros de Cloudflare.
+El Blueprint configura INOX_MEDIA_STORAGE=s3 y solicita INOX_S3_BUCKET,
+INOX_S3_ENDPOINT_URL, INOX_S3_REGION, INOX_S3_ACCESS_KEY_ID e
+INOX_S3_SECRET_ACCESS_KEY. El bucket debe ser privado. La copia del inventario
+usa INOX_INVENTORY_PERSISTENCE=database. La sincronizacion con Google requiere
+ademas INOX_INVENTORY_REFRESH_ENABLED=1, INOX_INVENTORY_SHEET_ID y la credencial
+de lectura existente mediante GOOGLE_APPLICATION_CREDENTIALS en una ruta
+privada valida del contenedor; no confundirla con el OAuth del correo.
+
+El transporte HTTPS usa EMAIL_BACKEND=security.gmail_backend.EmailBackend,
+GMAIL_API_CLIENT_ID, GMAIL_API_CLIENT_SECRET, GMAIL_API_REFRESH_TOKEN,
+GMAIL_API_SENDER y DEFAULT_FROM_EMAIL. El propietario debe autorizar el permiso
+gmail.send para el remitente indicado. No reutilizar contrasenas SMTP como
+refresh tokens. No se incluye ningun valor real de estas credenciales.
+No declarar secretos como ARG ni copiarlos en ninguna capa del Dockerfile.
+Si se utilizan secret files, excluir sus nombres del contexto de Docker.
+
+TRUST_HTTPS_PROXY=1 reconoce el HTTPS terminado por el proxy de la plataforma.
+TRUST_REVERSE_PROXY=0 mantiene deshabilitada la cabecera privada de IP de Caddy.
+No habilitar confianza general en X-Forwarded-For o CF-Connecting-IP: el acceso
+directo al servicio permitiria falsear esos valores. Los limites por cuenta
+siguen vigentes; sin un mecanismo verificado de IP, solicitudes del mismo
+proxy pueden compartir el limite de IP.
+
+Arranque
+
+El CMD de Docker ejecuta deploy/start-web.py. Este valida PORT,
+WEB_CONCURRENCY y GUNICORN_TIMEOUT, genera los estaticos y reemplaza su proceso
+por Gunicorn. No ejecuta migraciones, seed, restauraciones ni preparadores de
+cuentas. Usa un worker por defecto para la memoria del plan Free; PORT lo
+asigna Render (el Blueprint declara 10000). /health/ comprueba conexion a la
+base; no demuestra que correo, medios o Sheets funcionen.
+
+Verificacion antes del cambio publico
+
+- Comprobar migraciones, restauracion y recuentos contra la copia original.
+- Comprobar check --deploy, HTTPS, hosts y permisos anonimos de /admin/.
+- Comprobar archivos privados, medios publicados y una subida de prueba
+  autorizada que siga disponible despues de reiniciar el contenedor.
+- Comprobar lectura real de Sheets y conservacion de la ultima copia valida.
+- Entrar con la cuenta existente y confirmar personalmente el segundo factor.
+- Solo con el origen definitivo verificado configurar
+  SECURITY_PASSKEYS_ENABLED=1, SECURITY_PASSKEY_RP_ID=hostname-exacto y
+  SECURITY_PASSKEY_ORIGIN=https://hostname-exacto. Cada usuario debe registrar
+  su propia llave. Cambiar despues el dominio requiere registrar nuevas llaves.
+- Cambiar el enlace publico al panel solo despues de esas verificaciones.
+
+Limites del plan gratuito
+
+El servicio funciona sin esta PC, pero puede dormir tras 15 minutos sin trafico
+y tardar aproximadamente un minuto en despertar. Tiene 512 MB, cuotas de uso,
+reinicios y posibles suspensiones. Render no recomienda Free para produccion.
+No mantenerlo despierto con sondeos artificiales ni prometer disponibilidad
+continua. No agregar tarjeta, recursos o planes de pago sin autorizacion.
+
+Referencias oficiales comprobadas el 22/10/2026:
+https://render.com/docs/blueprint-spec
+https://render.com/docs/docker
+https://render.com/docs/free

@@ -2,9 +2,10 @@
 // Prices and unspecified warranty terms are intentionally excluded.
 
 import type { ProductCategory } from './categories.ts';
+import type { ProductOrigin } from '../lib/cms.ts';
 export { categories, type ProductCategory } from './categories.ts';
 
-export type Product = {
+export type Product = ProductOrigin & {
   id: string;
   slug: string;
   name: string;

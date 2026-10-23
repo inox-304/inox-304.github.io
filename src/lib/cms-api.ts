@@ -72,8 +72,12 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
       return { id: identifier(additional.id), name, description: string(additional.description ?? '', 2000), price: amount(additional.price) ?? null, chargeUnit: chargeUnit as CmsAdditional['chargeUnit'], unitLabel };
     });
     unique(variants.map(item => item.id)); unique(additionalCharges.map(item => item.id)); unique(additionals.map(item => item.id));
+    const supplyType = string(item.supplyType ?? '', 16) as CmsProduct['supplyType'];
+    if (!['', 'manufactured', 'distributed'].includes(supplyType || '')) throw new Error('Invalid product supply type');
     return {
       id: identifier(item.id), slug, name: string(item.name, 250), category, summary: string(item.summary, 10000),
+      supplyType, brand: string(item.brand ?? '', 120), supplierModel: string(item.supplierModel ?? '', 120),
+      equipmentFamily: string(item.equipmentFamily ?? '', 32), capacity: string(item.capacity ?? '', 180),
       features: list(item.features, 50).map(value => string(value)), image: asset(item.image, imageUrl, true),
       visible: true, featured: boolean(item.featured), order: item.order,
       contactId: item.contactId ? identifier(item.contactId) : '', price: amount(item.price), currency: item.currency,

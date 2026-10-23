@@ -95,6 +95,20 @@ class MediaAsset(ValidatedModel):
 
 
 class Product(ValidatedModel):
+    class SupplyType(models.TextChoices):
+        UNSPECIFIED = "", "Sin clasificar"
+        MANUFACTURED = "manufactured", "Fabricación propia"
+        DISTRIBUTED = "distributed", "Producto distribuido"
+
+    class EquipmentFamily(models.TextChoices):
+        MIXERS = "amasadoras", "Amasadoras"
+        BEATERS = "batidoras", "Batidoras"
+        VACUUM_PACKERS = "envasadoras-vacio", "Envasadoras al vacío"
+        ORANGE_JUICERS = "extractores-naranja", "Extractores de naranja"
+        SLUSH_MACHINES = "cremoladeras", "Máquinas de cremoladas"
+        ICE_CREAM_MACHINES = "maquinas-helado", "Máquinas de helado"
+        JUICE_DISPENSERS = "dispensadores-jugo", "Dispensadores de jugo"
+
     class Category(models.TextChoices):
         COLD = "linea-fria", "Línea fría"
         HOT = "linea-caliente", "Línea caliente"
@@ -116,6 +130,12 @@ class Product(ValidatedModel):
     slug = models.SlugField("dirección del producto", max_length=150, unique=True)
     name = models.CharField("nombre", max_length=250)
     category = models.CharField("categoría", max_length=30, choices=Category)
+    supply_type = models.CharField("origen del equipo", max_length=16, choices=SupplyType, blank=True, default="", help_text="Fabricación propia: se diseña en el taller. Distribuido: se vende el modelo del fabricante. Los equipos anteriores quedan sin clasificar hasta revisarlos.")
+    brand = models.CharField("marca", max_length=120, blank=True, default="")
+    supplier_model = models.CharField("modelo del fabricante", max_length=120, blank=True, default="", help_text="Conserve la referencia oficial. Es distinta del código interno de INOX.")
+    equipment_family = models.CharField("familia de equipos", max_length=32, choices=EquipmentFamily, blank=True, default="", help_text="Agrupa equipos similares dentro de su línea. Déjelo vacío si no corresponde a estas familias.")
+    capacity = models.CharField("capacidad", max_length=180, blank=True, default="", help_text="Escriba la capacidad y su unidad tal como las confirma el fabricante, por ejemplo litros de recipiente o kg de masa. No son equivalentes.")
+    source_url = models.URLField("fuente del fabricante (privada)", max_length=1000, blank=True, default="", validators=[validate_https], help_text="Enlace HTTPS de la ficha oficial para verificar datos. No se publica en la web.")
     description = models.TextField("descripción", max_length=5000, blank=True)
     characteristics = models.TextField("características", max_length=5000, blank=True, help_text="Una característica por línea.")
     is_active = models.BooleanField("activo", default=True, help_text="Desactive para conservarlo fuera de la web.")
@@ -329,3 +349,16 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.get_operation_display()}: {self.label}"
+
+
+class InventorySyncState(models.Model):
+    """Private singleton; durable Sheets cache and bounded cross-worker lease."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    snapshot = models.JSONField(null=True, blank=True)
+    status = models.JSONField(default=dict)
+    lease_token = models.CharField(max_length=64, blank=True, default="")
+    lease_expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name="inventory_sync_singleton")]

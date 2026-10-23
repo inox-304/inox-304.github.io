@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 LOCATIONS = ("Tienda", "Taller")
 KINDS = ("Materia prima", "Accesorio", "Producto terminado")
@@ -156,7 +157,36 @@ def snapshot_path():
     return Path(settings.DATA_DIR) / "inventory" / "snapshot.json"
 
 
+def inventory_persistence():
+    mode = getattr(settings, "INOX_INVENTORY_PERSISTENCE", "file")
+    if mode not in ("file", "database"):
+        raise ImproperlyConfigured("INOX_INVENTORY_PERSISTENCE must be file or database.")
+    return mode
+
+
+def validate_snapshot(snapshot):
+    """Validate before either persistence backend is allowed to replace a copy."""
+    if not isinstance(snapshot, dict):
+        raise InventoryError("La copia del inventario no tiene un formato válido.")
+    for key in ("inventory", "movements", "recipes", "costs"):
+        rows = snapshot.get(key, [])
+        if not isinstance(rows, list) or any(not isinstance(row, list) for row in rows):
+            raise InventoryError("La copia del inventario no tiene tablas válidas.")
+    try:
+        encoded = json.dumps(snapshot, ensure_ascii=False, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError):
+        raise InventoryError("La copia del inventario no tiene un formato válido.") from None
+    if len(encoded) > 5_000_000:
+        raise InventoryError("La copia del inventario supera el tamaño permitido.")
+    project(snapshot)
+    return snapshot
+
+
 def load_snapshot():
+    if inventory_persistence() == "database":
+        from .models import InventorySyncState
+        snapshot = InventorySyncState.objects.filter(pk=1).values_list("snapshot", flat=True).first()
+        return validate_snapshot(snapshot) if snapshot is not None else None
     path = snapshot_path()
     if not path.exists():
         return None
@@ -169,7 +199,14 @@ def load_snapshot():
 
 
 def save_snapshot(snapshot):
-    project(snapshot)  # A failed refresh must never replace the last valid copy.
+    validate_snapshot(snapshot)  # A failed refresh must never replace the last valid copy.
+    if inventory_persistence() == "database":
+        from .models import InventorySyncState
+        # Explicit imports also invalidate an in-flight refresh of the older copy.
+        InventorySyncState.objects.update_or_create(pk=1, defaults={
+            "snapshot": snapshot, "lease_token": "", "lease_expires_at": None,
+        })
+        return
     path = snapshot_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
@@ -180,6 +217,49 @@ def save_snapshot(snapshot):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def export_inventory_state():
+    """Portable private data only: never export a worker's live lease."""
+    from .inventory_sync import _read_state
+    snapshot = load_snapshot()
+    if snapshot is not None:
+        validate_snapshot(snapshot)
+    return {"snapshot": snapshot, "status": _read_state()}
+
+
+def import_inventory_state(payload, *, only_if_empty=False):
+    """Restore a validated private cache without network access or a live lease."""
+    if not isinstance(payload, dict):
+        raise InventoryError("El respaldo del inventario no tiene un formato válido.")
+    snapshot, status = payload.get("snapshot"), payload.get("status", {})
+    if snapshot is not None:
+        validate_snapshot(snapshot)
+    if not isinstance(status, dict):
+        raise InventoryError("El estado de sincronización no tiene un formato válido.")
+    try:
+        encoded = json.dumps(status, ensure_ascii=False, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError):
+        raise InventoryError("El estado de sincronización no tiene un formato válido.") from None
+    if len(encoded) > 10_000:
+        raise InventoryError("El estado de sincronización supera el tamaño permitido.")
+    if inventory_persistence() == "database":
+        from django.db import transaction
+        from .models import InventorySyncState
+        with transaction.atomic():
+            row, created = InventorySyncState.objects.select_for_update().get_or_create(pk=1)
+            if only_if_empty and not created:
+                raise InventoryError("Ya existe un estado de inventario; no se reemplazó.")
+            row.snapshot, row.status = snapshot, status
+            row.lease_token, row.lease_expires_at = "", None
+            row.save(update_fields=("snapshot", "status", "lease_token", "lease_expires_at"))
+        return
+    from .inventory_sync import _state_path, _write_state
+    if only_if_empty and (snapshot_path().exists() or _state_path().exists()):
+        raise InventoryError("Ya existe un estado de inventario; no se reemplazó.")
+    if snapshot is not None:
+        save_snapshot(snapshot)
+    _write_state(status)
 
 
 def fetch_sheet(spreadsheet_id):

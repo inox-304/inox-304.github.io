@@ -3,8 +3,8 @@ import { normalizeCategory, type ProductCategory } from '../data/categories.ts';
 export type CatalogOrder = 'catalogo' | 'nombre';
 export type CatalogState = { category: ProductCategory | 'todos'; query: string; order: CatalogOrder };
 
-export function catalogSearchText(product: { id: string; name: string; summary: string; features?: readonly string[] }, category: string) {
-  return [product.id, product.name, product.summary, category, ...(product.features || [])].join(' ');
+export function catalogSearchText(product: { id: string; name: string; summary: string; features?: readonly string[]; brand?: string; supplierModel?: string; equipmentFamily?: string; capacity?: string }, category: string) {
+  return [product.id, product.name, product.summary, category, product.brand, product.supplierModel, product.equipmentFamily, product.capacity, ...(product.features || [])].filter(Boolean).join(' ');
 }
 
 function normalize(value: string) {

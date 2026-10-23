@@ -198,12 +198,21 @@ Configura **fuera del repositorio** `INOX_DOMAIN`, `POSTGRES_PASSWORD` y `DJANGO
 
 Para cuentas con verificación por correo configura también `SECURITY_EMAIL_ENABLED=1`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS` o `EMAIL_USE_SSL`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` y `DEFAULT_FROM_EMAIL` en el entorno privado de Compose. El archivo local `backend/.env` no se copia a la imagen de producción. Usa `create_owner --mfa email` para esos propietarios.
 
+El contenedor web solo recopila los archivos estáticos y arranca Gunicorn. No ejecuta migraciones, importaciones ni preparadores de acceso al iniciarse. Aplica las migraciones como una operación explícita y revisada antes de arrancar una versión que las necesite.
+
+Para una **instalación completamente nueva**, sin datos existentes:
+
 ```sh
-docker compose up -d --build
-docker compose exec web backend/.venv/bin/python backend/manage.py seed_catalog
-docker compose exec web backend/.venv/bin/python backend/manage.py create_owner
-docker compose exec web backend/.venv/bin/python backend/manage.py check --deploy
+docker compose build web
+docker compose up -d db
+docker compose run --rm web backend/.venv/bin/python backend/manage.py migrate --noinput
+docker compose run --rm web backend/.venv/bin/python backend/manage.py seed_catalog
+docker compose run --rm web backend/.venv/bin/python backend/manage.py create_owner
+docker compose run --rm web backend/.venv/bin/python backend/manage.py check --deploy
+docker compose up -d web https
 ```
+
+Para trasladar esta instalación de INOX, sigue la sección de traslado completo: prepara únicamente el esquema del destino vacío, conserva la clave efectiva e importa el paquete verificado **antes** de abrir el servidor. No ejecutes `seed_catalog` ni `create_owner`. Para Render Free consulta `deploy/RENDER.txt`; ese proveedor no ejecuta este Compose ni dispone de shell o comandos de predespliegue gratuitos.
 
 La base y los archivos usan volúmenes persistentes. **No ejecutes `docker compose down -v`** sobre un negocio en uso: elimina los volúmenes. PostgreSQL no publica un puerto externo; el proceso web queda detrás de Caddy, que administra HTTPS. `DATABASE_SSLMODE=disable` en Compose solo corresponde a la red privada entre esos contenedores; una base externa debe usar TLS.
 

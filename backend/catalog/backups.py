@@ -12,11 +12,13 @@ from pathlib import Path
 from django.conf import settings
 from django.core import serializers
 from django.core.exceptions import ValidationError
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.core.management.color import no_style
 from django.db import connection, transaction
 
 from .audit import audit_context
 from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
+from .storage import open_private_file, save_new_file, verify_stored_file
 
 BACKUP_MODELS = (Contact, MediaAsset, Product, ProductVariant, ProductAdditional, ProductImage, BusinessSettings)
 MAX_ARCHIVE_SIZE = 512 * 1024 * 1024
@@ -56,26 +58,37 @@ def create_backup(destination):
             cursor.execute(f"LOCK TABLE {tables} IN SHARE MODE")
     records = [obj for model in BACKUP_MODELS for obj in model.objects.all()]
     database = serializers.serialize("json", records, ensure_ascii=False).encode("utf-8")
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    contents = {"catalog.json": database}
-    for asset in MediaAsset.objects.all():
-        name = safe_media_name(asset.file.name)
-        path = (media_root / name).resolve()
-        if not path.is_relative_to(media_root) or not path.is_file():
-            raise ValidationError(f"Falta el archivo privado {asset.pk}; la copia no se creó.")
-        contents[f"media/{name}"] = path.read_bytes()
-    if sum(map(len, contents.values())) > MAX_ARCHIVE_SIZE:
+    if len(database) > MAX_DATABASE_SIZE:
         raise ValidationError("El respaldo supera 512 MB; solicite una copia operativa de base de datos y archivos.")
-    manifest = {"format": "inox-catalog-v1", "created_at": datetime.now(timezone.utc).isoformat(), "files": {name: {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)} for name, data in contents.items()}}
-    manifest["signature"] = hmac.new(signing_key(), canonical(manifest), hashlib.sha256).hexdigest()
+    manifest = {"format": "inox-catalog-v1", "created_at": datetime.now(timezone.utc).isoformat(), "files": {"catalog.json": {"sha256": hashlib.sha256(database).hexdigest(), "size": len(database)}}}
+    total = len(database)
     try:
         with destination.open("xb") as output:
             with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("catalog.json", database)
+                for asset in MediaAsset.objects.all():
+                    name = safe_media_name(asset.file.name)
+                    if f"media/{name}" in manifest["files"]:
+                        continue
+                    digest, size = hashlib.sha256(), 0
+                    try:
+                        with open_private_file(asset.file.storage, name) as source, archive.open(f"media/{name}", "w") as target:
+                            while chunk := source.read(1024 * 1024):
+                                size += len(chunk)
+                                total += len(chunk)
+                                if total > MAX_ARCHIVE_SIZE:
+                                    raise ValidationError("El respaldo supera 512 MB; solicite una copia operativa de base de datos y archivos.")
+                                digest.update(chunk)
+                                target.write(chunk)
+                    except FileNotFoundError:
+                        raise ValidationError(f"Falta el archivo privado {asset.pk}; la copia no se creó.") from None
+                    manifest["files"][f"media/{name}"] = {"sha256": digest.hexdigest(), "size": size}
+                manifest["signature"] = hmac.new(signing_key(), canonical(manifest), hashlib.sha256).hexdigest()
                 archive.writestr("manifest.json", canonical(manifest))
-                for name, data in contents.items():
-                    archive.writestr(name, data)
         if os.name != "nt":
             destination.chmod(0o600)
+        if destination.stat().st_size > MAX_ARCHIVE_SIZE:
+            raise ValidationError("El respaldo supera el límite de tamaño permitido.")
     except Exception:
         destination.unlink(missing_ok=True)
         raise
@@ -136,10 +149,21 @@ def inspect_backup(source):
 
 def restore_backup(source):
     objects, contents = inspect_backup(source)
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    media_root.mkdir(parents=True, exist_ok=True)
+    if not isinstance(default_storage, FileSystemStorage):
+        # Existing S3 objects are immutable. Abort on an unexpected collision
+        # before modifying anything; a provider cannot atomically roll back an
+        # overwritten object together with PostgreSQL.
+        for name, payload in contents.items():
+            relative = safe_media_name(name.removeprefix("media/"))
+            if default_storage.exists(relative):
+                try:
+                    verify_stored_file(default_storage, relative, {"size": len(payload), "sha256": hashlib.sha256(payload).hexdigest()})
+                except OSError:
+                    raise ValidationError("Un archivo remoto existente tiene contenido distinto. Restaura en un almacenamiento vacío; no se sobrescribió el original.") from None
     replaced, added = [], []
-    with tempfile.TemporaryDirectory(prefix=".catalog-restore-", dir=media_root) as staging:
+    # Object storage has no cross-object transaction. Keep rollback bytes in a
+    # private local staging directory and verify every write before DB commit.
+    with tempfile.TemporaryDirectory(prefix=".catalog-restore-") as staging:
         staging = Path(staging)
         try:
             with transaction.atomic(), audit_context(operation="restore"):
@@ -154,25 +178,46 @@ def restore_backup(source):
                         cursor.execute(sql)
                 for index, (name, data) in enumerate(contents.items()):
                     relative = safe_media_name(name.removeprefix("media/"))
-                    target = (media_root / relative).resolve()
-                    if not target.is_relative_to(media_root):
-                        raise ValidationError("Ruta de archivo no permitida.")
-                    target.parent.mkdir(parents=True, exist_ok=True)
                     staged = staging / f"new-{index}"
                     staged.write_bytes(data)
-                    if target.exists():
+                    metadata = {"size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+                    if default_storage.exists(relative):
                         old = staging / f"old-{index}"
-                        target.replace(old)
-                        replaced.append((target, old))
+                        with open_private_file(default_storage, relative) as incoming, old.open("xb") as output:
+                            old_digest, old_size = hashlib.sha256(), 0
+                            while chunk := incoming.read(1024 * 1024):
+                                old_size += len(chunk)
+                                if old_size > MAX_ARCHIVE_SIZE:
+                                    raise ValidationError("El archivo existente supera el límite de restauración.")
+                                old_digest.update(chunk)
+                                output.write(chunk)
+                        old_metadata = {"size": old_size, "sha256": old_digest.hexdigest()}
+                        if old_metadata == metadata:
+                            continue
+                        replaced.append((relative, old, old_metadata))
+                        default_storage.delete(relative)
                     else:
-                        added.append(target)
-                    staged.replace(target)
+                        added.append(relative)
+                    with staged.open("rb") as incoming:
+                        save_new_file(default_storage, relative, incoming, metadata)
                 AuditLog.objects.create(entity="catalog.backup", object_id="catalog", label="Restauración de copia comercial", operation="restore", after={"records": len(objects), "files": len(contents)})
         except Exception:
-            for target in added:
-                target.unlink(missing_ok=True)
-            for target, old in reversed(replaced):
-                target.unlink(missing_ok=True)
-                old.replace(target)
+            rollback_failed = False
+            for name in reversed(added):
+                try:
+                    default_storage.delete(name)
+                except Exception:
+                    rollback_failed = True
+            for name, old, metadata in reversed(replaced):
+                try:
+                    default_storage.delete(name)
+                    with old.open("rb") as incoming:
+                        save_new_file(default_storage, name, incoming, metadata)
+                except Exception:
+                    rollback_failed = True
+            if rollback_failed:
+                # The signed source backup remains available to retry recovery;
+                # never report an atomic media rollback when a provider failed.
+                raise ValidationError("La base se revirtió, pero el almacenamiento no pudo completar la recuperación de archivos. Conserva la copia firmada y revisa los medios antes de usar el catálogo.") from None
             raise
     return len(objects)

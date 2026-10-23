@@ -19,6 +19,9 @@ def public_product(product):
     return {
         "id": product.code, "slug": product.slug, "name": product.name,
         "category": product.category, "summary": product.description,
+        "supplyType": product.supply_type, "brand": product.brand,
+        "supplierModel": product.supplier_model, "equipmentFamily": product.equipment_family,
+        "capacity": product.capacity,
         "features": [line.strip() for line in product.characteristics.splitlines() if line.strip()],
         "image": product.image_asset.public_url if product.image_asset_id else (product.image or "/images/brand/inox304-logo.webp"),
         "visible": True, "featured": product.featured, "order": product.order,

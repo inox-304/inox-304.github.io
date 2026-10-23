@@ -20,6 +20,8 @@ from django.views.decorators.debug import sensitive_variables
 
 from .models import EmailChallenge, EmailDevice, EnrollmentPermission, SecurityState
 from .smtp_backend import SUPPORTED_SMTP_BACKENDS, smtp_status
+from .gmail_backend import GmailDeliveryError
+from .mail_config import gmail_configuration_ready
 from .services import PENDING_KEY, VERSION, audit, seconds
 
 EMAIL_REGENERATE_KEY = "security_email_regenerate"
@@ -30,6 +32,7 @@ def _log_delivery_failure(error):
     # Only fixed categories and numeric SMTP statuses may enter logs. SMTP
     # exception messages can contain recipients, credentials or message bodies.
     categories = (
+        GmailDeliveryError,
         smtplib.SMTPAuthenticationError, smtplib.SMTPSenderRefused,
         smtplib.SMTPRecipientsRefused, smtplib.SMTPDataError,
         smtplib.SMTPHeloError, smtplib.SMTPConnectError,
@@ -141,7 +144,7 @@ def issue_email_challenge(request, user, purpose):
     backend = settings.EMAIL_BACKEND
     test_backend = backend == "django.core.mail.backends.locmem.EmailBackend" and getattr(settings, "ENVIRONMENT", "") == "test"
     smtp_backend = backend in SUPPORTED_SMTP_BACKENDS and bool(settings.EMAIL_HOST) and bool(settings.DEFAULT_FROM_EMAIL)
-    if not (smtp_backend or test_backend):
+    if not (smtp_backend or test_backend or gmail_configuration_ready(settings)):
         raise EmailDeliveryError()
     failed = False
     permanently_rejected = False

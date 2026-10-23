@@ -1,0 +1,783 @@
+{
+  "schema_version": 1,
+  "brand": "ILUMI",
+  "checked_on": "2026-10-22",
+  "products": [
+    {
+      "code": "ILUMI-AMA-15M",
+      "sku": "AMA-15M",
+      "name": "Amasadora monofásica de 15 kilos de capacidad",
+      "category_slug": "amasadoras",
+      "source_url": "https://ilumiperu.com/collections/amasadoras/products/amasadora-monofasica-de-16-kg-de-capacidad",
+      "capacity_text": "Bowl 45 L; descripción indica hasta 16 kg de masa por lote; título comercial indica 15 kg.",
+      "dimensions_text": "700 × 530 × 800 mm (ancho × fondo × alto)",
+      "features": [
+        "220 V; monofásica",
+        "Bowl de acero inoxidable; cuerpo de hierro fundido",
+        "Modos lento, rápido y reversa; parada de emergencia",
+        "Rejilla de seguridad con parada automática",
+        "Peso neto 110 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/products/AMA-15M-1_720x.jpg?v=1673472480"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_AMA-15M.jpg?v=1791231823"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Discrepancia oficial: título 15 kg frente a descripción 16 kg de masa. Confirmar capacidad con Ilumi antes de publicar.",
+        "Harina máxima no verificada."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-AMA-25M",
+      "sku": "AMA-25M",
+      "name": "Amasadora monofásica de 25 kilos de capacidad",
+      "category_slug": "amasadoras",
+      "source_url": "https://ilumiperu.com/products/amasadora-monofasica-de-25-kg-de-capacidad",
+      "capacity_text": "Bowl 68 L; hasta 25 kg de masa por lote en la página más reciente.",
+      "dimensions_text": "880 × 590 × 940 mm (ancho × fondo × alto)",
+      "features": [
+        "220 V; monofásica",
+        "Bowl de acero inoxidable; cuerpo de hierro fundido",
+        "Modos lento, rápido y reversa; parada de emergencia",
+        "Rejilla de seguridad con parada automática",
+        "Peso neto 200 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/products/AMA-25M-1_720x.jpg?v=1673540200"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_AMA-25M.jpg?v=1792685542"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Un resultado indexado antiguo titula 40 kg de masa; la página más reciente dice 25 kg. Conservar esta discrepancia para revisión, no publicar 40 kg.",
+        "Harina máxima no verificada."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-B-10L",
+      "sku": "B-10L",
+      "name": "Batidora industrial de 10 L",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-industrial-de-10-litros",
+      "capacity_text": "Bowl 10 L; hasta 1,6 kg de masa por lote.",
+      "dimensions_text": "440 × 340 × 650 mm (ancho × fondo × alto)",
+      "features": [
+        "220 V",
+        "Tres velocidades: 90 / 160 / 300 rpm",
+        "Bowl de acero inoxidable; rejilla de seguridad",
+        "Accesorios globo, paleta y gancho",
+        "Cuerpo de hierro fundido; peso neto 43 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/B-10L_378ae76e-1edb-4908-99f8-013d5be93c90_720x.jpg?v=1705350910"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_B-10L.jpg?v=1790089774"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-B-20L",
+      "sku": "B-20L",
+      "name": "Batidora industrial de 20 L",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-industrial-de-20-litros",
+      "capacity_text": "Bowl 20 L; hasta 4,8 kg de masa por lote.",
+      "dimensions_text": "540 × 430 × 770 mm (ancho × fondo × alto)",
+      "features": [
+        "220 V",
+        "Tres velocidades: 105 / 180 / 408 rpm",
+        "Bowl de acero inoxidable; rejilla de seguridad",
+        "Accesorios globo, paleta y gancho",
+        "Cuerpo de hierro fundido; peso neto 62 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/B-20L_720x.jpg?v=1705350937"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_B-20L.jpg?v=1789956753"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-B-30L",
+      "sku": "B-30L",
+      "name": "Batidora industrial de 30 L",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-industrial-de-30-litros",
+      "capacity_text": "Bowl 30 L; hasta 9,6 kg de masa por lote.",
+      "dimensions_text": "570 × 450 × 780 mm (ancho × fondo × alto)",
+      "features": [
+        "220 V",
+        "Tres velocidades: 105 / 180 / 408 rpm",
+        "Bowl de acero inoxidable; rejilla de seguridad",
+        "Accesorios globo, paleta y gancho",
+        "Cuerpo de hierro fundido; peso neto 72 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/B-30L_f9eb118d-6457-40a5-9fe4-ef1626d97236_720x.jpg?v=1705350949"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_B-30L.jpg?v=1792576448"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-B-7LRE",
+      "sku": "B-7LRE",
+      "name": "Batidora de 7 litros",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-de-7-litros",
+      "capacity_text": "Bowl 7 L; hasta 0,8 kg de masa por lote.",
+      "dimensions_text": "410 × 230 × 441 mm (ancho × fondo × alto)",
+      "features": [
+        "370 W; 220 V / 60 Hz",
+        "Velocidad variable 0–1050 rpm",
+        "Bowl de acero inoxidable; cubierta de seguridad",
+        "Accesorios globo, paleta y gancho",
+        "Transmisión por engranajes; peso neto 16 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/B-7LRE_-_ROJA_2_720x.jpg?v=1773430879"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_B-7LRE.jpg?v=1791386935"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Confirmar SKU comercial blanco; B-7LWH se observa en el nombre de imagen, no en selector de SKU verificado."
+      ],
+      "variants": [
+        {
+          "name": "Rojo",
+          "sku": "B-7LRE"
+        },
+        {
+          "name": "Blanco",
+          "sku": null,
+          "sku_hint_from_image_filename": "B-7LWH",
+          "image_url_template": "https://ilumiperu.com/cdn/shop/files/B-7LWH_-_BLANCA_2_%7Bwidth%7Dx.jpg?v=1773430881"
+        }
+      ]
+    },
+    {
+      "code": "ILUMI-BIT-270",
+      "sku": "BIT-270",
+      "name": "Batidora de inmersión de 270 W",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-de-inmersion-de-270w",
+      "capacity_text": "Hasta 10 L de volumen de mezclado; no es capacidad de bowl.",
+      "dimensions_text": "Brazo de 226 mm; diámetro publicado 28 mm. Dimensiones totales no confirmadas.",
+      "features": [
+        "270 W; 220 V / 60 Hz",
+        "Velocidad variable 4000–20000 rpm",
+        "Brazo de acero inoxidable",
+        "Mango ergonómico; peso neto 2,46 kg"
+      ],
+      "image_urls": [],
+      "technical_sheet_urls": [],
+      "model_3d_urls": [],
+      "warnings": [
+        "Ficha técnica visible como enlace en el resultado oficial, pero URL exacta no recuperada.",
+        "Solo se recuperó plantilla responsive de foto; falta URL final validada.",
+        "400 × 240 × 85 mm corresponde al embalaje, no al equipo."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-BIT-350",
+      "sku": "BIT-350",
+      "name": "Batidora de inmersión de 350 W",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-de-inmersion-de-350w",
+      "capacity_text": "Hasta 30 L de volumen de mezclado; no es capacidad de bowl.",
+      "dimensions_text": "Brazo de 300 mm; diámetro publicado 35 mm. Dimensiones totales no confirmadas.",
+      "features": [
+        "350 W; 220 V / 60 Hz",
+        "Velocidad variable 4000–16000 rpm",
+        "Brazo de acero inoxidable",
+        "Mango ergonómico; peso neto 2,80 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/BIT-350_2_720x.png?v=1778278421"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_BIT-350.jpg?v=1787858487"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "555 × 290 × 110 mm corresponde al embalaje, no al equipo."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-BIT-500",
+      "sku": "BIT-500",
+      "name": "Batidora de inmersión de 500 W",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/products/batidora-de-inmersion-de-500w",
+      "capacity_text": "Hasta 100 L de volumen de mezclado; no es capacidad de bowl.",
+      "dimensions_text": "Brazo de 400 mm; diámetro publicado 35 mm. Dimensiones totales no confirmadas.",
+      "features": [
+        "500 W; 220 V / 60 Hz",
+        "Velocidad variable 4000–16000 rpm",
+        "Brazo de acero inoxidable",
+        "Mango ergonómico; peso neto 3,28 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/BIT-500_2_720x.png?v=1778278471"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_BIT-500.jpg?v=1791322484"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "555 × 290 × 110 mm corresponde al embalaje, no al equipo."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-BIT-750",
+      "sku": "BIT-750",
+      "name": "Batidora de inmersión de 750 W",
+      "category_slug": "batidoras",
+      "source_url": "https://ilumiperu.com/collections/batidoras/products/batidora-de-inmersion-de-750w",
+      "capacity_text": "Hasta 200 L de volumen de mezclado; no es capacidad de bowl.",
+      "dimensions_text": "Brazo de 500 mm; diámetro publicado 35 mm. Dimensiones totales no confirmadas.",
+      "features": [
+        "750 W; 220 V / 60 Hz",
+        "Velocidad variable 8000–18000 rpm",
+        "Brazo de acero inoxidable",
+        "Mango ergonómico; peso neto 4,45 kg"
+      ],
+      "image_urls": [],
+      "technical_sheet_urls": [],
+      "model_3d_urls": [],
+      "warnings": [
+        "Ficha técnica visible como enlace en el resultado oficial, pero URL exacta no recuperada.",
+        "Solo se recuperó plantilla responsive de foto; falta URL final validada.",
+        "600 × 280 × 135 mm corresponde al embalaje, no al equipo."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-CR-121",
+      "sku": "CR-121",
+      "name": "Cremoladera de 12 L, 1 tolva",
+      "category_slug": "cremoladeras",
+      "source_url": "https://ilumiperu.com/collections/maquinas-cremoladeras/products/cremoladera-de-12-litros-con-1-tolva",
+      "capacity_text": "12 L totales; 1 tolva",
+      "dimensions_text": "240 × 530 × 800 mm (ancho × fondo × alto)",
+      "features": [
+        "Control digital",
+        "Rango declarado: −15 a 10 °C",
+        "Potencia: 550 W",
+        "Refrigerante: R290",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 31 kg",
+        "Tolva y tapa de policarbonato; agitador de acero inoxidable"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/CR-121_2_720x.jpg?v=1730213279"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_CR-121.jpg?v=1791640814"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-CR-122",
+      "sku": "CR-122",
+      "name": "Cremoladera de 24 L, 2 tolvas",
+      "category_slug": "cremoladeras",
+      "source_url": "https://ilumiperu.com/collections/bodegas/products/cremoladera-de-24-litros-con-2-tolvas",
+      "capacity_text": "24 L totales; 2 tolvas",
+      "dimensions_text": "430 × 530 × 800 mm (ancho × fondo × alto)",
+      "features": [
+        "Tolvas con funcionamiento independiente",
+        "Control digital",
+        "Rango declarado: −15 a 10 °C",
+        "Potencia: 890 W",
+        "Refrigerante: R404",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 41 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/CR-122_2_720x.jpg?v=1730214202"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_CR-122.jpg?v=1791934294"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Título oficial ambiguo ('2 tolvas de 24 litros'); Datos técnicos declara 24 L para el equipo. No interpretar 48 L."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-CR-123",
+      "sku": "CR-123",
+      "name": "Cremoladera de 36 L, 3 tolvas",
+      "category_slug": "cremoladeras",
+      "source_url": "https://ilumiperu.com/collections/maquinas-cremoladeras/products/cremoladera-de-36-litros-con-3-tolvas",
+      "capacity_text": "36 L totales; 3 tolvas",
+      "dimensions_text": "620 × 530 × 800 mm (ancho × fondo × alto)",
+      "features": [
+        "Tolvas con funcionamiento independiente",
+        "Control digital",
+        "Rango declarado: −15 a 10 °C",
+        "Potencia: 1300 W",
+        "Refrigerante: R404",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 60 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/CR-123_2_720x.jpg?v=1728060806"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_CR-123.jpg?v=1791251827"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Título oficial ambiguo ('3 tolvas de 36 litros'); Datos técnicos declara 36 L para el equipo. No interpretar 108 L."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-DJ-181",
+      "sku": "DJ-181",
+      "name": "Dispensador de jugos de 18 L, 1 tolva",
+      "category_slug": "dispensadores-jugo",
+      "source_url": "https://ilumiperu.com/products/dispensador-de-jugos-1-poza-18l",
+      "capacity_text": "18 L totales; 1 tolva",
+      "dimensions_text": "250 × 386 × 728 mm (ancho × fondo × alto)",
+      "features": [
+        "Circulación del jugo mediante sistema lluvia",
+        "Temperatura: 2 a 10 °C",
+        "Potencia: 420 W",
+        "Refrigerante: R134a",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 20 kg",
+        "Tolva de policarbonato"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/DJ-181_2_720x.jpg?v=1766509167"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_DJ-181.jpg?v=1791058997"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-DJ-182",
+      "sku": "DJ-182",
+      "name": "Dispensador de jugos de 36 L, 2 tolvas",
+      "category_slug": "dispensadores-jugo",
+      "source_url": "https://ilumiperu.com/collections/dispensadores-de-jugos/products/dispensador-de-jugos-de-36-litros-con-2-tolvas",
+      "capacity_text": "36 L totales; 2 tolvas",
+      "dimensions_text": "500 × 400 × 728 mm (ancho × fondo × alto)",
+      "features": [
+        "Circulación del jugo mediante sistema lluvia",
+        "Temperatura: 2 a 10 °C",
+        "Potencia: 450 W",
+        "Refrigerante: R134a",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 32 kg",
+        "Tolvas de policarbonato"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/DJ-182_2_1_720x.jpg?v=1752876509"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_DJ-182.jpg?v=1790455369"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-DJ-183",
+      "sku": "DJ-183",
+      "name": "Dispensador de jugos de 54 L, 3 tolvas",
+      "category_slug": "dispensadores-jugo",
+      "source_url": "https://ilumiperu.com/products/dispensador-de-jugos-3-pozas-18l",
+      "capacity_text": "54 L totales; 3 tolvas",
+      "dimensions_text": "725 × 400 × 728 mm (ancho × fondo × alto)",
+      "features": [
+        "Circulación del jugo mediante sistema lluvia",
+        "Temperatura: 2 a 10 °C",
+        "Potencia: 880 W",
+        "Refrigerante: R134a",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 40 kg",
+        "Tolvas de policarbonato"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/DJ-183_2_1_720x.jpg?v=1766509195"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_DJ-183.jpg?v=1790549161"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-VM-200T",
+      "sku": "VM-200T",
+      "name": "Máquina de envasado al vacío VM-200T",
+      "category_slug": "envasadoras-vacio",
+      "source_url": "https://ilumiperu.com/collections/envasado-al-vacio/products/maquina-de-envasado-al-vacio-vm-200t",
+      "capacity_text": "Longitud de sellado 260 mm, indicada en el listado oficial actualizado.",
+      "dimensions_text": "",
+      "features": [
+        "Envasado al vacío",
+        "Tapa transparente; manómetro según foto descrita por Ilumi",
+        "Peso bruto 35 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/VM-200T_2_720x.jpg?v=1729634114"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_VM-200T.jpg?v=1783209411"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "No confundir número de SKU 200 con longitud de sellado: listado dice 260 mm.",
+        "Dimensiones de producto, cámara, potencia y tensión pendientes de lectura de ficha técnica."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-VM-300T",
+      "sku": "VM-300T",
+      "name": "Máquina de envasado al vacío VM-300T",
+      "category_slug": "envasadoras-vacio",
+      "source_url": "https://ilumiperu.com/collections/envasado-al-vacio/products/maquina-de-envasado-al-vacio-vm-300t",
+      "capacity_text": "Longitud de sellado 300 mm, indicada en el listado oficial actualizado.",
+      "dimensions_text": "",
+      "features": [
+        "Envasado al vacío",
+        "Tapa transparente; manómetro según foto descrita por Ilumi",
+        "Peso bruto 43 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/VM-300T-27_720x.png?v=1720564083"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_VM-300T.jpg?v=1783209411"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Dimensiones de producto, cámara, potencia y tensión pendientes de lectura de ficha técnica."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-VM-400T",
+      "sku": "VM-400T",
+      "name": "Máquina de envasado al vacío VM-400T",
+      "category_slug": "envasadoras-vacio",
+      "source_url": "https://ilumiperu.com/products/maquina-de-envasado-al-vacio-vm-400t",
+      "capacity_text": "Sellado 400 × 10 mm por ciclo.",
+      "dimensions_text": "540 × 490 × 450 mm (ancho × fondo × alto)",
+      "features": [
+        "Manómetro de vacío",
+        "Potencia de vacío 0,9 kW; sellado 0,6 kW",
+        "Peso neto 60 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/VM-400T-29_720x.png?v=1720564070"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_VM-400T.jpg?v=1791325708"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Dimensiones de la cámara y tensión no confirmadas."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-VM-500T",
+      "sku": "VM-500T",
+      "name": "Máquina de envasado al vacío VM-500T",
+      "category_slug": "envasadoras-vacio",
+      "source_url": "https://ilumiperu.com/products/maquina-de-envasado-al-vacio-vm-500t",
+      "capacity_text": "Sellado 500 × 10 mm por ciclo.",
+      "dimensions_text": "650 × 575 × 480 mm (ancho × fondo × alto)",
+      "features": [
+        "Manómetro de vacío",
+        "Potencia de vacío 0,9 kW; sellado 0,75 kW",
+        "Peso neto 62 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/VM-500T-31_720x.png?v=1720564040"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_VM-500T.jpg?v=1791036323"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "Dimensiones de la cámara y tensión no confirmadas."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-OJM-01AI",
+      "sku": "OJM-01AI",
+      "name": "Extractor de naranjas",
+      "category_slug": "extractores-naranja",
+      "source_url": "https://ilumiperu.com/products/extractor-de-naranjas",
+      "capacity_text": "22–25 naranjas por minuto; fruta de 40–80 mm",
+      "dimensions_text": "470 × 490 × 880 mm (ancho × fondo × alto)",
+      "features": [
+        "Potencia: 500 W",
+        "Peso neto: 46 kg; bruto: 51 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/OJM-01AI_2_720x.jpg?v=1729631918"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_OJM-01AI.jpg?v=1790910156"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHA-16S",
+      "sku": "MHA-16S",
+      "name": "Máquina de helado artesanal de sobremesa, hasta 16 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-artesanal-de-16-litros",
+      "capacity_text": "Producción máxima declarada: 16 L/h; no es volumen del depósito",
+      "dimensions_text": "500 × 650 × 800 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: artesanal; sobremesa",
+        "Potencia: 1000 W",
+        "Refrigerante: R410",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 100 kg",
+        "Base con topes"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHA-16S_2_720x.jpg?v=1765493276"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHA-16S.jpg?v=1791235376"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHA-20",
+      "sku": "MHA-20",
+      "name": "Máquina de helado artesanal, hasta 20 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-artesanal-de-hasta-20-litros-por-hora",
+      "capacity_text": "Producción máxima declarada: 20 L/h; no es volumen del depósito",
+      "dimensions_text": "535 × 535 × 1370 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: artesanal; de piso con ruedas y freno",
+        "Potencia: 1600 W",
+        "Refrigerante: R404a",
+        "Alimentación: 220–240 V / 60 Hz",
+        "Peso neto: 100 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHA-20_2_720x.jpg?v=1729635775"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHA-20.jpg?v=1791915679"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHA-20S",
+      "sku": "MHA-20S",
+      "name": "Máquina de helado artesanal de sobremesa, hasta 20 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-artesanal-de-sobremesa-de-20-litros-por-hora",
+      "capacity_text": "Producción máxima declarada: 20 L/h; no es volumen del depósito",
+      "dimensions_text": "535 × 535 × 840 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: artesanal; sobremesa",
+        "Potencia: 1400 W",
+        "Refrigerante: R404a",
+        "Alimentación: 220–240 V / 60 Hz",
+        "Peso neto: 55 kg",
+        "Estructura de acero inoxidable"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHA-20S_2_a03940e9-f362-4d2c-a3b1-a813c873b29c_720x.jpg?v=1765489060"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHA-20S.jpg?v=1792123087"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHS-25",
+      "sku": "MHS-25",
+      "name": "Máquina de helado soft, hasta 25 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-soft-de-25-litros-por-hora",
+      "capacity_text": "Producción máxima declarada: 25 L/h; no es volumen del depósito",
+      "dimensions_text": "540 × 575 × 1370 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: soft; de piso con ruedas y freno",
+        "Potencia: 2000 W",
+        "Refrigerante: R404a",
+        "Alimentación: 220–240 V / 60 Hz",
+        "Peso neto: 119 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHS-25_2_fa1c064e-a166-4bf5-bcb4-60d6ecc1183f_720x.jpg?v=1765489401"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHS-25.jpg?v=1791334613"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "La web declara embalaje de 525 × 580 × 1380 mm: su ancho es menor que los 540 mm del equipo. Confirmar con ILUMI antes de logística/modelado."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHS-25PC",
+      "sku": "MHS-25PC",
+      "name": "Máquina de helado soft con Pre Cooling, hasta 25 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-soft-de-hasta-25-litros-por-hora-con-pre-cooling",
+      "capacity_text": "Producción máxima declarada: 25 L/h; no es volumen del depósito",
+      "dimensions_text": "540 × 735 × 1430 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: soft; Pre Cooling",
+        "2 compresores (descripción oficial de colección)",
+        "Control digital y descongelamiento automático",
+        "Ruedas con freno",
+        "Potencia: 2050 W",
+        "Refrigerante: R410",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 100 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHS-25PC_2_720x.jpg?v=1776293420"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHS-25PC.jpg?v=1791742218"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHS-25S",
+      "sku": "MHS-25S",
+      "name": "Máquina de helado soft de sobremesa con Pre Cooling, hasta 25 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-soft-de-sobremesa",
+      "capacity_text": "Producción máxima declarada: 25 L/h; no es volumen del depósito",
+      "dimensions_text": "540 × 735 × 870 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: soft; sobremesa; Pre Cooling",
+        "Control digital y descongelamiento automático",
+        "Base con topes",
+        "Potencia: 2050 W",
+        "Refrigerante: R410",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 90 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHS-25S_2_720x.jpg?v=1784146624"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHS-25S.jpg?v=1791742218"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "La colección general de máquinas de helado muestra siete productos y omite este SKU; sí figura en las colecciones oficiales Helado Soft y Heladerías.",
+        "La página indica 2 años para compresor en descripción y 1 año general en Datos técnicos. Confirmar alcance de garantía antes de publicarlo."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHS-30PC",
+      "sku": "MHS-30PC",
+      "name": "Máquina de helado soft con Pre Cooling, hasta 30 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-soft-pre-cooling-de-25-litros",
+      "capacity_text": "Producción máxima declarada: 30 L/h; no es volumen del depósito",
+      "dimensions_text": "540 × 735 × 1430 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: soft; Pre Cooling",
+        "2 compresores",
+        "Control digital y descongelamiento automático",
+        "Ruedas con freno",
+        "Potencia: 2050 W",
+        "Refrigerante: R410",
+        "Alimentación: 220 V / 60 Hz",
+        "Peso neto: 115 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHS-30PC_2_720x.jpg?v=1776092024"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHS-30PC.jpg?v=1791304680"
+      ],
+      "model_3d_urls": [],
+      "warnings": [
+        "La URL conserva '25-litros', pero SKU, título y datos técnicos identifican MHS-30PC y hasta 30 L/h."
+      ],
+      "variants": []
+    },
+    {
+      "code": "ILUMI-MHS-30S",
+      "sku": "MHS-30S",
+      "name": "Máquina de helado soft de sobremesa, hasta 30 L/h",
+      "category_slug": "maquinas-helado",
+      "source_url": "https://ilumiperu.com/products/maquina-de-helado-soft-de-sobremesa-de-30-litros-por-hora",
+      "capacity_text": "Producción máxima declarada: 30 L/h; no es volumen del depósito",
+      "dimensions_text": "540 × 615 × 780 mm (ancho × fondo × alto)",
+      "features": [
+        "Tipo: soft; sobremesa",
+        "Control digital",
+        "Potencia: 2000 W",
+        "Refrigerante: R404a",
+        "Alimentación: 220–240 V / 60 Hz",
+        "Peso neto: 100 kg"
+      ],
+      "image_urls": [
+        "https://ilumiperu.com/cdn/shop/files/MHS-30S_2_36d7b12d-f059-4fff-9435-25b6086e64f6_720x.jpg?v=1755300364"
+      ],
+      "technical_sheet_urls": [
+        "https://ilumiperu.com/cdn/shop/files/Ficha_Tecnica_MHS-30S.jpg?v=1792007728"
+      ],
+      "model_3d_urls": [],
+      "warnings": [],
+      "variants": []
+    }
+  ]
+}

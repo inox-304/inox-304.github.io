@@ -7,6 +7,7 @@ Stop application writers for the complete export, transfer and cutover window.
 import datetime
 import hashlib
 import hmac
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -18,11 +19,14 @@ from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core import serializers
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection, transaction
 from django.db.models import Max
 from django.db.migrations.recorder import MigrationRecorder
 from django.utils import timezone
+
+from catalog.storage import open_private_file, save_new_file, storage_names
 
 
 FORMAT = "inox-private-installation-v1"
@@ -125,9 +129,20 @@ def safe_name(name):
 def data_roots():
     data = Path(settings.DATA_DIR).resolve()
     media = Path(settings.MEDIA_ROOT).resolve()
-    if media != data / "media":
-        raise TransferError("El traslado requiere MEDIA_ROOT dentro de DATA_DIR/media.")
+    if isinstance(default_storage, FileSystemStorage):
+        if media != data / "media" or Path(default_storage.location).resolve() != media:
+            raise TransferError("El traslado requiere almacenamiento local en DATA_DIR/media.")
     return data, media
+
+
+class StoredSource:
+    def __init__(self, name):
+        self.name = name
+
+    def open(self, mode):
+        if mode != "rb":
+            raise ValueError("Los medios de traslado solo se abren para lectura.")
+        return open_private_file(default_storage, self.name)
 
 
 def state_payload():
@@ -195,13 +210,10 @@ def source_files():
     result = []
     if (data / "inventory").is_symlink():
         raise TransferError("No se permiten enlaces simbólicos en el inventario.")
-    if media.exists():
-        for path in sorted(media.rglob("*")):
-            if path.is_symlink():
-                raise TransferError("No se permiten enlaces simbólicos en los archivos de la instalación.")
-            if path.is_file():
-                result.append((safe_name("media/" + path.relative_to(media).as_posix()), path))
-    for name in sorted(INVENTORY_FILES):
+    for name in storage_names(default_storage, max_files=MAX_FILES):
+        result.append((safe_name("media/" + name), StoredSource(name)))
+    inventory_files = INVENTORY_FILES if getattr(settings, "INOX_INVENTORY_PERSISTENCE", "file") == "file" else set()
+    for name in sorted(inventory_files):
         path = data / name
         if path.is_symlink() or (path.exists() and not path.resolve().is_relative_to(data)):
             raise TransferError("La copia de inventario contiene una ruta no permitida.")
@@ -235,6 +247,7 @@ def export_installation(destination):
             if len(payloads) + len(files) + 1 > MAX_FILES:
                 raise TransferError("La instalación supera el límite de archivos.")
             manifest = {"format": FORMAT, "created_at": timezone.now().isoformat(), "django_key_sha256": key_fingerprint(),
+                        "inventory_persistence": getattr(settings, "INOX_INVENTORY_PERSISTENCE", "file"),
                         **structure, "counts": counts, "sequences": sequence_highwaters(), "files": {}}
             descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             created = True
@@ -309,6 +322,7 @@ def inspect_archive(source):
             database = json.loads(archive.read("database.json"))
             relations = json.loads(archive.read("relations.json"))
             validate_records(database, relations, manifest)
+            source_inventory_mode(manifest, database)
             return manifest, database, relations
     except TransferError:
         raise
@@ -370,37 +384,112 @@ def empty_destination():
         if permission.codename not in standard | custom:
             raise TransferError("El destino contiene permisos personalizados; no se sobrescribió.")
     data, media = data_roots()
-    for root in (media, data / "inventory"):
+    if storage_names(default_storage, max_files=MAX_FILES):
+        raise TransferError("Los directorios de medios e inventario del destino deben estar vacíos.")
+    for root in ((media, data / "inventory") if isinstance(default_storage, FileSystemStorage) else (data / "inventory",)):
         if root.is_symlink() or (root.exists() and (not root.is_dir() or any(root.iterdir()))):
             raise TransferError("Los directorios de medios e inventario del destino deben estar vacíos.")
 
 
-def install_files(source, manifest, installed, created_dirs):
+def install_local_file(name, incoming, expected, installed, created_dirs):
     data, _ = data_roots()
+    destination = data / safe_name(name)
+    if not destination.resolve().is_relative_to(data):
+        raise TransferError("La ruta de destino no es privada.")
+    missing = []
+    parent = destination.parent
+    while not parent.exists():
+        missing.append(parent)
+        parent = parent.parent
+    for directory in reversed(missing):
+        directory.mkdir(mode=0o700)
+        created_dirs.append(directory)
+    descriptor = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    installed.append(destination)
+    digest, size = hashlib.sha256(), 0
+    with os.fdopen(descriptor, "wb") as output:
+        while chunk := incoming.read(1024 * 1024):
+            digest.update(chunk)
+            size += len(chunk)
+            output.write(chunk)
+    if size != expected["size"] or digest.hexdigest() != expected["sha256"]:
+        raise TransferError("El archivo cambió durante el traslado; se canceló la importación.")
+
+
+def install_files(source, manifest, installed, created_dirs):
     with zipfile.ZipFile(source) as archive:
         for name in manifest["files"]:
             if name in {"database.json", "relations.json"}:
                 continue
-            destination = data / safe_name(name)
-            if not destination.resolve().is_relative_to(data):
-                raise TransferError("La ruta de destino no es privada.")
-            missing = []
-            parent = destination.parent
-            while not parent.exists():
-                missing.append(parent)
-                parent = parent.parent
-            for directory in reversed(missing):
-                directory.mkdir(mode=0o700)
-                created_dirs.append(directory)
-            descriptor = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            installed.append(destination)
-            digest = hashlib.sha256()
-            with os.fdopen(descriptor, "wb") as output, archive.open(name) as incoming:
-                while chunk := incoming.read(1024 * 1024):
-                    digest.update(chunk)
-                    output.write(chunk)
-            if digest.hexdigest() != manifest["files"][name]["sha256"]:
-                raise TransferError("El archivo cambió durante el traslado; se canceló la importación.")
+            if name.startswith("media/") and not isinstance(default_storage, FileSystemStorage):
+                relative = safe_name(name).removeprefix("media/")
+                # Track before put: an interrupted provider response may mean
+                # the object was created even when save() raised locally.
+                if default_storage.exists(relative):
+                    raise TransferError("El archivo remoto de destino ya existe; no se sobrescribió.")
+                installed.append((default_storage, relative))
+                with archive.open(name) as incoming:
+                    save_new_file(default_storage, relative, incoming, manifest["files"][name])
+                continue
+            with archive.open(name) as incoming:
+                install_local_file(name, incoming, manifest["files"][name], installed, created_dirs)
+
+
+def source_inventory_mode(manifest, database):
+    mode = manifest.get("inventory_persistence")
+    if mode is None:
+        # Packages predating persistence metadata used files. The first remote
+        # package format omitted those files when its DB row was authoritative.
+        has_row = any(row["model"] == "catalog.inventorysyncstate" for row in database)
+        return "database" if has_row and not INVENTORY_FILES.intersection(manifest["files"]) else "file"
+    if mode not in {"file", "database"}:
+        raise TransferError("El respaldo no identifica un almacenamiento de inventario válido.")
+    return mode
+
+
+def restore_inventory_backend(source, manifest, database, installed, created_dirs):
+    """Keep the active cache when moving in either direction between backends."""
+    row = next((row for row in database if row["model"] == "catalog.inventorysyncstate"), None)
+    source_mode = source_inventory_mode(manifest, database)
+    if getattr(settings, "INOX_INVENTORY_PERSISTENCE", "file") == "file":
+        if source_mode == "file" or row is None:
+            return  # Its original files have already been restored verbatim.
+        if INVENTORY_FILES.intersection(manifest["files"]):
+            raise TransferError("La copia contiene dos estados de inventario distintos. No se eligió uno automáticamente.")
+        from catalog.inventory import validate_snapshot
+        snapshot = row["fields"].get("snapshot")
+        status = row["fields"].get("status", {})
+        if not isinstance(status, dict):
+            raise TransferError("El estado de inventario no tiene un formato válido.")
+        payloads = {"inventory/sync-status.json": canonical(status)}
+        if len(payloads["inventory/sync-status.json"]) > 10_000:
+            raise TransferError("El estado de inventario supera el tamaño permitido.")
+        if snapshot is not None:
+            validate_snapshot(snapshot)
+            payloads["inventory/snapshot.json"] = canonical(snapshot)
+        # Do not alter the serialized DB row; its exact digest remains intact.
+        # New local files participate in the same cleanup journal as the media.
+        for name, payload in payloads.items():
+            install_local_file(name, io.BytesIO(payload),
+                {"size": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}, installed, created_dirs)
+        return
+    if source_mode == "database":
+        return  # The exact serialized row, including its status, is preserved.
+    names = INVENTORY_FILES.intersection(manifest["files"])
+    if not names and row is None:
+        return
+    from catalog.inventory import import_inventory_state
+    with zipfile.ZipFile(source) as archive:
+        if any(archive.getinfo(name).file_size > MAX_DATABASE for name in names):
+            raise TransferError("La copia de inventario supera el límite de traslado.")
+        payload = {"snapshot": None, "status": {}}
+        if "inventory/snapshot.json" in names:
+            payload["snapshot"] = json.loads(archive.read("inventory/snapshot.json"))
+        if "inventory/sync-status.json" in names:
+            payload["status"] = json.loads(archive.read("inventory/sync-status.json"))
+        # A prior cloud->local transfer may retain a dormant original DB row.
+        # The signed active-backend marker makes the current files authoritative.
+        import_inventory_state(payload, only_if_empty=row is None)
 
 
 def import_installation(source, check_only=False):
@@ -454,6 +543,7 @@ def import_installation(source, check_only=False):
                 install_files(snapshot, manifest, installed, created_dirs)
                 sequences_attempted = True
                 restore_sequences(manifest["sequences"])
+                restore_inventory_backend(snapshot, manifest, database, installed, created_dirs)
             committed = True
         return manifest
     except Exception:
@@ -461,9 +551,16 @@ def import_installation(source, check_only=False):
             # TemporaryDirectory exits after atomic() has committed. A failed
             # cleanup must never remove media referenced by the committed rows.
             raise TransferError("La instalación se restauró, pero no se pudo completar la limpieza del paquete temporal privado. Los datos y medios se conservaron; revisa el temporal antes de usar el destino.") from None
+        cleanup_failed = False
         for path in reversed(installed):
-            if path.resolve().is_relative_to(data):
-                path.unlink(missing_ok=True)
+            try:
+                if isinstance(path, tuple):
+                    storage, name = path
+                    storage.delete(name)
+                elif path.resolve().is_relative_to(data):
+                    path.unlink(missing_ok=True)
+            except Exception:
+                cleanup_failed = True
         for directory in reversed(created_dirs):
             if directory.resolve().is_relative_to(data):
                 directory.rmdir()
@@ -478,6 +575,8 @@ def import_installation(source, check_only=False):
                     restore_sequences({name: max(value, current[name]) for name, value in destination_sequences.items()})
             except Exception:
                 raise TransferError("Los datos importados se revirtieron, pero las secuencias requieren revisión antes de usar el destino.") from None
+        if cleanup_failed:
+            raise TransferError("Los registros importados se revirtieron, pero no se pudo limpiar todo el almacenamiento. Revisa los objetos privados del destino antes de repetir el traslado.") from None
         raise
     finally:
         ContentType.objects.clear_cache()

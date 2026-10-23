@@ -91,7 +91,7 @@ class ProductVariantForm(forms.ModelForm):
         model = ProductVariant
         fields = "__all__"
         labels = {"name": "Nombre de la variación"}
-        help_texts = {"name": "Por ejemplo: a gas con horno, eléctrica con cooler o 150 cm.",
+        help_texts = {"name": "En fabricación propia: gas, eléctrica o tamaño. En productos distribuidos: solo modelos, capacidades y opciones confirmados por el fabricante.",
                       "material_variant": "Elige un acabado de los que muestra el archivo al subirlo. Si no tiene acabados, déjalo vacío.",
                       "cost": "Referencia manual privada. El costo de fabricación se calcula por su código en la hoja."}
 

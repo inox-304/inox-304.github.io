@@ -18,7 +18,8 @@
     <p class="inox-editor-eyebrow">Catálogo INOX 304</p>
     <h2 id="inox-editor-title">{% if add %}Nuevo equipo, paso a paso{% else %}Edita tu equipo{% endif %}</h2>
     <p>Empieza por sus datos. Puedes guardar un borrador y añadir las fotos, la ficha técnica y el modelo 3D cuando estén listos.</p>
-    {% if original and perms.catalog.view_inventory %}<p><a href="{% url 'inventory-dashboard' %}?equipo={{ original.code|urlencode }}&amp;cantidad=1&amp;almacen=Taller#planificar">Analizar materiales y fabricación de {{ original.code }} →</a></p>{% endif %}
+    {% if original and perms.catalog.view_inventory and original.supply_type != 'distributed' %}<p><a href="{% url 'inventory-dashboard' %}?equipo={{ original.code|urlencode }}&amp;cantidad=1&amp;almacen=Taller#planificar">Analizar materiales y fabricación de {{ original.code }} →</a></p>{% endif %}
+    {% if original.supply_type == 'distributed' %}<p class="inox-editor-notice">Producto distribuido: vendemos el modelo del fabricante. Su capacidad y opciones son oficiales; no se ofrece fabricación a medida ni se calculan materiales de taller para este equipo.</p>{% endif %}
   </section>
   {% if errors %}
     <p class="inox-editor-notice" role="alert">Corrige los datos señalados. Si seleccionaste archivos nuevos, vuelve a elegirlos antes de guardar; los archivos que ya estaban guardados se conservan.</p>
@@ -43,8 +44,8 @@
       <p id="inox-step-progress" role="status" aria-live="polite"></p>
     </div>
   </div>
-  <aside class="inox-editor-notice inox-step inox-step-variants">Una variación cambia el equipo completo: gas / eléctrica, tamaño o refrigeración. Puedes asignarle su propio GLB, PDF y código de fabricación. Su receta reemplaza la principal; los adicionales se suman por separado.</aside>
-  <aside class="inox-editor-notice inox-step inox-step-additionals">Los adicionales son opciones que se agregan: una plancha, un quemador wok o una repisa. Vincula cada uno con su código de fabricación para definir sus componentes y trabajo. La geometría combinada del 3D se preparará con tus modelos.</aside>
+  <aside class="inox-editor-notice inox-step inox-step-variants">{% if original.supply_type == 'distributed' %}Agrupa solo versiones confirmadas por el fabricante. Cada capacidad o modelo puede tener su propia ficha y GLB; no uses el código de fabricación para una referencia de compra.{% else %}En fabricación propia, una variación cambia el equipo completo: gas / eléctrica, tamaño o refrigeración. Puedes asignarle su propio GLB, PDF y código de fabricación. Su receta reemplaza la principal. En productos distribuidos, registra únicamente versiones oficiales del fabricante.{% endif %}</aside>
+  <aside class="inox-editor-notice inox-step inox-step-additionals">{% if original.supply_type == 'distributed' %}Añade únicamente accesorios u opciones compatibles confirmados por el fabricante. No prometas cambios de medidas o componentes del equipo. Los datos existentes se conservan.{% else %}En fabricación propia, los adicionales son opciones que se agregan: una plancha, un quemador wok o una repisa. Su código de fabricación permite definir componentes y trabajo. En equipos distribuidos, ofrece solo accesorios compatibles confirmados. La geometría combinada del 3D requiere modelos preparados.{% endif %}</aside>
   <noscript><p class="inox-editor-notice">Todos los apartados se muestran a continuación. Los botones de guardar funcionan sin JavaScript.</p></noscript>
 {% endblock %}
 

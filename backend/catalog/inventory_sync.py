@@ -6,13 +6,19 @@ import os
 import tempfile
 import threading
 import time
+import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from .inventory import InventoryError, fetch_sheet, load_snapshot, save_snapshot, snapshot_path
+from django.db import DatabaseError
+from django.db.models import Q
+
+from .inventory import (InventoryError, fetch_sheet, inventory_persistence, load_snapshot,
+                        save_snapshot, snapshot_path, validate_snapshot)
 
 
 POLL_SECONDS = 60
+LEASE_SECONDS = 120
 _thread_lock = threading.Lock()
 
 
@@ -25,6 +31,10 @@ def _state_path():
 
 
 def _read_state():
+    if inventory_persistence() == "database":
+        from .models import InventorySyncState
+        state = InventorySyncState.objects.filter(pk=1).values_list("status", flat=True).first()
+        return state if isinstance(state, dict) else {}
     try:
         path = _state_path()
         if path.stat().st_size > 10_000:
@@ -36,6 +46,10 @@ def _read_state():
 
 
 def _write_state(state):
+    if inventory_persistence() == "database":
+        from .models import InventorySyncState
+        InventorySyncState.objects.update_or_create(pk=1, defaults={"status": state})
+        return
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
@@ -142,6 +156,8 @@ def refresh_inventory():
     """Read at most once per minute across tabs, threads and server workers."""
     if not sync_enabled():
         return {**sync_status(), "refreshed": False, "changed": False}
+    if inventory_persistence() == "database":
+        return _refresh_database()
     try:
         with _refresh_lock() as acquired:
             if not acquired:
@@ -174,3 +190,61 @@ def refresh_inventory():
         return {**sync_status(), "state": "error", "refreshed": False, "changed": False,
                 "message": "No se pudo guardar la actualización. Se conserva la última copia disponible.",
                 "retryAfter": POLL_SECONDS}
+
+
+def _refresh_database():
+    """CAS lease: no transaction/connection lock is held during Google HTTP."""
+    from .models import InventorySyncState
+    token = uuid.uuid4().hex
+    owned = False
+    try:
+        InventorySyncState.objects.get_or_create(pk=1)
+        now = time.time()
+        started = datetime.fromtimestamp(now, timezone.utc)
+        available = Q(lease_token="") | Q(lease_expires_at__isnull=True) | Q(lease_expires_at__lte=started)
+        owned = bool(InventorySyncState.objects.filter(pk=1).filter(available).update(
+            lease_token=token, lease_expires_at=started + timedelta(seconds=LEASE_SECONDS)))
+        if not owned:
+            return {**sync_status(), "refreshed": False, "changed": False, "busy": True, "retryAfter": 5}
+        row = InventorySyncState.objects.get(pk=1)
+        current = row.snapshot or {}
+        state = row.status if isinstance(row.status, dict) else {}
+        source_id = os.getenv("INOX_INVENTORY_SHEET_ID", "") or current.get("spreadsheetId", "")
+        attempted = _number(state.get("attempted"))
+        if state.get("spreadsheetId") == source_id and 0 <= now - attempted < POLL_SECONDS:
+            return {**sync_status(snapshot=current), "refreshed": False, "changed": False}
+        if state.get("spreadsheetId") != source_id:
+            state = {}
+        state = {**state, "spreadsheetId": source_id, "attempted": now}
+        if not InventorySyncState.objects.filter(pk=1, lease_token=token, lease_expires_at__gt=started).update(status=state):
+            return {**sync_status(), "refreshed": False, "changed": False, "busy": True, "retryAfter": 5}
+        try:
+            snapshot = fetch_sheet(source_id)
+            validate_snapshot(snapshot)
+            finished = time.time()
+            changes = {"snapshot": snapshot, "status": {**state, "verified": finished, "error": ""}}
+        except InventoryError as error:
+            snapshot = None
+            finished = time.time()
+            changes = {"status": {**state, "error": str(error)}}
+        # A timed-out worker cannot overwrite a newer worker, even if its HTTP
+        # response arrives later. Snapshot and status commit together.
+        saved = InventorySyncState.objects.filter(pk=1, lease_token=token,
+            lease_expires_at__gt=datetime.fromtimestamp(finished, timezone.utc)).update(
+                **changes, lease_token="", lease_expires_at=None)
+        if not saved:
+            return {**sync_status(), "refreshed": False, "changed": False, "busy": True, "retryAfter": 5}
+        return {**sync_status(snapshot=snapshot if snapshot is not None else current),
+                "refreshed": snapshot is not None,
+                "changed": snapshot is not None and snapshot_revision(current) != snapshot_revision(snapshot)}
+    except DatabaseError:
+        # Provider/connection details can contain credentials. Never return them.
+        return {"enabled": True, "state": "error", "refreshed": False, "changed": False,
+                "message": "No se pudo guardar la actualización. Se conserva la última copia disponible.",
+                "retryAfter": POLL_SECONDS, "interval": POLL_SECONDS}
+    finally:
+        if owned:
+            try:
+                InventorySyncState.objects.filter(pk=1, lease_token=token).update(lease_token="", lease_expires_at=None)
+            except DatabaseError:
+                pass  # The bounded lease remains recoverable after an outage.

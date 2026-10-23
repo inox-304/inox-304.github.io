@@ -1,10 +1,12 @@
 """Persistent, same-origin backend. Production deliberately requires external configuration."""
 import os
 import secrets
+from email.utils import parseaddr
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
 from security.smtp_backend import SUPPORTED_SMTP_BACKENDS
+from security.mail_config import GMAIL_API_BACKEND
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
@@ -114,8 +116,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 X_FRAME_OPTIONS = 'DENY'
 TRUSTED_INOX_PROXY = os.getenv('TRUST_REVERSE_PROXY') == '1'
-if TRUSTED_INOX_PROXY:
-    # Set only when the application port is private behind our own TLS proxy.
+TRUST_HTTPS_PROXY = os.getenv('TRUST_HTTPS_PROXY') == '1'
+if TRUSTED_INOX_PROXY or TRUST_HTTPS_PROXY:
+    # The hosting edge must overwrite this header. This does not authorize
+    # caller-supplied client-IP headers (reserved for our private Caddy proxy).
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 LANGUAGE_CODE = 'es-pe'
@@ -126,11 +130,28 @@ STATIC_URL = '/admin-static/'
 STATIC_ROOT = DATA_DIR / 'admin-static'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 WHITENOISE_MAX_AGE = 0 if DEBUG else 3600
-if ENVIRONMENT == 'production':
-    STORAGES = {
-        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+                   if ENVIRONMENT == 'production' else 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+INOX_MEDIA_STORAGE = os.getenv('INOX_MEDIA_STORAGE', 'file')
+if INOX_MEDIA_STORAGE not in ('file', 's3'):
+    raise ImproperlyConfigured('INOX_MEDIA_STORAGE must be file or s3.')
+if INOX_MEDIA_STORAGE == 's3':
+    s3_options = {
+        'bucket_name': os.getenv('INOX_S3_BUCKET', ''),
+        'endpoint_url': os.getenv('INOX_S3_ENDPOINT_URL', ''),
+        'region_name': os.getenv('INOX_S3_REGION', 'us-east-1'),
+        'access_key': os.getenv('INOX_S3_ACCESS_KEY_ID', ''),
+        'secret_key': os.getenv('INOX_S3_SECRET_ACCESS_KEY', ''),
     }
+    if not all(s3_options.values()) or not s3_options['endpoint_url'].startswith('https://'):
+        raise ImproperlyConfigured('Private S3 storage requires its bucket, HTTPS endpoint, region and credentials.')
+    STORAGES['default'] = {'BACKEND': 'catalog.storage.PrivateS3Storage', 'OPTIONS': s3_options}
+INOX_INVENTORY_PERSISTENCE = os.getenv('INOX_INVENTORY_PERSISTENCE', 'file')
+if INOX_INVENTORY_PERSISTENCE not in ('file', 'database'):
+    raise ImproperlyConfigured('INOX_INVENTORY_PERSISTENCE must be file or database.')
 MEDIA_ROOT = DATA_DIR / 'media'
 MEDIA_URL = '/media/'
 FRONTEND_DIST = Path(os.getenv('FRONTEND_DIST', PROJECT_DIR / 'dist-server')).resolve()
@@ -154,10 +175,20 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '1') == '1'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '0') == '1'
 EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+GMAIL_API_CLIENT_ID = os.getenv('GMAIL_API_CLIENT_ID', '')
+GMAIL_API_CLIENT_SECRET = os.getenv('GMAIL_API_CLIENT_SECRET', '')
+GMAIL_API_REFRESH_TOKEN = os.getenv('GMAIL_API_REFRESH_TOKEN', '')
+GMAIL_API_SENDER = os.getenv('GMAIL_API_SENDER', '').strip().lower()
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured('Choose either EMAIL_USE_TLS or EMAIL_USE_SSL.')
 if ENVIRONMENT == 'production' and SECURITY_EMAIL_ENABLED:
-    if EMAIL_BACKEND not in SUPPORTED_SMTP_BACKENDS or not EMAIL_HOST or not DEFAULT_FROM_EMAIL:
-        raise ImproperlyConfigured('Email verification requires a configured SMTP transport.')
-    if not (EMAIL_USE_TLS or EMAIL_USE_SSL):
+    if EMAIL_BACKEND == GMAIL_API_BACKEND:
+        if not all((GMAIL_API_CLIENT_ID, GMAIL_API_CLIENT_SECRET, GMAIL_API_REFRESH_TOKEN,
+                    GMAIL_API_SENDER, DEFAULT_FROM_EMAIL)):
+            raise ImproperlyConfigured('Gmail HTTPS verification requires OAuth credentials and a sender.')
+        if parseaddr(DEFAULT_FROM_EMAIL)[1].lower() != GMAIL_API_SENDER:
+            raise ImproperlyConfigured('DEFAULT_FROM_EMAIL must match the authorized Gmail API sender.')
+    elif EMAIL_BACKEND not in SUPPORTED_SMTP_BACKENDS or not EMAIL_HOST or not DEFAULT_FROM_EMAIL:
+        raise ImproperlyConfigured('Email verification requires a configured SMTP or Gmail HTTPS transport.')
+    elif not (EMAIL_USE_TLS or EMAIL_USE_SSL):
         raise ImproperlyConfigured('Production SMTP must use TLS.')

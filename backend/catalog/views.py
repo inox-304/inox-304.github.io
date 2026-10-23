@@ -1,7 +1,6 @@
-from pathlib import Path
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from django.conf import settings
+from django.core.exceptions import SuspiciousFileOperation
 from django.db.models import Q
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -10,6 +9,7 @@ from django.views.decorators.http import require_GET, require_safe
 
 from .models import MediaAsset, Product, ProductVariant
 from .serializers import public_catalog_data, public_product_queryset
+from .storage import open_private_file
 
 
 @never_cache
@@ -30,11 +30,11 @@ def public_media(request, asset_id):
 
 
 def media_response(asset):
-    root = Path(settings.MEDIA_ROOT).resolve()
-    path = (root / asset.file.name).resolve()
-    if not path.is_relative_to(root) or not path.is_file():
-        raise Http404
-    response = FileResponse(path.open("rb"), content_type=asset.content_type, as_attachment=asset.kind == "pdf", filename=f"{asset.pk}.{ {'image': 'webp', 'pdf': 'pdf', 'glb': 'glb'}[asset.kind] }")
+    try:
+        source = open_private_file(asset.file.storage, asset.file.name)
+    except (FileNotFoundError, SuspiciousFileOperation):
+        raise Http404 from None
+    response = FileResponse(source, content_type=asset.content_type, as_attachment=asset.kind == "pdf", filename=f"{asset.pk}.{ {'image': 'webp', 'pdf': 'pdf', 'glb': 'glb'}[asset.kind] }")
     response["X-Content-Type-Options"] = "nosniff"
     response["Content-Security-Policy"] = "default-src 'none'; sandbox"
     return response
