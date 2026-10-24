@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { cooktopAssetFor } from '../src/lib/cooktop-assets.ts';
+import { cartAssetFor, CART_ASSET } from '../src/lib/cart-assets.ts';
 import { parseCooktopConfig, initialCooktopSelection, placeCooktopModule, cooktopSummary } from '../src/lib/cooktop-config.ts';
 import { planCooktopParts } from '../src/scripts/cooktop-scene.ts';
 import { products } from '../src/data/products.ts';
@@ -12,14 +13,17 @@ const config = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import
 const initial = () => ({ config: structuredClone(config), selection: { layoutId: 'six', energy: 'gas', placements: [] } });
 const models = { P04: '/models/inox/cocina-industrial-4-hornillas-tipo-isla-plancha-ho-v2.glb', P05: '/models/inox/cocina-industrial-tipo-isla-4-parrillas-plancha-ho-v2.glb' };
 const product = id => ({ id, name: id, supplyType: 'manufactured', image: '/images/products/example.jpg', model3d: models[id], variants: [] });
+const cartProduct = () => ({ ...product('P15'), model3d: CART_ASSET });
+const cartInitial = () => ({ config: { version: 1, enabled: true, modules: ['broastera', 'freidora', 'conservadora', 'plancha'].map(id => ({ id, label: id, defaultIncluded: true })) }, selection: { included: ['broastera', 'freidora', 'conservadora', 'plancha'] } });
 const source = ts.transpileModule(readFileSync(new URL('../src/scripts/product-media.ts', import.meta.url), 'utf8')
   .replace(/^import .*;\r?\n/gm, ''),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText
-  .replace("import('./cooktop-scene')", 'loadSceneModule()').replace("import('@google/model-viewer')", 'loadNativeModule()');
+  .replace("import('./cooktop-scene')", 'loadSceneModule()').replace("import('./cart-scene')", 'loadCartModule()').replace("import('@google/model-viewer')", 'loadNativeModule()');
 
-function fixture(base = product('P04'), deferNative = false) {
-  const calls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [], frames = new Map();
+function fixture(base = product('P04'), deferNative = false, { failInitialCartUpdate = false } = {}) {
+  const calls = [], cartCalls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [], frames = new Map();
   let currentState = initial(), stateProduct = base.id, timerId = 0;
+  let currentCart = base.id === 'P15' ? cartInitial() : null, cartProductId = base.id;
   let finishNativeLoad;
   const nativeModule = new Promise(resolve => {
     finishNativeLoad = () => resolve({ ModelViewerElement: class {} });
@@ -39,17 +43,24 @@ function fixture(base = product('P04'), deferNative = false) {
     focus() { this.focused = true; }
     pause() {}
     updateFraming() { (this.framingTimes ||= []).push(this.currentTime); return this.framingPromise || Promise.resolve(); }
-    querySelectorAll(selector) { return this.children.flatMap(child => [...(child.tagName === selector ? [child] : []), ...child.querySelectorAll(selector)]); }
+    querySelectorAll(selector) {
+      const matches = child => {
+        const attr = selector.match(/^\[data-([\w-]+)(?:="([^"]*)")?\]$/);
+        if (attr) { const key = attr[1].replace(/-([a-z])/g, (_, c) => c.toUpperCase()); return attr[2] === undefined ? key in child.dataset : child.dataset[key] === attr[2]; }
+        return child.tagName === selector;
+      };
+      return this.children.flatMap(child => [...(matches(child) ? [child] : []), ...child.querySelectorAll(selector)]);
+    }
     querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
     set src(value) { this.source = value; if (this.tagName === 'model-viewer') queueMicrotask(() => this.emit('load')); }
   }
-  const root = new Element(), cooktopRoot = new Element(), variant = new Element('select');
+  const root = new Element(), cooktopRoot = new Element(), cartRoot = new Element(), variant = new Element('select');
   const names = ['media-toolbar', 'photo-options', 'gallery-photo', 'gallery-image', 'model-host', 'show-model', 'model-help', 'media-status'];
   const nodes = Object.fromEntries(names.map(name => [name, new Element(name === 'show-model' ? 'button' : 'div')]));
   root.querySelector = selector => nodes[selector.slice(6, -1)];
   root.dataset.initialProduct = JSON.stringify(base);
   const document = {
-    querySelector: selector => selector === '[data-cooktop-root]' ? cooktopRoot : selector === '[data-product-variant]' ? variant : null,
+    querySelector: selector => selector === '[data-cooktop-root]' ? cooktopRoot : selector === '[data-cart-root]' ? cartRoot : selector === '[data-product-variant]' ? variant : null,
     querySelectorAll: selector => selector === '[data-product-media]' ? [root] : [], createElement: tag => new Element(tag),
     addEventListener(type, callback) { if (!documents.has(type)) documents.set(type, []); documents.get(type).push(callback); },
   };
@@ -65,15 +76,34 @@ function fixture(base = product('P04'), deferNative = false) {
     } };
     calls.push(call); return promise;
   } });
+  const loadCartModule = async () => ({ createCartScene(host, url, options) {
+    let resolve, reject;
+    const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+    const call = { url, options, updates: [], views: [], roofs: [], disposed: 0,
+      reject() { reject(new Error('Missing cart asset')); },
+      complete() {
+        this.canvas = new Element('canvas'); host.append(this.canvas); const self = this;
+        resolve({
+          update(included) { self.updates.push(structuredClone(included)); if (failInitialCartUpdate && self.updates.length === 1) options.onError(new Error('Incompatible selection')); },
+          setView(view) { self.views.push(view); }, setCanopyVisible(visible) { self.roofs.push(visible); },
+          focus() { self.canvas.focus(); }, dispose() { self.disposed++; self.canvas.remove(); },
+        });
+      },
+    };
+    cartCalls.push(call); return promise;
+  } });
   runInNewContext(source, { document, window, URL, location: new URL('https://inox.example/'), CustomEvent,
     safeImage: value => value, safeModel: value => value, safePreviewAsset: (value, safe) => safe(value), withBase: value => value,
     cooktopAssetFor, readCooktop: (_root, id) => id === stateProduct ? currentState : null,
+    cartAssetFor, readCart: (_root, id) => id === cartProductId ? currentCart : null, loadCartModule,
     pickCooktopAnchor: (_root, id, anchor) => picks.push({ id, anchor }), loadSceneModule,
     loadNativeModule: () => nativeModule, cancelAnimationFrame(id) { frames.delete(id); }, requestAnimationFrame(callback) { frames.set(++timerId, callback); return timerId; },
     performance: { now: () => 0 }, matchMedia: () => ({ matches: true }), console,
   });
   const changed = (interactive = true, id = stateProduct) => dispatch('inox:cooktop-updated', { productId: id, interactive });
-  return { nodes, calls, timers, picks, changed, dispatch, finishNativeLoad,
+  return { nodes, calls, cartCalls, timers, picks, changed, dispatch, finishNativeLoad,
+    cartChanged(interactive = true, id = cartProductId) { dispatch('inox:cart-updated', { productId: id, interactive }); },
+    setCartState(state, id = cartProductId) { currentCart = state; cartProductId = id; },
     frame() { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(500)); },
     setState(state, id = stateProduct) { currentState = state; stateProduct = id; },
     pagehide() { windowEvents.get('pagehide')(); },
@@ -88,6 +118,115 @@ test('only the exact approved source or opaque media ID may choose a modular cha
   assert.equal(cooktopAssetFor('P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330/'), '/models/inox/cooktop-p04-v1.glb');
   assert.equal(cooktopAssetFor('P04', '/admin/catalog/mediaasset/a5c077e3-be87-5d5a-9aaf-1ebcced04330/file/'), '/models/inox/cooktop-p04-v1.glb');
   for (const [id, url] of [['P04', '/models/new-sketchup.glb'], ['P04', models.P05], ['P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330-extra/'], ['ILUMI-DJ-181', models.P04], ['__proto__', models.P04]]) assert.equal(cooktopAssetFor(id, url), '');
+});
+
+test('cart geometry is restricted to P15 and its explicitly reviewed media', () => {
+  assert.equal(cartAssetFor('P15', CART_ASSET), CART_ASSET);
+  assert.equal(cartAssetFor('P15', '/media/5d302554-9c6f-5523-a8f1-cf26d6fb8539/'), CART_ASSET);
+  for (const [id, model] of [['P04', CART_ASSET], ['ILUMI-DJ-181', CART_ASSET], ['P15', '/models/new-cart.glb'], ['P15', ''], ['__proto__', CART_ASSET]]) assert.equal(cartAssetFor(id, model), '');
+});
+
+test('cart interaction opens one scene and delayed initialization applies the latest complete selection', async () => {
+  const f = fixture(cartProduct()); f.cartChanged(false); await f.flush(); assert.equal(f.cartCalls.length, 0);
+  f.cartChanged(); await f.flush(); assert.equal(f.cartCalls.length, 1);
+  const state = cartInitial(); state.selection.included = ['plancha']; f.setCartState(state); f.cartChanged(); await f.flush();
+  assert.equal(f.cartCalls.length, 1); f.cartCalls[0].complete(); await f.flush();
+  assert.deepEqual(f.cartCalls[0].updates, [['plancha']]); assert.equal(f.cartCalls[0].canvas.focused, undefined); assert.equal(f.timers.size, 0);
+  state.selection.included = ['freidora']; f.setCartState(state); f.cartChanged();
+  assert.deepEqual(f.cartCalls[0].updates.at(-1), ['freidora']); assert.equal(f.cartCalls.length, 1);
+  f.cartChanged(true, 'P04'); assert.equal(f.cartCalls[0].updates.length, 2); f.pagehide(); assert.equal(f.cartCalls[0].disposed, 1);
+});
+
+test('cart roof and worktop view controls inspect geometry without modifying the selected equipment', async () => {
+  const f = fixture(cartProduct()); f.nodes['show-model'].click(); await f.flush(); f.cartCalls[0].complete(); await f.flush();
+  const call = f.cartCalls[0], toolbar = f.nodes['media-toolbar']; assert.equal(call.canvas.focused, true);
+  const roof = toolbar.querySelectorAll('button').find(button => button.textContent === 'Ocultar toldo');
+  assert.ok(roof && !roof.hidden); roof.click(); assert.deepEqual(call.roofs, [false]); assert.equal(roof.textContent, 'Mostrar toldo');
+  roof.click(); assert.deepEqual(call.roofs, [false, true]);
+  const top = toolbar.querySelector('[data-model-view="top"]'); assert.equal(top.textContent, 'Ver encimera');
+  top.click(); assert.deepEqual(call.views, ['top']); assert.equal(call.roofs.at(-1), false); assert.equal(roof.getAttribute('aria-pressed'), 'true');
+  assert.equal(call.updates.length, 1);
+  f.nodes['photo-options'].querySelector('button').click(); assert.equal(call.disposed, 1); assert.equal(f.nodes['model-host'].hidden, true); assert.equal(roof.hidden, true); f.pagehide();
+});
+
+test('closing the cart during loading disposes its late scene and preserves the photograph', async () => {
+  const f = fixture(cartProduct()); f.cartChanged(); await f.flush(); f.nodes['show-model'].click();
+  f.cartCalls[0].complete(); await f.flush();
+  assert.equal(f.cartCalls[0].disposed, 1); assert.equal(f.cartCalls[0].updates.length, 0);
+  assert.equal(f.nodes['model-host'].hidden, true); assert.equal(f.nodes['model-host'].children.length, 0);
+  assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'false'); assert.equal(f.timers.size, 0);
+});
+
+test('revoking cart options closes loaded or pending scenes without silently reopening the reference model', async () => {
+  for (const loaded of [false, true]) {
+    const f = fixture(cartProduct()); f.cartChanged(); await f.flush();
+    if (loaded) { f.cartCalls[0].complete(); await f.flush(); }
+    f.setCartState(null); f.cartChanged(false);
+    if (!loaded) { f.cartCalls[0].complete(); await f.flush(); }
+    f.cartChanged(); await f.flush();
+    assert.equal(f.cartCalls[0].disposed, 1); assert.equal(f.cartCalls.length, 1);
+    assert.equal(f.nodes['model-host'].children.length, 0); assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'false'); f.pagehide();
+  }
+});
+
+test('an independent cart variant cannot inherit the base equipment or a late modular scene', async () => {
+  const f = fixture(cartProduct()); f.cartChanged(); await f.flush();
+  f.dispatch('inox:configuration-updated', { productId: 'P15', variant: { id: 'other', model3d: '/models/independent-cart.glb' } });
+  await f.flush(); f.cartChanged(); f.cartCalls[0].complete(); await f.flush();
+  assert.equal(f.cartCalls[0].disposed, 1); assert.equal(f.cartCalls[0].updates.length, 0); assert.equal(f.cartCalls.length, 1);
+  assert.equal(f.nodes['model-host'].querySelector('model-viewer').source, '/models/independent-cart.glb'); f.pagehide();
+});
+
+test('a cart renderer error returns to photo and retry restores the current equipment', async () => {
+  const f = fixture(cartProduct()), state = cartInitial(); state.selection.included = ['freidora', 'plancha']; f.setCartState(state);
+  f.cartChanged(); await f.flush(); f.cartCalls[0].complete(); await f.flush();
+  f.cartCalls[0].options.onError(new Error('Context lost')); assert.equal(f.cartCalls[0].disposed, 1);
+  assert.match(f.nodes['media-status'].textContent, /reintentar/); assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'false');
+  f.nodes['show-model'].click(); await f.flush(); f.cartCalls[1].complete(); await f.flush();
+  assert.deepEqual(f.cartCalls[1].updates, [['freidora', 'plancha']]); assert.equal(f.cartCalls[1].disposed, 0);
+  assert.equal(f.nodes['model-host'].children.length, 1); assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'true'); f.pagehide();
+});
+
+test('a synchronous initial cart update failure cannot leave loading success controls behind', async () => {
+  const f = fixture(cartProduct(), false, { failInitialCartUpdate: true }); f.cartChanged(); await f.flush();
+  f.cartCalls[0].complete(); await f.flush();
+  assert.equal(f.cartCalls[0].disposed, 1); assert.equal(f.nodes['model-host'].children.length, 0);
+  assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'false'); assert.match(f.nodes['media-status'].textContent, /reintentar/);
+  assert.equal(f.nodes['media-toolbar'].querySelectorAll('button').find(button => button.textContent === 'Ocultar toldo').hidden, true);
+  assert.equal(f.nodes['model-help'].hidden, true); assert.equal(f.timers.size, 0);
+});
+
+test('a timed out cart scene cannot overwrite a successful retry', async () => {
+  const f = fixture(cartProduct()); f.cartChanged(); await f.flush();
+  [...f.timers.values()].forEach(callback => callback()); assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'false');
+  f.cartChanged(); await f.flush(); assert.equal(f.cartCalls.length, 2);
+  f.cartCalls[1].complete(); await f.flush(); f.cartCalls[0].complete(); await f.flush();
+  assert.equal(f.cartCalls[0].disposed, 1); assert.equal(f.cartCalls[1].disposed, 0);
+  assert.deepEqual(f.nodes['model-host'].children, [f.cartCalls[1].canvas]); f.pagehide();
+});
+
+test('late cart rules replace a pending native viewer while its stale import cannot overwrite the cart', async () => {
+  const f = fixture(cartProduct(), true); f.setCartState(null); f.nodes['show-model'].click(); await f.flush();
+  assert.equal(f.cartCalls.length, 0); assert.equal(f.nodes['model-host'].querySelector('model-viewer'), null);
+  f.setCartState(cartInitial()); f.cartChanged(false); await f.flush(); assert.equal(f.cartCalls.length, 1);
+  f.cartCalls[0].complete(); await f.flush(); f.finishNativeLoad(); await f.flush();
+  assert.deepEqual(f.nodes['model-host'].children, [f.cartCalls[0].canvas]); assert.equal(f.cartCalls[0].disposed, 0); f.pagehide();
+});
+
+test('late cart rules never reopen a photo selected during native viewer loading', async () => {
+  const f = fixture(cartProduct(), true); f.setCartState(null); f.nodes['show-model'].click(); await f.flush();
+  f.nodes['show-model'].click(); f.setCartState(cartInitial()); f.cartChanged(false); await f.flush();
+  f.finishNativeLoad(); await f.flush();
+  assert.equal(f.cartCalls.length, 0); assert.equal(f.nodes['model-host'].children.length, 0); assert.equal(f.timers.size, 0);
+  assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'false'); f.pagehide();
+});
+
+test('leaving P15 during load keeps another product model isolated from the late cart', async () => {
+  const f = fixture(cartProduct()); f.cartChanged(); await f.flush();
+  f.dispatch('inox:product-updated', { product: { id: 'P06', name: 'Horno', image: '/images/horno.webp', model3d: '/models/horno.glb' } });
+  await f.flush(); f.cartCalls[0].complete(); await f.flush(); f.cartChanged();
+  assert.equal(f.cartCalls[0].disposed, 1); assert.equal(f.cartCalls[0].updates.length, 0);
+  assert.equal(f.nodes['model-host'].querySelector('model-viewer').source, '/models/horno.glb'); f.pagehide();
 });
 
 test('ordinary doors reserve open-pose framing before animating and stale preparations cannot reopen them', async () => {

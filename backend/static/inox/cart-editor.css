@@ -1,0 +1,6 @@
+.cart-config-editor { max-width: 100%; min-width: 0; }
+.cart-config-editor table { display: block; max-width: 100%; overflow-x: auto; }
+.cart-config-editor th, .cart-config-editor td { padding: 12px; vertical-align: middle; }
+.cart-config-editor input[type="text"] { min-width: 130px; max-width: 220px; }
+.cart-config-editor label { float: none !important; display: inline-flex !important; gap: 7px; align-items: center; width: auto !important; }
+.cart-config-editor p { max-width: 850px; line-height: 1.6; }

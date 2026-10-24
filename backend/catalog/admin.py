@@ -128,6 +128,7 @@ class ProductAdmin(AuditedAdmin):
         ("Origen, marca y capacidad", {"description": "En productos distribuidos conserva las capacidades y opciones oficiales del fabricante. Cambiar de modelo no significa fabricar a medida. La foto, el PDF y el 3D pueden añadirse después.", "fields": ("supply_type", "brand", "supplier_model", "equipment_family", "capacity", "source_url"), "classes": ("inox-step", "inox-step-details")}),
         ("Identificadores", {"description": "Se crean automáticamente en un equipo nuevo y se conservan al editarlo.", "fields": ("code", "slug"), "classes": ("collapse", "inox-step", "inox-step-details")}),
         ("Configurador de cocina", {"description": "Define las opciones y posiciones que puedes fabricar. El borrador se prepara solo cuando lo solicitas; habilítalo después de revisarlo.", "fields": ("cooktop_config",), "classes": ("inox-step", "inox-step-configurator")}),
+        ("Personalización del carrito", {"description": "Aprueba los módulos que se pueden incluir o retirar en este carrito. Los cambios se reflejan en su modelo 3D compatible.", "fields": ("cart_config",), "classes": ("inox-step", "inox-step-cart")}),
         ("Tipos de opción", {"description": "Define aquí los tipos y valores permitidos solo para este equipo. Después selecciona una combinación en cada variación. No se activan ni crean combinaciones automáticamente.", "fields": ("variant_axes",), "classes": ("inox-step", "inox-step-variants")}),
         ("Foto principal", {"fields": ("image_upload", "image_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Ficha técnica", {"fields": ("technical_upload", "technical_current"), "classes": ("inox-step", "inox-step-media")}),
@@ -144,7 +145,7 @@ class ProductAdmin(AuditedAdmin):
 
     def get_fieldsets(self, request, obj=None):
         can_edit = is_owner(request.user) and (self.has_change_permission(request, obj) if obj else self.has_add_permission(request))
-        return tuple(fieldset for fieldset in super().get_fieldsets(request, obj) if can_edit or not {"cooktop_config", "variant_axes"}.intersection(fieldset[1]["fields"]))
+        return tuple(fieldset for fieldset in super().get_fieldsets(request, obj) if can_edit or not {"cooktop_config", "cart_config", "variant_axes"}.intersection(fieldset[1]["fields"]))
 
     def get_form(self, request, obj=None, **kwargs):
         base_form = super().get_form(request, obj, **kwargs)
@@ -153,6 +154,7 @@ class ProductAdmin(AuditedAdmin):
         class RequestProductForm(base_form):
             def __init__(self, *args, **form_kwargs):
                 form_kwargs["can_edit_cooktop"] = can_edit_cooktop
+                form_kwargs["can_edit_cart"] = is_owner(request.user)
                 form_kwargs["can_edit_variant_axes"] = is_owner(request.user)
                 form_kwargs["defer_variant_consistency"] = request.user.has_perm("catalog.view_productvariant") or request.user.has_perm("catalog.change_productvariant")
                 super().__init__(*args, **form_kwargs)
@@ -161,9 +163,11 @@ class ProductAdmin(AuditedAdmin):
 
     def save_model(self, request, obj, form, change):
         if not is_owner(request.user):
-            previous = Product.objects.only("cooktop_config", "variant_axes").get(pk=obj.pk) if change else None
+            previous = Product.objects.only("cooktop_config", "cart_config", "variant_axes").get(pk=obj.pk) if change else None
             if obj.cooktop_config != (previous.cooktop_config if previous else {}):
                 raise PermissionDenied("Solo el propietario puede modificar el configurador de cocina.")
+            if obj.cart_config != (previous.cart_config if previous else {}):
+                raise PermissionDenied("Solo el propietario puede modificar el configurador del carrito.")
             if obj.variant_axes != (previous.variant_axes if previous else []):
                 raise PermissionDenied("Solo el propietario puede definir los tipos de opción y sus valores permitidos.")
         obj._defer_variant_consistency = getattr(obj, "_variant_inline_validated", False)
@@ -269,6 +273,8 @@ class ProductAdmin(AuditedAdmin):
                 values.update(code=f"{source.code[:53]}-C-{token}", slug=f"{source.slug[:134]}-copia-{token}", name=f"{source.name[:242]} (copia)", is_published=False)
                 if source.cooktop_config:
                     values["cooktop_config"] = {**deepcopy(source.cooktop_config), "enabled": False}
+                if source.cart_config:
+                    values["cart_config"] = {**deepcopy(source.cart_config), "enabled": False}
                 copy = Product.objects.create(**values)
                 for model, items in ((ProductVariant, source.variants.all()), (ProductAdditional, source.additionals.all()), (ProductImage, source.gallery_images.all())):
                     for item in items:
@@ -399,9 +405,9 @@ class AuditLogAdmin(admin.ModelAdmin):
                 with transaction.atomic(), audit_context(request.user, "restore"):
                     obj = model.objects.select_for_update().get(pk=obj.pk)
                     if model is Product and not is_owner(request.user):
-                        protected = ("variant_axes", "cooktop_config")
+                        protected = ("variant_axes", "cooktop_config", "cart_config")
                         if any(field in log.before and log.before[field] != getattr(obj, field) for field in protected):
-                            raise PermissionDenied("Solo el propietario puede restaurar los tipos de opción o el configurador de cocina.")
+                            raise PermissionDenied("Solo el propietario puede restaurar los tipos de opción o los configuradores.")
                     for field in model._meta.concrete_fields:
                         if not field.primary_key and field.editable and field.name in log.before:
                             value = log.before[field.name]

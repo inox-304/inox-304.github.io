@@ -1,5 +1,6 @@
 import { categoryNames, normalizeWhatsapp, safeHttps, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet, type CmsAdditional, type CmsData, type CmsProduct } from './cms.ts';
 import { parseCooktopConfig } from './cooktop-config.ts';
+import { parseCartConfig } from './cart-config.ts';
 import { parseVariantAxes, parseOptionValues, validateVariantCombinations } from './product-variant-options.ts';
 
 const settingKeys = ['empresa', 'direccion', 'referencia_direccion', 'facebook', 'instagram', 'tiktok', 'horarios', 'contacto_principal', 'contacto_instalaciones', 'contacto_medida', 'contacto_formulario', 'hero_title', 'hero_description', 'home_text'];
@@ -79,12 +80,14 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
     const supplyType = string(item.supplyType ?? '', 16) as CmsProduct['supplyType'];
     if (!['', 'manufactured', 'distributed'].includes(supplyType || '')) throw new Error('Invalid product supply type');
     const cooktopConfig = parseCooktopConfig(item.cooktopConfig);
+    const cartConfig = parseCartConfig(item.cartConfig);
+    if (cartConfig && (supplyType !== 'manufactured' || category !== 'linea-caliente' || item.equipmentFamily !== 'carritos-comida' || (!cartConfig.enabled && !preview))) throw new Error('Unauthorized cart configuration');
     if (cooktopConfig && (supplyType !== 'manufactured' || category !== 'linea-caliente' || item.equipmentFamily !== 'cocinas' || (!cooktopConfig.enabled && !preview))) throw new Error('Unauthorized cooktop configuration');
     return {
       id: identifier(item.id), slug, name: string(item.name, 250), category, summary: string(item.summary, 10000),
       supplyType, brand: string(item.brand ?? '', 120), supplierModel: string(item.supplierModel ?? '', 120),
       equipmentFamily: string(item.equipmentFamily ?? '', 32), capacity: string(item.capacity ?? '', 180),
-      cooktopConfig, variantAxes,
+      cooktopConfig, cartConfig, variantAxes,
       features: list(item.features, 50).map(value => string(value)), image: asset(item.image, imageUrl, true),
       visible: true, featured: boolean(item.featured), order: item.order,
       contactId: item.contactId ? identifier(item.contactId) : '', price: amount(item.price), currency: item.currency,

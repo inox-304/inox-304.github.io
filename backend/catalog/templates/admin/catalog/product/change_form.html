@@ -8,7 +8,7 @@
 
 {% block extrahead %}
   {{ block.super }}
-  <script defer src="{% static 'inox/product-editor.js' %}?v=4"></script>
+  <script defer src="{% static 'inox/product-editor.js' %}?v=5"></script>
   <script defer src="{% static 'inox/variant-batch.js' %}?v=1"></script>
   <script defer src="{% static 'inox/model-inspector.js' %}"></script>
 {% endblock %}
@@ -33,6 +33,7 @@
         <li><button type="button" data-inox-go-step="variants"><span aria-hidden="true">3</span>Variaciones</button></li>
         <li><button type="button" data-inox-go-step="additionals"><span aria-hidden="true">4</span>Adicionales</button></li>
         {% if adminform.form.cooktop_config %}<li><button type="button" data-inox-go-step="configurator"><span aria-hidden="true">5</span>Configurador</button></li>{% endif %}
+        {% if adminform.form.cart_config %}<li><button type="button" data-inox-go-step="cart"><span aria-hidden="true">6</span>Carrito</button></li>{% endif %}
         <li><button type="button" data-inox-go-step="pricing"><span aria-hidden="true">5</span>Precio</button></li>
         <li><button type="button" data-inox-go-step="review"><span aria-hidden="true">6</span>Revisar y guardar</button></li>
       </ol>
@@ -48,7 +49,7 @@
   </div>
   <section class="inox-editor-notice inox-step inox-step-variants">
     <p>Las variaciones sirven para cualquier equipo: capacidades, litros, tamaños o versiones completas. Tú decides cuáles ofrecer; cada opción puede tener su propia foto, modelo 3D, ficha, precio y disponibilidad.</p>
-    <p>{% if original.supply_type == 'distributed' %}Agrupa solo versiones confirmadas por el fabricante. No uses el código de fabricación para una referencia de compra.{% else %}En fabricación propia, el código de una variación identifica su receta completa y reemplaza la receta principal. Los módulos que se combinan sobre una cocina se definen en Configurador. Para un carrito, puedes preparar sus versiones completas con sus archivos propios; la combinación visual de piezas requiere su modelo modular.{% endif %}</p>
+    <p>{% if original.supply_type == 'distributed' %}Agrupa solo versiones confirmadas por el fabricante. No uses el código de fabricación para una referencia de compra.{% else %}En fabricación propia, el código de una variación identifica su receta completa y reemplaza la receta principal. Los módulos de una cocina se definen en Configurador. Los módulos que se incluyen o retiran de un carrito compatible se definen en Carrito; sus versiones completas también pueden tener archivos propios.{% endif %}</p>
     <div class="inox-variant-batch" data-inox-variant-batch hidden>
       <h3>Preparar varias opciones</h3>
       <label for="inox-variant-names">Un nombre por línea, con su capacidad o medida cuando corresponda</label>
@@ -77,6 +78,7 @@
       <div><dt>Variaciones</dt><dd data-inox-summary="variants">Sin variaciones</dd></div>
       <div><dt>Adicionales</dt><dd data-inox-summary="additionals">Sin adicionales</dd></div>
       {% if adminform.form.cooktop_config %}<div><dt>Configurador</dt><dd data-inox-summary="configurator">Sin configurador</dd></div>{% endif %}
+      {% if adminform.form.cart_config %}<div><dt>Carrito</dt><dd data-inox-summary="cart">Sin personalización del carrito</dd></div>{% endif %}
       <div><dt>Publicación</dt><dd data-inox-summary="publication">Borrador</dd></div>
     </dl>
     <p class="inox-review-note">Los archivos pendientes no impiden guardar un borrador. Revisa la visibilidad y pulsa Guardar para conservar los cambios. Los archivos elegidos se enviarán al guardar.</p>

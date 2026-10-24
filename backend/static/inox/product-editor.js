@@ -11,9 +11,10 @@
     { id: 'variants', title: 'Variaciones', description: 'Prepara capacidades, tamaños o versiones completas de este equipo. Cada opción puede cambiar su foto, modelo 3D y ficha. Activa solo las opciones revisadas.' },
     { id: 'additionals', title: 'Adicionales', description: 'Añade las opciones que el cliente puede solicitar con este equipo. Cada una puede tener su tarifa por unidad o medida, o quedar a cotizar. Los costos internos son privados; la ubicación en el modelo 3D se definirá con tus diseños.' },
     { id: 'configurator', title: 'Configurador', description: 'Define las posiciones, energías y módulos compatibles de esta cocina. Puedes conservarlo deshabilitado para revisarlo antes de ofrecerlo.' },
+    { id: 'cart', title: 'Personalización del carrito', description: 'Aprueba qué módulos compatibles se pueden incluir o retirar. Define su selección inicial y revisa el modelo antes de habilitarlo.' },
     { id: 'pricing', title: 'Precio', description: 'Define cómo se cobra este equipo y si mostrarás su precio al público.' },
     { id: 'review', title: 'Revisar y guardar', description: 'Revisa lo que has preparado y decide si lo conservas como borrador o lo publicas.' },
-  ].filter(step => step.id !== 'configurator' || form.querySelector('.inox-step-configurator'));
+  ].filter(step => !['configurator', 'cart'].includes(step.id) || form.querySelector(`.inox-step-${step.id}`));
   const sections = [];
   const seen = new Set();
   form.querySelectorAll('.inox-step').forEach(section => {
@@ -203,6 +204,8 @@
       const config = JSON.parse(valueOf('cooktop_config') || '{}');
       setSummary('configurator', config.kind === 'cooktop' ? `${config.enabled ? 'Habilitado' : 'Borrador deshabilitado'} · ${config.layouts.length} distribución(es)` : 'Sin configurador');
     } catch { setSummary('configurator', 'Revisa la configuración antes de guardar'); }
+    const cartModules = [...form.querySelectorAll('input[name^="cart_config-"][name$="-allowed"]')].filter(input => input.checked).length;
+    setSummary('cart', cartModules ? `${namedInput('cart_config-enabled')?.checked ? 'Habilitado' : 'Borrador deshabilitado'} · ${cartModules} módulo(s)` : 'Sin personalización del carrito');
     const gallery = [...uploadCards.entries()].filter(([input, card]) => {
       if (!input.name.endsWith('-upload')) return false;
       const prefix = input.name.slice(0, -'upload'.length);

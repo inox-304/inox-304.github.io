@@ -2,6 +2,7 @@ from django.db.models import Prefetch
 
 from .models import BusinessSettings, Contact, Product, ProductAdditional, ProductImage, ProductVariant
 from .cooktop import CooktopValidationError, validate_product_cooktop_config
+from .cart import CartValidationError, validate_product_cart_config
 from .variant_options import VariantOptionsError, validate_variant_axes, validate_option_values, combination_key
 
 
@@ -48,6 +49,14 @@ def public_variants(product):
     return axes, variants
 
 
+def public_cart_config(product, *, preview=False):
+    try:
+        config = validate_product_cart_config(product.cart_config, supply_type=product.supply_type, category=product.category, equipment_family=product.equipment_family)
+    except CartValidationError:
+        return None
+    return config if config and (config["enabled"] or preview is True) else None
+
+
 def public_product(product, *, preview=False):
     variant_axes, variants = public_variants(product)
     return {
@@ -57,6 +66,7 @@ def public_product(product, *, preview=False):
         "supplierModel": product.supplier_model, "equipmentFamily": product.equipment_family,
         "capacity": product.capacity,
         "cooktopConfig": public_cooktop_config(product, preview=preview),
+        "cartConfig": public_cart_config(product, preview=preview),
         "variantAxes": variant_axes,
         "features": [line.strip() for line in product.characteristics.splitlines() if line.strip()],
         "image": product.image_asset.public_url if product.image_asset_id else (product.image or "/images/brand/inox304-logo.webp"),

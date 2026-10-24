@@ -7,7 +7,8 @@ from uuid import uuid4
 from .models import MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 from .validators import clean_upload
 from .cooktop import CooktopValidationError, validate_cooktop_config
-from .widgets import CooktopConfigWidget, VariantAxesWidget, VariantOptionValuesWidget
+from .cart import CartValidationError, validate_cart_config
+from .widgets import CooktopConfigWidget, CartConfigWidget, VariantAxesWidget, VariantOptionValuesWidget
 from .variant_options import VariantOptionsError, validate_variant_axes, validate_option_values, validate_variant_combinations
 
 
@@ -23,15 +24,18 @@ class ProductAdminForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = "__all__"
-        widgets = {"description": forms.Textarea(attrs={"rows": 4}), "characteristics": forms.Textarea(attrs={"rows": 5}), "internal_notes": forms.Textarea(attrs={"rows": 4}), "cooktop_config": CooktopConfigWidget(), "variant_axes": VariantAxesWidget()}
+        widgets = {"description": forms.Textarea(attrs={"rows": 4}), "characteristics": forms.Textarea(attrs={"rows": 5}), "internal_notes": forms.Textarea(attrs={"rows": 4}), "cooktop_config": CooktopConfigWidget(), "cart_config": CartConfigWidget(), "variant_axes": VariantAxesWidget()}
 
     def __init__(self, *args, **kwargs):
         self.can_edit_cooktop = kwargs.pop("can_edit_cooktop", False)
+        self.can_edit_cart = kwargs.pop("can_edit_cart", False)
         self.can_edit_variant_axes = kwargs.pop("can_edit_variant_axes", False)
         self.defer_variant_consistency = kwargs.pop("defer_variant_consistency", False)
         super().__init__(*args, **kwargs)
         if not self.can_edit_cooktop:
             self.fields.pop("cooktop_config", None)
+        if not self.can_edit_cart:
+            self.fields.pop("cart_config", None)
         if not self.can_edit_variant_axes:
             self.fields.pop("variant_axes", None)
         for name in ("code", "slug"):
@@ -67,6 +71,9 @@ class ProductAdminForm(forms.ModelForm):
         data = super().clean()
         if not self.can_edit_cooktop and "cooktop_config" in self.data:
             self.add_error(None, "Solo el propietario puede modificar el configurador de cocina.")
+        cart_prefix = self.add_prefix("cart_config")
+        if not self.can_edit_cart and any(key == cart_prefix or key.startswith(f"{cart_prefix}-") for key in self.data):
+            self.add_error(None, "Solo el propietario puede modificar el configurador del carrito.")
         if not self.can_edit_variant_axes and "variant_axes" in self.data:
             self.add_error(None, "Solo el propietario puede definir los tipos de opción y sus valores permitidos.")
         if "code" in self.fields and "code" not in self.errors and not data.get("code"):
@@ -97,6 +104,16 @@ class ProductAdminForm(forms.ModelForm):
             raw = self.cleaned_data.get("variant_axes")
             return validate_variant_axes([] if self.data.get(self.add_prefix("variant_axes")) in (None, "") else raw)
         except VariantOptionsError as exc:
+            raise ValidationError(str(exc)) from exc
+
+    def clean_cart_config(self):
+        try:
+            value = self.cleaned_data.get("cart_config")
+            raw = self.fields["cart_config"].widget.value_from_datadict(self.data, self.files, self.add_prefix("cart_config"))
+            if raw in (None, ""):
+                value = self.instance.cart_config or {}
+            return validate_cart_config(value)
+        except CartValidationError as exc:
             raise ValidationError(str(exc)) from exc
 
     def _post_clean(self):

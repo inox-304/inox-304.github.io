@@ -8,6 +8,7 @@ from django.db import models
 
 from .validators import clean_upload, validate_https, validate_public_url
 from .cooktop import CooktopValidationError, validate_product_cooktop_config
+from .cart import CartValidationError, validate_product_cart_config
 from .variant_options import VariantOptionsError, validate_variant_axes, validate_option_values, validate_variant_combinations
 
 
@@ -111,6 +112,7 @@ class Product(ValidatedModel):
         ICE_CREAM_MACHINES = "maquinas-helado", "Máquinas de helado"
         JUICE_DISPENSERS = "dispensadores-jugo", "Dispensadores de jugo"
         COOKTOPS = "cocinas", "Cocinas"
+        FOOD_CARTS = "carritos-comida", "Carritos de comida"
 
     class Category(models.TextChoices):
         COLD = "linea-fria", "Línea fría"
@@ -139,6 +141,7 @@ class Product(ValidatedModel):
     equipment_family = models.CharField("familia de equipos", max_length=32, choices=EquipmentFamily, blank=True, default="", help_text="Agrupa equipos similares dentro de su línea. Déjelo vacío si no corresponde a estas familias.")
     capacity = models.CharField("capacidad", max_length=180, blank=True, default="", help_text="Escriba la capacidad y su unidad tal como las confirma el fabricante, por ejemplo litros de recipiente o kg de masa. No son equivalentes.")
     cooktop_config = models.JSONField("configurador de cocina", default=dict, blank=True, help_text="Opciones de fabricación definidas por el propietario para esta cocina. Se publica solo al habilitarlo.")
+    cart_config = models.JSONField("configurador del carrito", default=dict, blank=True, help_text="Módulos compatibles aprobados por el propietario. Requiere un modelo 3D preparado para este carrito; se publica solo al habilitarlo.")
     variant_axes = models.JSONField("tipos de opción de las variaciones", default=list, blank=True)
     source_url = models.URLField("fuente del fabricante (privada)", max_length=1000, blank=True, default="", validators=[validate_https], help_text="Enlace HTTPS de la ficha oficial para verificar datos. No se publica en la web.")
     description = models.TextField("descripción", max_length=5000, blank=True)
@@ -184,6 +187,10 @@ class Product(ValidatedModel):
         except CooktopValidationError as exc:
             # This field is excluded for nonowner editors; a nonfield error also
             # handles an attempted reclassification of an already configured unit.
+            errors["__all__"] = str(exc)
+        try:
+            self.cart_config = validate_product_cart_config(self.cart_config, supply_type=self.supply_type, category=self.category, equipment_family=self.equipment_family)
+        except CartValidationError as exc:
             errors["__all__"] = str(exc)
         try:
             self.variant_axes = validate_variant_axes(self.variant_axes)

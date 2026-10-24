@@ -9,6 +9,8 @@ import * as additionals from '../src/lib/product-additionals.ts';
 import * as families from '../src/lib/product-families.ts';
 import * as cooktop from '../src/lib/cooktop-config.ts';
 import * as cooktopAssets from '../src/lib/cooktop-assets.ts';
+import * as cart from '../src/lib/cart-config.ts';
+import * as cartAssets from '../src/lib/cart-assets.ts';
 import { catalogSearchText } from '../src/lib/catalog-controls.ts';
 import { getProductStage } from '../src/lib/product-stage.ts';
 import { withBase } from '../src/lib/paths.ts';
@@ -94,7 +96,7 @@ function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl } =
   const clearTimer = id => timers.delete(id);
   const window = { events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: setTimer, clearTimeout: clearTimer };
   const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; } };
-  runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...cooktop, ...cooktopAssets,
+  runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...cooktop, ...cooktopAssets, ...cart, ...cartAssets,
     catalogSearchText, getProductStage, withBase, renderVariantOptions, document, location, window, history, URL, URLSearchParams, CustomEvent, AbortController, Error,
     setTimeout: setTimer, clearTimeout: clearTimer,
     fetch: async (url, options) => { requests.push({ url: String(url), options }); return fetchImpl ? fetchImpl(url, options) : { ok: true, json: async () => structuredClone(remoteRules) }; },

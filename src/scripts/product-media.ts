@@ -4,6 +4,9 @@ import type { ModelViewerElement } from '@google/model-viewer';
 import { cooktopAssetFor } from '../lib/cooktop-assets';
 import { readCooktop, pickCooktopAnchor } from './cooktop-ui';
 import type { CooktopScene, CooktopInteraction, CooktopView } from './cooktop-scene';
+import { cartAssetFor } from '../lib/cart-assets';
+import { readCart } from './cart-ui';
+import type { CartScene } from './cart-scene';
 
 type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'supplyType' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
 let viewerModule: Promise<typeof import('@google/model-viewer')> | undefined;
@@ -41,9 +44,13 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   let timeout: number | undefined;
   let viewer: ModelViewerElement | undefined;
   let modular: CooktopScene | undefined;
+  let cartScene: CartScene | undefined;
+  let cartLoading = false;
+  let canopyVisible = true;
   let modularLoading = false;
   let interaction: CooktopInteraction | null = null;
   const cooktopRoot = document.querySelector<HTMLElement>('[data-cooktop-root]');
+  const cartRoot = document.querySelector<HTMLElement>('[data-cart-root]');
   let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
   let doorFrame: number | undefined;
   let doorAction = 0;
@@ -52,14 +59,25 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   doors.type = 'button'; doors.className = 'product-view-button'; doors.hidden = true;
   doors.textContent = 'Abrir puertas'; doors.setAttribute('aria-pressed', 'false');
   toolbar.append(doors);
+  const canopy = document.createElement('button'); canopy.type = 'button'; canopy.className = 'product-view-button'; canopy.hidden = true;
+  canopy.textContent = 'Ocultar toldo'; canopy.setAttribute('aria-pressed', 'false'); toolbar.append(canopy);
+  canopy.addEventListener('click', () => {
+    if (!cartScene) return;
+    canopyVisible = !canopyVisible; cartScene.setCanopyVisible(canopyVisible);
+    canopy.textContent = canopyVisible ? 'Ocultar toldo' : 'Mostrar toldo'; canopy.setAttribute('aria-pressed', String(!canopyVisible));
+  });
   const viewpoints = document.createElement('div');
   viewpoints.className = 'product-photo-options'; viewpoints.hidden = true;
-  viewpoints.setAttribute('role', 'group'); viewpoints.setAttribute('aria-label', 'Ángulo de la cocina 3D');
+  viewpoints.setAttribute('role', 'group'); viewpoints.setAttribute('aria-label', 'Ángulo del equipo 3D');
   for (const [view, label] of [['top', 'Superior'], ['front', 'Frente'], ['perspective', 'Perspectiva']] as [CooktopView, string][]) {
     const viewButton = document.createElement('button');
     viewButton.type = 'button'; viewButton.className = 'product-view-button'; viewButton.textContent = label;
-    viewButton.setAttribute('aria-label', `Vista ${label.toLowerCase()} de la cocina`);
-    viewButton.addEventListener('click', () => { modular?.setView(view); });
+    viewButton.dataset.modelView = view;
+    viewButton.setAttribute('aria-label', `Vista ${label.toLowerCase()} del equipo`);
+    viewButton.addEventListener('click', () => {
+      modular?.setView(view); cartScene?.setView(view);
+      if (cartScene && view === 'top') { canopyVisible = false; cartScene.setCanopyVisible(false); canopy.textContent = 'Mostrar toldo'; canopy.setAttribute('aria-pressed', 'true'); }
+    });
     viewpoints.append(viewButton);
   }
   toolbar.append(viewpoints);
@@ -134,6 +152,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     viewer?.remove();
     viewer = undefined;
     modular?.dispose(); modular = undefined; modularLoading = false;
+    cartScene?.dispose(); cartScene = undefined; cartLoading = false; canopyVisible = true; canopy.hidden = true;
     doors.hidden = true;
     viewpoints.hidden = true;
     host.replaceChildren(); host.hidden = true; help.hidden = true;
@@ -175,6 +194,29 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     }
     timeout = window.setTimeout(failed, 45000);
     try {
+      const cart = !selectedVariant && product.id ? readCart(cartRoot, product.id) : null;
+      const cartAsset = cart ? cartAssetFor(product.id || '', model) : '';
+      if (cart && cartAsset) {
+        cartLoading = true;
+        const { createCartScene } = await import('./cart-scene');
+        if (request !== revision || !product) return;
+        host.hidden = false;
+        const productId = product.id!;
+        const scene = await createCartScene(host, withBase(cartAsset), { onError: () => { if (request === revision) failed(); } });
+        if (request !== revision) { scene.dispose(); return; }
+        const latest = readCart(cartRoot, productId);
+        if (!latest) { scene.dispose(); resetViewer(); return; }
+        cartScene = scene; cartLoading = false; scene.update(latest.selection.included);
+        if (request !== revision) return;
+        window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy'); button.firstChild!.textContent = 'Volver a foto ';
+        help.hidden = false; help.textContent = `${navigationHelp} El equipamiento cambia al marcar sus opciones. Ocultar el toldo solo facilita ver la encimera: sigue incluido en el carrito. Vista ilustrativa, a confirmar con el taller.`;
+        canopy.hidden = false; canopyVisible = true; canopy.textContent = 'Ocultar toldo'; canopy.setAttribute('aria-pressed', 'false');
+        viewpoints.hidden = false;
+        const top = viewpoints.querySelector<HTMLButtonElement>('[data-model-view="top"]'); if (top) top.textContent = 'Ver encimera';
+        photos.querySelectorAll('button').forEach(photo => photo.setAttribute('aria-pressed', 'false'));
+        if (focusViewer) scene.focus();
+        return;
+      }
       const state = !selectedVariant && product.id ? readCooktop(cooktopRoot, product.id) : null;
       const asset = state ? cooktopAssetFor(product.id || '', model) : '';
       if (state && asset) {
@@ -197,6 +239,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         scene.update(latest.config, latest.selection);
         doors.hidden = !scene.hasDoors; doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
         scene.setInteraction(interaction); viewpoints.hidden = false;
+        const top = viewpoints.querySelector<HTMLButtonElement>('[data-model-view="top"]'); if (top) top.textContent = 'Superior';
         photos.querySelectorAll('button').forEach(photo => photo.setAttribute('aria-pressed', 'false'));
         if (focusViewer) host.querySelector('canvas')?.focus();
         return;
@@ -261,7 +304,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (wasOpen && model) void showModel(false);
   }
   button.addEventListener('click', () => { void showModel(); });
-  root.addEventListener('keydown', event => { if (event.key === 'Escape' && (viewer || modular)) { selectPhoto(selectedPhoto); button.focus(); } });
+  root.addEventListener('keydown', event => { if (event.key === 'Escape' && (viewer || modular || cartScene)) { selectPhoto(selectedPhoto); button.focus(); } });
   document.addEventListener('inox:product-updated', event => {
     update((event as CustomEvent<{ product: MediaProduct | null }>).detail.product);
   });
@@ -275,7 +318,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     updatePhotos();
     const nextModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     button.hidden = !nextModel; toolbar.hidden = !nextModel && sources.length < 2;
-    if (oldModel !== nextModel || modular || modularLoading) { resetViewer(); if (wasOpen && nextModel) void showModel(false); }
+    if (oldModel !== nextModel || modular || modularLoading || cartScene || cartLoading) { resetViewer(); if (wasOpen && nextModel) void showModel(false); }
     else {
       const poster = imageUrl(selectedVariant?.image || product.modelPoster || product.image);
       if (viewer && poster) viewer.setAttribute('poster', withBase(poster));
@@ -305,6 +348,15 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (!product || product.id !== detail?.productId || selectedVariant || !readCooktop(cooktopRoot, detail.productId)) return;
     interaction = detail.interaction;
     modular?.setInteraction(interaction);
+  });
+  document.addEventListener('inox:cart-updated', event => {
+    const detail = (event as CustomEvent<{ productId: string; interactive: boolean }>).detail;
+    if (!product || product.id !== detail.productId || selectedVariant) return;
+    const state = readCart(cartRoot, detail.productId);
+    if (!state) { if (cartScene || cartLoading) resetViewer(); return; }
+    if (cartScene) { cartScene.update(state.selection.included); return; }
+    if (cartLoading) return; // First load always applies the latest choice, not the initiating choice.
+    if (cartAssetFor(detail.productId, product.model3d || '') && (detail.interactive || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
   });
   window.addEventListener('pagehide', resetViewer);
   try { update(JSON.parse(root.dataset.currentProduct ?? root.dataset.initialProduct ?? 'null')); }

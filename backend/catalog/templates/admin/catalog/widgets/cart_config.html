@@ -1,0 +1,19 @@
+<div class="cart-config-editor" id="{{ widget.attrs.id }}">
+  <input type="hidden" name="{{ widget.name }}-present" value="1">
+  <p>Permite elegir qué equipos lleva este carrito. Primero indica los módulos disponibles y su selección inicial; después habilita la personalización. Se requieren fabricación propia, línea caliente y familia Carritos de comida.</p>
+  <p><label><input type="checkbox" name="{{ widget.name }}-enabled"{% if widget.enabled %} checked{% endif %}> Habilitar personalización del carrito en la web</label></p>
+  <table>
+    <thead><tr><th scope="col">Módulo 3D compatible</th><th scope="col">Disponible para elegir</th><th scope="col">Seleccionado al entrar</th><th scope="col">Nombre visible</th></tr></thead>
+    <tbody>
+    {% for module in widget.modules %}
+      <tr>
+        <th scope="row">{{ module.id }}</th>
+        <td><label><input type="checkbox" name="{{ widget.name }}-{{ module.id }}-allowed"{% if module.allowed %} checked{% endif %}> Ofrecer {{ module.id }}</label></td>
+        <td><label><input type="checkbox" name="{{ widget.name }}-{{ module.id }}-included"{% if module.included %} checked{% endif %}> Incluir {{ module.id }} inicialmente</label></td>
+        <td><input type="text" name="{{ widget.name }}-{{ module.id }}-label" value="{{ module.label }}" maxlength="80" aria-label="Nombre visible de {{ module.id }}"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>Al retirar un módulo, su estación se representa como superficie libre. La carrocería, el toldo y las ruedas se conservan. Estas opciones no asignan precios ni descuentan inventario. El archivo 3D debe tener los módulos compatibles; no basta con cambiar el nombre del producto.</p>
+</div>

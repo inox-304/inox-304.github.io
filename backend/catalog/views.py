@@ -10,9 +10,10 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_safe
 
 from .models import MediaAsset, Product, ProductVariant
-from .serializers import public_catalog_data, public_cooktop_config, public_product_queryset, public_variants
+from .serializers import public_catalog_data, public_cooktop_config, public_cart_config, public_product_queryset, public_variants
 from .storage import open_private_file
 from .cooktop import CooktopValidationError, cooktop_selection_summary, validate_cooktop_selection
+from .cart import CartValidationError, cart_selection_summary, validate_cart_selection
 from .variant_options import VariantOptionsError, validate_option_values
 
 
@@ -48,6 +49,40 @@ def _unique_json_object(pairs):
             raise ValueError("Repeated JSON key")
         data[key] = value
     return data
+
+
+def _cart_product(code):
+    return get_object_or_404(Product.objects.only("code", "cart_config", "supply_type", "category", "equipment_family"), code=code, is_active=True, is_published=True)
+
+
+@never_cache
+@require_GET
+def public_cart(request, code):
+    product = _cart_product(code)
+    return _cooktop_response(request, {"productId": product.code, "cartConfig": public_cart_config(product)})
+
+
+@never_cache
+@require_GET
+def check_cart_selection(request, code):
+    product = _cart_product(code)
+    config = public_cart_config(product)
+    raw = request.GET.get("selection", "")
+    error = ""
+    if not config:
+        error = "Este configurador no está habilitado."
+    elif len(request.GET.getlist("selection")) != 1 or not raw or len(raw) > 1000:
+        error = "Envíe una selección de hasta 1000 caracteres."
+    if error:
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": error}, status=400)
+    try:
+        selection = json.loads(raw, object_pairs_hook=_unique_json_object)
+        selection = validate_cart_selection(config, selection)
+        summary = cart_selection_summary(config, selection)
+    except (ValueError, RecursionError) as exc:
+        error = str(exc) if isinstance(exc, CartValidationError) else "La selección no tiene un formato válido."
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": error}, status=400)
+    return _cooktop_response(request, {"productId": product.code, "valid": True, "selection": selection, "summary": summary})
 
 
 @never_cache
