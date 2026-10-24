@@ -18,7 +18,7 @@ const source = ts.transpileModule(readFileSync(new URL('../src/scripts/product-m
   .replace("import('./cooktop-scene')", 'loadSceneModule()').replace("import('@google/model-viewer')", 'loadNativeModule()');
 
 function fixture(base = product('P04'), deferNative = false) {
-  const calls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [];
+  const calls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [], frames = new Map();
   let currentState = initial(), stateProduct = base.id, timerId = 0;
   let finishNativeLoad;
   const nativeModule = new Promise(resolve => {
@@ -38,6 +38,7 @@ function fixture(base = product('P04'), deferNative = false) {
     click() { this.emit('click'); }
     focus() { this.focused = true; }
     pause() {}
+    updateFraming() { (this.framingTimes ||= []).push(this.currentTime); return this.framingPromise || Promise.resolve(); }
     querySelectorAll(selector) { return this.children.flatMap(child => [...(child.tagName === selector ? [child] : []), ...child.querySelectorAll(selector)]); }
     querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
     set src(value) { this.source = value; if (this.tagName === 'model-viewer') queueMicrotask(() => this.emit('load')); }
@@ -68,11 +69,12 @@ function fixture(base = product('P04'), deferNative = false) {
     safeImage: value => value, safeModel: value => value, safePreviewAsset: (value, safe) => safe(value), withBase: value => value,
     cooktopAssetFor, readCooktop: (_root, id) => id === stateProduct ? currentState : null,
     pickCooktopAnchor: (_root, id, anchor) => picks.push({ id, anchor }), loadSceneModule,
-    loadNativeModule: () => nativeModule, cancelAnimationFrame() {}, requestAnimationFrame: () => 1,
+    loadNativeModule: () => nativeModule, cancelAnimationFrame(id) { frames.delete(id); }, requestAnimationFrame(callback) { frames.set(++timerId, callback); return timerId; },
     performance: { now: () => 0 }, matchMedia: () => ({ matches: true }), console,
   });
   const changed = (interactive = true, id = stateProduct) => dispatch('inox:cooktop-updated', { productId: id, interactive });
   return { nodes, calls, timers, picks, changed, dispatch, finishNativeLoad,
+    frame() { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(500)); },
     setState(state, id = stateProduct) { currentState = state; stateProduct = id; },
     pagehide() { windowEvents.get('pagehide')(); },
     flush: () => new Promise(resolve => setImmediate(resolve)),
@@ -86,6 +88,27 @@ test('only the exact approved source or opaque media ID may choose a modular cha
   assert.equal(cooktopAssetFor('P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330/'), '/models/inox/cooktop-p04-v1.glb');
   assert.equal(cooktopAssetFor('P04', '/admin/catalog/mediaasset/a5c077e3-be87-5d5a-9aaf-1ebcced04330/file/'), '/models/inox/cooktop-p04-v1.glb');
   for (const [id, url] of [['P04', '/models/new-sketchup.glb'], ['P04', models.P05], ['P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330-extra/'], ['ILUMI-DJ-181', models.P04], ['__proto__', models.P04]]) assert.equal(cooktopAssetFor(id, url), '');
+});
+
+test('ordinary doors reserve open-pose framing before animating and stale preparations cannot reopen them', async () => {
+  const f = fixture({ id: 'P06', name: 'Horno', image: '/images/horno.webp', model3d: '/models/horno.glb', doorAnimation: 'Abrir_puertas' });
+  f.nodes['show-model'].click(); await f.flush();
+  const viewer = f.nodes['model-host'].children[0];
+  viewer.availableAnimations = ['Abrir_puertas']; viewer.currentTime = 0; viewer.duration = 1.35; viewer.emit('load');
+  const doors = f.nodes['media-toolbar'].children.find(child => child.textContent === 'Abrir puertas');
+  doors.click();
+  assert.equal(viewer.framingTimes[0], 1.3499, 'framing measures the open pose before any animation frame');
+  await f.flush();
+  assert.equal(viewer.currentTime, 0, 'animation starts at the actual closed pose');
+  f.frame(); assert.equal(viewer.currentTime, 1.3499); assert.equal(doors.textContent, 'Cerrar puertas');
+  doors.click(); f.frame(); assert.equal(viewer.currentTime, 0); assert.equal(viewer.framingTimes.at(-1), 0);
+
+  let finishFraming;
+  viewer.framingPromise = new Promise(resolve => { finishFraming = resolve; });
+  doors.click(); doors.click(); f.frame();
+  finishFraming(); await f.flush(); f.frame();
+  assert.equal(viewer.currentTime, 0, 'quick open-close stays closed when the old framing promise finishes');
+  assert.equal(doors.textContent, 'Abrir puertas');
 });
 
 test('P03 keeps its own media and accepts the approved lineal rule set without inheriting central modules', () => {
@@ -130,6 +153,26 @@ test('door control follows real geometry when adding and removing an oven after 
   doors.click(); assert.deepEqual(f.calls[0].doorStates, [true]);
   state.selection.kitchen.oven = 'none'; f.setState(state); f.changed(); assert.equal(doors.hidden, true);
   assert.equal(doors.getAttribute('aria-pressed'), 'false'); assert.equal(doors.textContent, 'Abrir puertas'); f.pagehide();
+});
+
+test('variant interaction opens the selected 3D once and ignores other products or initial hydration', async () => {
+  const base = { ...product('P08'), model3d: '/models/inox/horno-pollero-ecologico-v2.glb' };
+  const f = fixture(base); f.setState(null, 'P08');
+  f.dispatch('inox:variant-interaction', { productId: 'P08' }); await f.flush();
+  assert.equal(f.nodes['model-host'].querySelector('model-viewer'), null, 'No selected variant means no implicit opening');
+  const variant = { id: 'pollero-18', name: '18 pollos', image: '/images/products/pollero-config-p08-carbon-18-v1.webp', model3d: '/models/inox/pollero-config-p08-carbon-18-v1.glb', doorAnimation: 'Abrir_puertas' };
+  f.dispatch('inox:configuration-updated', { productId: 'P08', variant }); await f.flush();
+  assert.equal(f.nodes['model-host'].querySelector('model-viewer'), null, 'Initial selection only updates the photo');
+  f.dispatch('inox:variant-interaction', { productId: 'P07' }); await f.flush();
+  assert.equal(f.nodes['model-host'].querySelector('model-viewer'), null);
+  f.dispatch('inox:variant-interaction', { productId: 'P08' }); f.dispatch('inox:variant-interaction', { productId: 'P08' }); await f.flush();
+  let viewer = f.nodes['model-host'].querySelector('model-viewer');
+  assert.equal(viewer.source, variant.model3d); assert.equal(viewer.focused, undefined); assert.equal(f.nodes['model-host'].children.length, 1);
+  const second = { ...variant, id: 'pollero-30', model3d: '/models/inox/pollero-config-p08-carbon-30-v1.glb' };
+  f.dispatch('inox:configuration-updated', { productId: 'P08', variant: second }); f.dispatch('inox:variant-interaction', { productId: 'P08' }); await f.flush();
+  viewer = f.nodes['model-host'].querySelector('model-viewer'); assert.equal(viewer.source, second.model3d); assert.equal(f.nodes['model-host'].children.length, 1);
+  f.nodes['show-model'].click(); f.dispatch('inox:variant-interaction', { productId: 'P07' }); await f.flush();
+  assert.equal(f.nodes['model-host'].children.length, 0); f.pagehide();
 });
 
 test('an interactive selection opens 3D and pending creation applies the latest selection without reloading', async () => {

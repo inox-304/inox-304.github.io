@@ -1,0 +1,90 @@
+[
+  {
+    "productId": "P06",
+    "mode": "convencional",
+    "capacity": 4,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-convencional-4-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 385360,
+    "triangles": 11848,
+    "poster": "/images/products/multiuso-config-p06-convencional-4-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "convencional",
+    "capacity": 6,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-convencional-6-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 386912,
+    "triangles": 11848,
+    "poster": "/images/products/multiuso-config-p06-convencional-6-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "convencional",
+    "capacity": 8,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-convencional-8-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 388552,
+    "triangles": 11848,
+    "poster": "/images/products/multiuso-config-p06-convencional-8-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "convencional",
+    "capacity": 10,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-convencional-10-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 390132,
+    "triangles": 11848,
+    "poster": "/images/products/multiuso-config-p06-convencional-10-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "conveccion",
+    "capacity": 4,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-conveccion-4-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 473648,
+    "triangles": 14664,
+    "poster": "/images/products/multiuso-config-p06-conveccion-4-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "conveccion",
+    "capacity": 6,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-conveccion-6-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 475280,
+    "triangles": 14664,
+    "poster": "/images/products/multiuso-config-p06-conveccion-6-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "conveccion",
+    "capacity": 8,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-conveccion-8-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 477000,
+    "triangles": 14664,
+    "poster": "/images/products/multiuso-config-p06-conveccion-8-v1.webp"
+  },
+  {
+    "productId": "P06",
+    "mode": "conveccion",
+    "capacity": 10,
+    "capacityUnit": "bandejas",
+    "model3d": "/models/inox/multiuso-config-p06-conveccion-10-v1.glb",
+    "doorAnimation": "Abrir_puertas",
+    "bytes": 478668,
+    "triangles": 14664,
+    "poster": "/images/products/multiuso-config-p06-conveccion-10-v1.webp"
+  }
+]

@@ -30,8 +30,12 @@ class AuditedAdmin(admin.ModelAdmin):
             for instance in formset.deleted_objects:
                 instance.delete()
             for instance in instances:
-                persist_uploads(instance)
-                instance.save()
+                instance._defer_variant_consistency = isinstance(instance, ProductVariant) and getattr(formset, "_variant_final_validated", False)
+                try:
+                    persist_uploads(instance)
+                    instance.save()
+                finally:
+                    instance._defer_variant_consistency = False
             formset.save_m2m()
 
     def delete_model(self, request, obj):
@@ -50,7 +54,7 @@ class ProductVariantInline(admin.StackedInline):
     extra = 0
     max_num = 100
     fieldsets = (
-        (None, {"fields": ("name", "manufacturing_code")}),
+        (None, {"fields": ("name", "option_values", "manufacturing_code")}),
         ("Precio y disponibilidad", {"fields": (("price", "cost"), "availability")}),
         ("Foto, modelo y ficha de esta variación", {"fields": ("image_upload", "image_current", "model_upload", "technical_upload", "current_files")}),
         ("Reutilizar archivos guardados", {"fields": ("image_asset", "model_asset", "technical_asset"), "classes": ("collapse",)}),
@@ -124,6 +128,7 @@ class ProductAdmin(AuditedAdmin):
         ("Origen, marca y capacidad", {"description": "En productos distribuidos conserva las capacidades y opciones oficiales del fabricante. Cambiar de modelo no significa fabricar a medida. La foto, el PDF y el 3D pueden añadirse después.", "fields": ("supply_type", "brand", "supplier_model", "equipment_family", "capacity", "source_url"), "classes": ("inox-step", "inox-step-details")}),
         ("Identificadores", {"description": "Se crean automáticamente en un equipo nuevo y se conservan al editarlo.", "fields": ("code", "slug"), "classes": ("collapse", "inox-step", "inox-step-details")}),
         ("Configurador de cocina", {"description": "Define las opciones y posiciones que puedes fabricar. El borrador se prepara solo cuando lo solicitas; habilítalo después de revisarlo.", "fields": ("cooktop_config",), "classes": ("inox-step", "inox-step-configurator")}),
+        ("Tipos de opción", {"description": "Define aquí los tipos y valores permitidos solo para este equipo. Después selecciona una combinación en cada variación. No se activan ni crean combinaciones automáticamente.", "fields": ("variant_axes",), "classes": ("inox-step", "inox-step-variants")}),
         ("Foto principal", {"fields": ("image_upload", "image_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Ficha técnica", {"fields": ("technical_upload", "technical_current"), "classes": ("inox-step", "inox-step-media")}),
         ("Modelo 3D", {"description": "Sube el modelo principal. Cada variación puede tener otro GLB y otra ficha. Abrir puertas requiere un clip animado dentro del archivo; el botón aparece cuando el visor lo reconoce.", "fields": ("model_upload", "model_current", "poster_upload", "poster_current", "door_animation"), "classes": ("inox-step", "inox-step-media")}),
@@ -139,7 +144,7 @@ class ProductAdmin(AuditedAdmin):
 
     def get_fieldsets(self, request, obj=None):
         can_edit = is_owner(request.user) and (self.has_change_permission(request, obj) if obj else self.has_add_permission(request))
-        return tuple(fieldset for fieldset in super().get_fieldsets(request, obj) if can_edit or "cooktop_config" not in fieldset[1]["fields"])
+        return tuple(fieldset for fieldset in super().get_fieldsets(request, obj) if can_edit or not {"cooktop_config", "variant_axes"}.intersection(fieldset[1]["fields"]))
 
     def get_form(self, request, obj=None, **kwargs):
         base_form = super().get_form(request, obj, **kwargs)
@@ -148,16 +153,28 @@ class ProductAdmin(AuditedAdmin):
         class RequestProductForm(base_form):
             def __init__(self, *args, **form_kwargs):
                 form_kwargs["can_edit_cooktop"] = can_edit_cooktop
+                form_kwargs["can_edit_variant_axes"] = is_owner(request.user)
+                form_kwargs["defer_variant_consistency"] = request.user.has_perm("catalog.view_productvariant") or request.user.has_perm("catalog.change_productvariant")
                 super().__init__(*args, **form_kwargs)
 
         return RequestProductForm
 
     def save_model(self, request, obj, form, change):
         if not is_owner(request.user):
-            previous = Product.objects.only("cooktop_config").get(pk=obj.pk).cooktop_config if change else {}
-            if obj.cooktop_config != previous:
+            previous = Product.objects.only("cooktop_config", "variant_axes").get(pk=obj.pk) if change else None
+            if obj.cooktop_config != (previous.cooktop_config if previous else {}):
                 raise PermissionDenied("Solo el propietario puede modificar el configurador de cocina.")
-        super().save_model(request, obj, form, change)
+            if obj.variant_axes != (previous.variant_axes if previous else []):
+                raise PermissionDenied("Solo el propietario puede definir los tipos de opción y sus valores permitidos.")
+        obj._defer_variant_consistency = getattr(obj, "_variant_inline_validated", False)
+        try:
+            super().save_model(request, obj, form, change)
+        finally:
+            obj._defer_variant_consistency = False
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.full_clean()
 
     def render_change_form(self, request, context, *args, **kwargs):
         context["is_nav_sidebar_enabled"] = False
@@ -214,7 +231,9 @@ class ProductAdmin(AuditedAdmin):
         for field, asset in (("image", product.image_asset), ("technicalSheet", product.technical_asset), ("model3d", product.model_asset), ("modelPoster", product.poster_asset)):
             if asset:
                 item[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
-        for variant_data, variant in zip(item["variants"], product.variants.all()):
+        variants_by_id = {str(variant.pk): variant for variant in product.variants.all()}
+        for variant_data in item["variants"]:
+            variant = variants_by_id[variant_data["id"]]
             for field, asset in (("image", variant.image_asset), ("model3d", variant.model_asset), ("technicalSheet", variant.technical_asset)):
                 if asset:
                     variant_data[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
@@ -379,6 +398,10 @@ class AuditLogAdmin(admin.ModelAdmin):
             try:
                 with transaction.atomic(), audit_context(request.user, "restore"):
                     obj = model.objects.select_for_update().get(pk=obj.pk)
+                    if model is Product and not is_owner(request.user):
+                        protected = ("variant_axes", "cooktop_config")
+                        if any(field in log.before and log.before[field] != getattr(obj, field) for field in protected):
+                            raise PermissionDenied("Solo el propietario puede restaurar los tipos de opción o el configurador de cocina.")
                     for field in model._meta.concrete_fields:
                         if not field.primary_key and field.editable and field.name in log.before:
                             value = log.before[field.name]

@@ -14,7 +14,7 @@ const imageUrl = (value: string) => safePreviewAsset(value, safeImage, privatePr
 const modelUrl = (value: string) => safePreviewAsset(value, safeModel, privatePreview);
 
 function loadViewer() {
-  // This import and all model downloads occur only after an explicit 360° click.
+  // Load only when the customer opens 360° or interacts with a configuration.
   viewerModule ||= import('@google/model-viewer').then(module => {
     module.ModelViewerElement.modelCacheSize = 0;
     module.ModelViewerElement.dracoDecoderLocation = withBase('/vendor/model-viewer/draco/');
@@ -46,6 +46,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   const cooktopRoot = document.querySelector<HTMLElement>('[data-cooktop-root]');
   let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
   let doorFrame: number | undefined;
+  let doorAction = 0;
   let animationLabels = { open: 'Abrir puertas', close: 'Cerrar puertas' };
   const doors = document.createElement('button');
   doors.type = 'button'; doors.className = 'product-view-button'; doors.hidden = true;
@@ -65,6 +66,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
 
   function configureViewer() {
     if (!viewer || !product) return;
+    doorAction++;
     if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
     const material = selectedVariant?.materialVariant || '';
     viewer.variantName = material && viewer.availableVariants.includes(material) ? material : null;
@@ -91,23 +93,41 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     viewer.pause();
     if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
     // Seeking to exactly duration can wrap a repeating glTF clip to frame zero.
-    const element = viewer, start = element.currentTime, target = opening ? Math.max(0, element.duration - 0.0001) : 0;
-    const began = performance.now();
+    const element = viewer, action = ++doorAction, start = element.currentTime, target = opening ? Math.max(0, element.duration - 0.0001) : 0;
     const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450;
-    const step = (now: number) => {
-      if (viewer !== element) return;
-      const progress = duration ? Math.min(1, (now - began) / duration) : 1;
-      element.currentTime = start + (target - start) * (progress * progress * (3 - 2 * progress));
-      if (progress < 1) doorFrame = requestAnimationFrame(step);
-      else void element.updateFraming();
+    const animate = () => {
+      if (viewer !== element || action !== doorAction) return;
+      const began = performance.now();
+      const step = (now: number) => {
+        if (viewer !== element || action !== doorAction) return;
+        const progress = duration ? Math.min(1, (now - began) / duration) : 1;
+        element.currentTime = start + (target - start) * (progress * progress * (3 - 2 * progress));
+        if (progress < 1) doorFrame = requestAnimationFrame(step);
+        else if (!opening) void element.updateFraming();
+      };
+      doorFrame = requestAnimationFrame(step);
     };
-    doorFrame = requestAnimationFrame(step);
     doors.setAttribute('aria-pressed', String(opening)); doors.textContent = opening ? animationLabels.close : animationLabels.open;
+    if (opening) {
+      // Measure the open pose before its animation, so the door has room throughout.
+      // model-viewer's framing keeps the user's current viewing angles.
+      element.currentTime = target;
+      void element.updateFraming().then(() => {
+        if (viewer !== element || action !== doorAction) return;
+        element.currentTime = start;
+        animate();
+      }).catch(() => {
+        if (viewer !== element || action !== doorAction) return;
+        element.currentTime = start;
+        animate();
+      });
+    } else animate();
   });
 
   function message(value = '') { status.textContent = value; status.hidden = !value; }
   function resetViewer() {
     revision++;
+    doorAction++;
     window.clearTimeout(timeout);
     if (doorFrame !== undefined) cancelAnimationFrame(doorFrame);
     viewer?.removeAttribute('src');
@@ -261,6 +281,10 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       if (viewer && poster) viewer.setAttribute('poster', withBase(poster));
       configureViewer();
     }
+  });
+  document.addEventListener('inox:variant-interaction', event => {
+    const detail = (event as CustomEvent<{ productId: string }>).detail;
+    if (product?.id === detail?.productId && selectedVariant && button.getAttribute('aria-pressed') !== 'true') void showModel(false);
   });
   document.addEventListener('inox:cooktop-updated', event => {
     const detail = (event as CustomEvent<{ productId: string; interactive: boolean }>).detail;

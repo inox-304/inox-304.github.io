@@ -12,6 +12,7 @@ import * as cooktopAssets from '../src/lib/cooktop-assets.ts';
 import { catalogSearchText } from '../src/lib/catalog-controls.ts';
 import { getProductStage } from '../src/lib/product-stage.ts';
 import { withBase } from '../src/lib/paths.ts';
+import { renderVariantOptions } from '../src/scripts/variant-options-ui.ts';
 
 const rules = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const script = path => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
@@ -91,7 +92,7 @@ function fixture({ data = catalog(), preview = false, remoteRules } = {}) {
   const window = { events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: () => 1, clearTimeout() {} };
   const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; } };
   runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...cooktop, ...cooktopAssets,
-    catalogSearchText, getProductStage, withBase, document, location, window, history, URL, URLSearchParams, CustomEvent, AbortController, Error,
+    catalogSearchText, getProductStage, withBase, renderVariantOptions, document, location, window, history, URL, URLSearchParams, CustomEvent, AbortController, Error,
     fetch: async (url, options) => { requests.push({ url: String(url), options }); return { ok: true, json: async () => structuredClone(remoteRules) }; },
     Option: class extends Element { constructor(text, value) { super('option'); this.textContent = text; this.value = value; } },
   });

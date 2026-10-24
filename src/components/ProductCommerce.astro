@@ -15,6 +15,7 @@ const origin = productOriginLabel(product);
   <span data-product-unit hidden></span>
   <p class="product-availability" data-product-availability hidden></p>
   <label class="product-variants" data-product-variants hidden><span data-product-variant-label>Variación</span><select data-product-variant aria-label="Variación del equipo"></select></label>
+  <fieldset class="variant-options" data-variant-options hidden></fieldset>
   <div class="product-additional" data-product-additional hidden><p>Cargos ya incluidos en el precio</p><ul data-product-charges></ul></div>
   <fieldset class="product-extras" data-product-extras hidden aria-describedby="product-extras-hint">
     <legend>Adicionales <span>Opcionales</span></legend>
@@ -36,6 +37,14 @@ const origin = productOriginLabel(product);
   .product-availability, .product-variants, .product-additional { flex-basis: 100%; font-size: .85rem; margin: 0; }
   .product-variants select { display: block; width: 100%; margin-top: 8px; padding: 12px; border: 1px solid #ced9e5; background: #f5f8fb; color: inherit; font: inherit; border-radius: 3px; }
   .product-additional ul { padding-left: 20px; }
+  .variant-options { flex-basis: 100%; min-width: 0; padding: 20px; margin: 0; border: 1px solid #cad6e0; border-radius: 8px; background: #fff; }
+  .variant-options :global(legend) { padding: 0 8px; font-weight: 600; font-size: 1rem; }
+  .variant-options :global(.variant-options-hint) { margin: 0 0 16px; font-size: .8rem; line-height: 1.6; color: #526574; }
+  .variant-options :global(.variant-options-grid) { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 16px; }
+  .variant-options :global(label) { display: grid; gap: 7px; font-size: .8rem; font-weight: 600; }
+  .variant-options :global(select) { width: 100%; min-width: 0; padding: 12px 8px; border: 1px solid #bdcdda; border-radius: 4px; background: #f7fafc; color: #142335; font: inherit; }
+  .variant-options :global(select:focus-visible) { outline: 2px solid #245d82; outline-offset: 3px; }
+  .variant-options :global(.variant-options-status) { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid #e1e7ed; font-size: .78rem; line-height: 1.5; color: #385674; }
   .product-extras { flex-basis: 100%; min-width: 0; border: 0; padding: 20px 0 0; margin: 0; border-top: 1px solid #d9e0e7; }
   .product-extras legend { padding: 0 10px 0 0; color: var(--ink, #142335); font-size: 1rem; font-weight: 600; }
   .product-extras legend span { margin-left: 10px; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: #526574; font-weight: 500; }

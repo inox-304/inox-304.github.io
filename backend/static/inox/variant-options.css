@@ -1,0 +1,15 @@
+.inox-variant-options { clear: both; width: 100%; max-width: 920px; color: #20364b; }
+.inox-variant-options textarea[hidden], .inox-variant-options [hidden] { display: none !important; }
+.inox-variant-options .inox-option-help { color: #52657a; font-size: 13px; line-height: 1.6; margin: 12px 0; }
+.inox-variant-options .inox-option-axis { border: 1px solid #d6e1ec; border-radius: 10px; padding: 16px; margin-bottom: 12px; background: #f8fafc; }
+.inox-variant-options .inox-option-row { display: flex; align-items: flex-end; gap: 12px; margin: 10px 0; }
+.inox-variant-options .inox-option-field { display: flex; flex-direction: column; float: none; width: auto; flex: 1; gap: 7px; padding: 0; margin: 12px 0; font-size: 13px; }
+.inox-variant-options .inox-option-row .inox-option-field { margin: 0; }
+.inox-variant-options .inox-option-field input, .inox-variant-options .inox-option-field select { width: 100%; max-width: 100%; box-sizing: border-box; min-height: 40px; background: #fff; border: 1px solid #bfcede; border-radius: 7px; color: #12283e; }
+.inox-variant-options .inox-option-button { appearance: none; min-height: 40px; padding: 9px 14px; background: #fff; color: #17476a; border: 1px solid #b8cbdc; border-radius: 7px; cursor: pointer; font-weight: 600; }
+.inox-variant-options .inox-option-button:hover { background: #eaf2f8; }
+.inox-variant-options .inox-option-button:disabled { opacity: .5; cursor: default; }
+.inox-variant-options [data-variant-status] { font-size: 13px; line-height: 1.6; color: #345b70; margin: 10px 0; }
+.inox-variant-options [data-variant-status][data-error=true] { color: #a83425; }
+.inox-variant-options :focus-visible { outline: 2px solid #277bb1; outline-offset: 3px; }
+@media (max-width: 600px) { .inox-variant-options .inox-option-row { align-items: stretch; flex-direction: column; } }

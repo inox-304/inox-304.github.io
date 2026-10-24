@@ -3,10 +3,11 @@ import { categories, normalizeCategory } from '../data/categories.ts';
 import type { CooktopConfig } from './cooktop-config.ts';
 
 export type CmsContact = { id: string; name: string; whatsapp: string; phone: string; email: string; message: string; active: boolean };
-export type CmsVariant = { id: string; name: string; price?: number; availability: string; image?: string; model3d?: string; technicalSheet?: string; materialVariant?: string; doorAnimation?: string };
+export type CmsVariantAxis = { id: string; label: string; options: { id: string; label: string }[] };
+export type CmsVariant = { id: string; name: string; price?: number; availability: string; image?: string; model3d?: string; technicalSheet?: string; materialVariant?: string; doorAnimation?: string; optionValues?: Record<string, string> };
 export type CmsAdditionalCharge = { id: string; name: string; price?: number };
 export type CmsAdditional = { id: string; name: string; description: string; price: number | null; chargeUnit: 'unit' | 'm' | 'm2' | 'custom'; unitLabel: string };
-export type ProductOrigin = { supplyType?: '' | 'manufactured' | 'distributed'; brand?: string; supplierModel?: string; equipmentFamily?: string; capacity?: string; cooktopConfig?: CooktopConfig | null };
+export type ProductOrigin = { supplyType?: '' | 'manufactured' | 'distributed'; brand?: string; supplierModel?: string; equipmentFamily?: string; capacity?: string; cooktopConfig?: CooktopConfig | null; variantAxes?: CmsVariantAxis[] };
 export type CmsProduct = ProductOrigin & { id: string; slug: string; name: string; category: string; summary: string; features: string[]; image: string; visible: boolean; featured: boolean; order: number; contactId: string; price?: number; currency: 'PEN' | 'USD'; showPrice: boolean; technicalSheet: string; model3d: string; modelPoster: string; doorAnimation?: string; gallery: string[]; chargeUnit?: string; unitLabel?: string; availability?: string; variants?: CmsVariant[]; additionalCharges?: CmsAdditionalCharge[]; additionals?: CmsAdditional[] };
 
 export function productOriginLabel(product: ProductOrigin): string {

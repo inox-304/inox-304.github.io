@@ -1,5 +1,6 @@
 import { categoryNames, normalizeWhatsapp, safeHttps, safeImage, safeModel, safePreviewAsset, safeTechnicalSheet, type CmsAdditional, type CmsData, type CmsProduct } from './cms.ts';
 import { parseCooktopConfig } from './cooktop-config.ts';
+import { parseVariantAxes, parseOptionValues, validateVariantCombinations } from './product-variant-options.ts';
 
 const settingKeys = ['empresa', 'direccion', 'referencia_direccion', 'facebook', 'instagram', 'tiktok', 'horarios', 'contacto_principal', 'contacto_instalaciones', 'contacto_medida', 'contacto_formulario', 'hero_title', 'hero_description', 'home_text'];
 export function emptyCmsData(): CmsData {
@@ -56,10 +57,12 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
     if (typeof item.order !== 'number' || !Number.isFinite(item.order)) throw new Error('Invalid catalog order');
     if (item.currency !== 'PEN' && item.currency !== 'USD') throw new Error('Invalid catalog currency');
     if (item.visible !== true) throw new Error('Unpublished catalog product');
+    const variantAxes = parseVariantAxes(item.variantAxes ?? []);
     const variants = list(item.variants ?? [], 100).map(value => {
       const variant = record(value);
-      return { id: identifier(variant.id), name: string(variant.name, 250), price: amount(variant.price), availability: string(variant.availability ?? '', 250), image: asset(variant.image, imageUrl), model3d: asset(variant.model3d, modelUrl), technicalSheet: asset(variant.technicalSheet, documentUrl), materialVariant: string(variant.materialVariant ?? '', 120), doorAnimation: string(variant.doorAnimation ?? '', 120) };
+      return { id: identifier(variant.id), name: string(variant.name, 250), price: amount(variant.price), availability: string(variant.availability ?? '', 250), image: asset(variant.image, imageUrl), model3d: asset(variant.model3d, modelUrl), technicalSheet: asset(variant.technicalSheet, documentUrl), materialVariant: string(variant.materialVariant ?? '', 120), doorAnimation: string(variant.doorAnimation ?? '', 120), optionValues: parseOptionValues(variantAxes, variant.optionValues ?? {}) };
     });
+    validateVariantCombinations(variantAxes, variants);
     const additionalCharges = list(item.additionalCharges ?? [], 100).map(value => {
       const charge = record(value);
       return { id: identifier(charge.id), name: string(charge.name, 250), price: amount(charge.price) };
@@ -81,7 +84,7 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
       id: identifier(item.id), slug, name: string(item.name, 250), category, summary: string(item.summary, 10000),
       supplyType, brand: string(item.brand ?? '', 120), supplierModel: string(item.supplierModel ?? '', 120),
       equipmentFamily: string(item.equipmentFamily ?? '', 32), capacity: string(item.capacity ?? '', 180),
-      cooktopConfig,
+      cooktopConfig, variantAxes,
       features: list(item.features, 50).map(value => string(value)), image: asset(item.image, imageUrl, true),
       visible: true, featured: boolean(item.featured), order: item.order,
       contactId: item.contactId ? identifier(item.contactId) : '', price: amount(item.price), currency: item.currency,

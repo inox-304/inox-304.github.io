@@ -43,6 +43,16 @@ type FamilyDefinition = {
 
 const definitions: readonly FamilyDefinition[] = [
   {
+    // Two original designs share the owner-confirmed capacity/fuel choices.
+    // Neither original photograph is evidence of a dedicated wood-only SKU.
+    id: 'inox-hornos-polleros', name: 'Horno pollero configurable', label: 'Diseño',
+    selectorLabel: 'Diseño', cardAction: 'Elegir capacidad y combustible', cardSummary: '12 a 30 pollos · leña o carbón',
+    models: [
+      { productId: 'P07', label: 'Diseño frontal', capacity: 30 },
+      { productId: 'P08', label: 'HPE-1', capacity: 30, priority: 1 },
+    ],
+  },
+  {
     // Owner-confirmed central-kitchen versions. Group listings only: each SKU
     // retains its own approved cooktop rules, photographs and model references.
     id: 'inox-cocinas-centrales', name: 'Cocina central configurable', label: 'Versión',

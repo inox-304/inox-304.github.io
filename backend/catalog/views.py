@@ -10,9 +10,10 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_safe
 
 from .models import MediaAsset, Product, ProductVariant
-from .serializers import public_catalog_data, public_cooktop_config, public_product_queryset
+from .serializers import public_catalog_data, public_cooktop_config, public_product_queryset, public_variants
 from .storage import open_private_file
 from .cooktop import CooktopValidationError, cooktop_selection_summary, validate_cooktop_selection
+from .variant_options import VariantOptionsError, validate_option_values
 
 
 @never_cache
@@ -76,7 +77,14 @@ def check_cooktop_selection(request, code):
 def public_media(request, asset_id):
     asset = get_object_or_404(MediaAsset, pk=asset_id)
     referenced = Product.objects.filter(is_active=True, is_published=True).filter(Q(image_asset_id=asset_id) | Q(technical_asset_id=asset_id) | Q(model_asset_id=asset_id) | Q(poster_asset_id=asset_id) | Q(gallery_images__asset_id=asset_id)).exists()
-    variant_reference = ProductVariant.objects.filter(product__is_active=True, product__is_published=True, is_active=True).filter(Q(image_asset_id=asset_id) | Q(model_asset_id=asset_id) | Q(technical_asset_id=asset_id)).exists()
+    variant_reference = False
+    for variant in ProductVariant.objects.filter(product__is_active=True, product__is_published=True, is_active=True).filter(Q(image_asset_id=asset_id) | Q(model_asset_id=asset_id) | Q(technical_asset_id=asset_id)).select_related("product"):
+        try:
+            validate_option_values(variant.product.variant_axes, variant.option_values, active=True)
+        except VariantOptionsError:
+            continue
+        variant_reference = True
+        break
     if not referenced and not variant_reference:
         raise Http404
     return media_response(asset)
@@ -106,7 +114,7 @@ def public_quote(request, code):
     except (InvalidOperation, ValueError):
         return JsonResponse({"error": "Ingrese una cantidad válida, mayor que cero y con hasta tres decimales; por unidad solo se admiten enteros."}, status=400)
     variant_id = request.GET.get("variant", "")
-    variant = next((item for item in product.variants.all() if str(item.pk) == variant_id), None) if variant_id else None
+    variant = next((item for item, _values in public_variants(product)[1] if str(item.pk) == variant_id), None) if variant_id else None
     if variant_id and variant is None:
         return JsonResponse({"error": "La variante no está disponible para este producto."}, status=400)
     price = variant.computed_price if variant else product.computed_price

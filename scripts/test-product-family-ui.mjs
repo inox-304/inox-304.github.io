@@ -12,6 +12,7 @@ import { getProductStage } from '../src/lib/product-stage.ts';
 import { withBase } from '../src/lib/paths.ts';
 import { products } from '../src/data/products.ts';
 import { parseCooktopConfig } from '../src/lib/cooktop-config.ts';
+import { renderVariantOptions } from '../src/scripts/variant-options-ui.ts';
 const plain = value => JSON.parse(JSON.stringify(value));
 
 function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs) {
@@ -62,7 +63,7 @@ function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs) {
     .replace(/^import .*;\r?\n/gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
   runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
     ...cms, ...api, ...additionals, ...families, catalogSearchText, getProductStage, withBase,
-    parseCooktopConfig,
+    parseCooktopConfig, renderVariantOptions,
     renderCooktop(_root, config, productId, onChange) { cooktopCalls.push({ productId, config }); onChange(''); },
     document, location, window, history, URL, URLSearchParams, CustomEvent,
     Option: class { constructor(text, value) { this.textContent = text; this.value = value; } },

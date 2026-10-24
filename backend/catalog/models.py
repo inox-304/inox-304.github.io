@@ -8,6 +8,7 @@ from django.db import models
 
 from .validators import clean_upload, validate_https, validate_public_url
 from .cooktop import CooktopValidationError, validate_product_cooktop_config
+from .variant_options import VariantOptionsError, validate_variant_axes, validate_option_values, validate_variant_combinations
 
 
 MONEY_VALIDATORS = [MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100000000"))]
@@ -138,6 +139,7 @@ class Product(ValidatedModel):
     equipment_family = models.CharField("familia de equipos", max_length=32, choices=EquipmentFamily, blank=True, default="", help_text="Agrupa equipos similares dentro de su línea. Déjelo vacío si no corresponde a estas familias.")
     capacity = models.CharField("capacidad", max_length=180, blank=True, default="", help_text="Escriba la capacidad y su unidad tal como las confirma el fabricante, por ejemplo litros de recipiente o kg de masa. No son equivalentes.")
     cooktop_config = models.JSONField("configurador de cocina", default=dict, blank=True, help_text="Opciones de fabricación definidas por el propietario para esta cocina. Se publica solo al habilitarlo.")
+    variant_axes = models.JSONField("tipos de opción de las variaciones", default=list, blank=True)
     source_url = models.URLField("fuente del fabricante (privada)", max_length=1000, blank=True, default="", validators=[validate_https], help_text="Enlace HTTPS de la ficha oficial para verificar datos. No se publica en la web.")
     description = models.TextField("descripción", max_length=5000, blank=True)
     characteristics = models.TextField("características", max_length=5000, blank=True, help_text="Una característica por línea.")
@@ -183,6 +185,12 @@ class Product(ValidatedModel):
             # This field is excluded for nonowner editors; a nonfield error also
             # handles an attempted reclassification of an already configured unit.
             errors["__all__"] = str(exc)
+        try:
+            self.variant_axes = validate_variant_axes(self.variant_axes)
+            if self.pk and not getattr(self, "_defer_variant_consistency", False):
+                validate_variant_combinations(self.variant_axes, self.variants.values_list("option_values", "is_active"))
+        except VariantOptionsError as exc:
+            errors["__all__"] = str(exc)
         if self.charge_unit == self.ChargeUnit.CUSTOM and not self.custom_unit.strip():
             errors["custom_unit"] = "Indique la unidad de cobro."
         if self.show_price and self.price is None:
@@ -214,6 +222,7 @@ class Product(ValidatedModel):
 class ProductVariant(ValidatedModel):
     product = models.ForeignKey(Product, related_name="variants", on_delete=models.CASCADE)
     name = models.CharField("variante / tamaño", max_length=180)
+    option_values = models.JSONField("combinación de opciones", default=dict, blank=True)
     manufacturing_code = models.CharField("código de fabricación", max_length=64, blank=True, validators=[CODE_VALIDATOR], help_text="Código de esta configuración completa en Inventario y Recetas, por ejemplo EQ-001-GAS. Vacío: consumo aún por definir.")
     image_asset = models.ForeignKey(MediaAsset, related_name="variant_images", null=True, blank=True, on_delete=models.PROTECT, verbose_name="foto de esta variación", limit_choices_to={"kind": "image"})
     model_asset = models.ForeignKey(MediaAsset, related_name="variant_models", null=True, blank=True, on_delete=models.PROTECT, verbose_name="modelo de esta variación", limit_choices_to={"kind": "glb"})
@@ -239,6 +248,14 @@ class ProductVariant(ValidatedModel):
     def clean(self):
         super().clean()
         errors = {}
+        if not getattr(self, "_defer_variant_consistency", False) and (self.product_id or "product" in self._state.fields_cache):
+            try:
+                self.option_values = validate_option_values(self.product.variant_axes, self.option_values, active=self.is_active)
+                if self.option_values and self.product_id:
+                    previous = self.product.variants.exclude(pk=self.pk).values_list("option_values", "is_active")
+                    validate_variant_combinations(self.product.variant_axes, [*previous, (self.option_values, self.is_active)])
+            except VariantOptionsError as exc:
+                errors["option_values"] = str(exc)
         for field, kind in (("image_asset", "image"), ("model_asset", "glb"), ("technical_asset", "pdf")):
             asset = getattr(self, field, None)
             if asset and asset.kind != kind:

@@ -135,10 +135,10 @@ test('bundled publication hides only the seven retired SKUs while retaining ever
       console.log(JSON.stringify({ products, visible: visibleProducts.map(p => p.id), cards: catalogProducts.map(p => p.id), featured: featuredProducts.map(p => p.id) }));
     `], { cwd: directory, encoding: 'utf8' }));
     const hidden = ['P19', 'P21', 'P22', 'ILUMI-BIT-270', 'ILUMI-BIT-350', 'ILUMI-BIT-500', 'ILUMI-BIT-750'];
-    assert.equal(result.products.length, 61);
+    assert.equal(result.products.length, 63);
     assert.deepEqual(result.products.filter(product => product.visible === false).map(product => product.id), hidden);
     assert.deepEqual(result.visible, result.products.filter(product => !hidden.includes(product.id)).map(product => product.id));
-    assert.equal(result.visible.length, 54); assert.equal(result.cards.length, 36);
+    assert.equal(result.visible.length, 56); assert.equal(result.cards.length, 37);
     assert.ok(result.cards.includes('INOX-COC-EMP'));
     assert.equal(result.visible.filter(id => id.startsWith('ILUMI-')).length, 24);
     assert.ok(result.visible.includes('P32'));

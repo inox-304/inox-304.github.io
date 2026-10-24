@@ -2,7 +2,8 @@
 // Prices and unspecified warranty terms are intentionally excluded.
 
 import type { ProductCategory } from './categories.ts';
-import type { ProductOrigin } from '../lib/cms.ts';
+import type { ProductOrigin, CmsVariant } from '../lib/cms.ts';
+import { ovenOptions } from './oven-options.ts';
 export { categories, type ProductCategory } from './categories.ts';
 
 export type Product = ProductOrigin & {
@@ -24,9 +25,10 @@ export type Product = ProductOrigin & {
   modelPoster?: string;
   doorAnimation?: string;
   gallery?: string[];
+  variants?: CmsVariant[];
 };
 
-export const products: Product[] = [
+const baseProducts: Product[] = [
   {
     "id": "P01",
     "slug": "cocina-semiindustrial-4-hornillas-horno-electrico",
@@ -1425,3 +1427,4 @@ export const products: Product[] = [
     "featured": false
   }
 ];
+export const products: Product[] = ovenOptions(baseProducts);

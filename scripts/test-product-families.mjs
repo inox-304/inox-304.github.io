@@ -7,23 +7,24 @@ const ids = list => list.map(product => product.id);
 const sample = (id, extra = {}) => ({ id, name: id, category: 'linea-fria', ...extra });
 const familyFor = id => getProductFamily(id, products);
 
-test('all 61 SKUs remain intact while the catalog presents 36 entries with hidden immersion mixers and grouped blender and central-kitchen versions', () => {
+test('the 61 existing SKUs plus pizza and tavola yield 37 cards, grouping pollero designs without deleting records', () => {
   const before = structuredClone(products);
   const catalog = catalogFamilyProducts(products);
-  assert.equal(products.length, 61);
-  assert.equal(catalog.length, 36);
+  assert.equal(products.length, 63);
+  assert.equal(catalog.length, 37);
   assert.ok(catalog.some(product => product.id === 'INOX-COC-EMP'));
   assert.deepEqual(products, before);
-  assert.deepEqual(ids(catalog.filter(product => /^P\d+$/.test(product.id))), ids(products.filter(product => /^P\d+$/.test(product.id) && product.visible !== false && !['P05', 'P26', 'P31'].includes(product.id))));
+  assert.deepEqual(ids(catalog.filter(product => /^P\d+$/.test(product.id))), ids(products.filter(product => /^P\d+$/.test(product.id) && product.visible !== false && !['P05', 'P07', 'P26', 'P31'].includes(product.id))));
   const families = catalog.map(product => familyFor(product.id)).filter(Boolean);
-  assert.equal(families.length, 10);
-  assert.deepEqual(new Set(families.flatMap(family => ids(family.members.map(member => member.product)))), new Set(products.filter(product => product.visible !== false && (['P04', 'P05', 'P25', 'P26', 'P30', 'P31'].includes(product.id) || (product.id.startsWith('ILUMI-') && !['ILUMI-B-7LRE', 'ILUMI-OJM-01AI'].includes(product.id)))).map(product => product.id)));
+  assert.equal(families.length, 11);
+  assert.deepEqual(new Set(families.flatMap(family => ids(family.members.map(member => member.product)))), new Set(products.filter(product => product.visible !== false && (['P04', 'P05', 'P07', 'P08', 'P25', 'P26', 'P30', 'P31'].includes(product.id) || (product.id.startsWith('ILUMI-') && !['ILUMI-B-7LRE', 'ILUMI-OJM-01AI'].includes(product.id)))).map(product => product.id)));
   for (const card of catalog) assert.ok(products.includes(card), 'retain every subtype field and the original reference');
 });
 
 test('the largest visible equipment represents each family, with declared tie preferences', () => {
   for (const [first, expected] of [
     ['P05', 'P04'],
+    ['P07', 'P08'],
     ['P26', 'P25'],
     ['P31', 'P30'],
     ['ILUMI-DJ-181', 'ILUMI-DJ-183'],

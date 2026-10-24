@@ -7,6 +7,7 @@ import { catalogSearchText } from '../lib/catalog-controls';
 import { catalogFamilyProducts, getProductFamily } from '../lib/product-families';
 import { parseCooktopConfig, type CooktopConfig } from '../lib/cooktop-config';
 import { renderCooktop } from './cooktop-ui';
+import { renderVariantOptions } from './variant-options-ui';
 
 type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; cooktopOrigin?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
@@ -226,10 +227,11 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     variants.setAttribute('aria-label', variantLabel);
     const selected = variants.dataset.productId === product.id ? variants.value : '';
     variants.dataset.productId = product.id;
-    const options = [new Option('Configuración principal', ''), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];
+    const structured = !!product.variantAxes?.length;
+    const options = [...(structured ? [] : [new Option('Configuración principal', '')]), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];
     variants.replaceChildren(...options);
-    variants.value = (product.variants || []).some(item => item.id === selected) ? selected : '';
-    variants.closest<HTMLElement>('[data-product-variants]')!.hidden = !product.variants?.length;
+    variants.value = (product.variants || []).some(item => item.id === selected) ? selected : structured ? product.variants?.[0]?.id || '' : '';
+    variants.closest<HTMLElement>('[data-product-variants]')!.hidden = structured || !product.variants?.length;
     const selectVariant = () => {
       const variant = product.variants?.find(item => item.id === variants.value);
       showProductPhoto(variant?.image || product.image, variant ? `${product.name} · ${variant.name}` : product.name);
@@ -246,6 +248,10 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
       updateQuote();
     };
     variants.onchange = selectVariant; selectVariant();
+    renderVariantOptions(detail.querySelector<HTMLElement>('[data-variant-options]'), product, variants.value, id => {
+      variants.value = id; selectVariant();
+      document.dispatchEvent(new CustomEvent('inox:variant-interaction', { detail: { productId: product.id } }));
+    });
   }
   const extras = detail.querySelector<HTMLElement>('[data-product-extras]');
   const extraOptions = detail.querySelector<HTMLElement>('[data-product-extra-options]');

@@ -1,0 +1,7 @@
+<div data-variant-values-editor class="inox-variant-options">
+  {% include "django/forms/widgets/textarea.html" %}
+  {{ widget.axes|json_script:widget.axes_id }}
+  <p data-variant-fallback>Activa JavaScript para seleccionar esta combinación. Los datos guardados se conservan.</p>
+  <div data-variant-controls hidden></div>
+  <p data-variant-status role="status" aria-live="polite"></p>
+</div>

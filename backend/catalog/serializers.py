@@ -2,6 +2,7 @@ from django.db.models import Prefetch
 
 from .models import BusinessSettings, Contact, Product, ProductAdditional, ProductImage, ProductVariant
 from .cooktop import CooktopValidationError, validate_product_cooktop_config
+from .variant_options import VariantOptionsError, validate_variant_axes, validate_option_values, combination_key
 
 
 def catalog_product_queryset():
@@ -24,7 +25,31 @@ def public_cooktop_config(product, *, preview=False):
     return config if config and (config["enabled"] or preview is True) else None
 
 
+def public_variants(product):
+    try:
+        axes = validate_variant_axes(product.variant_axes)
+    except VariantOptionsError:
+        return [], []
+    variants, seen = [], set()
+    for variant in product.variants.all():
+        if not variant.is_active:
+            continue
+        try:
+            values = validate_option_values(axes, variant.option_values, active=True)
+        except VariantOptionsError:
+            continue
+        key = combination_key(values)
+        if key is not None and key in seen:
+            continue
+        seen.add(key)
+        variants.append((variant, values))
+        if len(variants) == 100:
+            break
+    return axes, variants
+
+
 def public_product(product, *, preview=False):
+    variant_axes, variants = public_variants(product)
     return {
         "id": product.code, "slug": product.slug, "name": product.name,
         "category": product.category, "summary": product.description,
@@ -32,6 +57,7 @@ def public_product(product, *, preview=False):
         "supplierModel": product.supplier_model, "equipmentFamily": product.equipment_family,
         "capacity": product.capacity,
         "cooktopConfig": public_cooktop_config(product, preview=preview),
+        "variantAxes": variant_axes,
         "features": [line.strip() for line in product.characteristics.splitlines() if line.strip()],
         "image": product.image_asset.public_url if product.image_asset_id else (product.image or "/images/brand/inox304-logo.webp"),
         "visible": True, "featured": product.featured, "order": product.order,
@@ -44,11 +70,11 @@ def public_product(product, *, preview=False):
         "doorAnimation": product.door_animation,
         "gallery": [item.public_url for item in product.gallery_images.all()],
         "chargeUnit": product.charge_unit, "unitLabel": product.unit_label, "availability": product.availability,
-        "variants": [{"id": str(variant.pk), "name": variant.name, "price": _amount(variant.computed_price) if product.show_price else None, "availability": variant.availability,
+        "variants": [{"id": str(variant.pk), "name": variant.name, "optionValues": values, "price": _amount(variant.computed_price) if product.show_price else None, "availability": variant.availability,
                       "image": variant.image_asset.public_url if variant.image_asset_id else None,
                       "model3d": variant.model_asset.public_url if variant.model_asset_id else "",
                       "technicalSheet": variant.technical_asset.public_url if variant.technical_asset_id else "",
-                      "materialVariant": variant.material_variant, "doorAnimation": variant.door_animation} for variant in product.variants.all()],
+                      "materialVariant": variant.material_variant, "doorAnimation": variant.door_animation} for variant, values in variants],
         "additionals": [{"id": str(item.pk), "name": item.name, "description": item.description, "price": _amount(item.price) if item.show_price else None, "chargeUnit": item.charge_unit, "unitLabel": item.unit_label} for item in product.additionals.all() if item.is_active],
         "additionalCharges": [{"id": "included", "name": "Adicional incluido", "price": _amount(product.additional_flat)}] if product.show_price and product.additional_flat else [],
     }
