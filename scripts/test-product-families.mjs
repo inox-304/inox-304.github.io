@@ -7,11 +7,12 @@ const ids = list => list.map(product => product.id);
 const sample = (id, extra = {}) => ({ id, name: id, category: 'linea-fria', ...extra });
 const familyFor = id => getProductFamily(id, products);
 
-test('all 60 SKUs remain intact while the published catalog presents 38 entries and nine families', () => {
+test('all 61 SKUs remain intact while the catalog presents 39 entries including the new built-in kitchen', () => {
   const before = structuredClone(products);
   const catalog = catalogFamilyProducts(products);
-  assert.equal(products.length, 60);
-  assert.equal(catalog.length, 38);
+  assert.equal(products.length, 61);
+  assert.equal(catalog.length, 39);
+  assert.ok(catalog.some(product => product.id === 'INOX-COC-EMP'));
   assert.deepEqual(products, before);
   assert.deepEqual(ids(catalog.filter(product => /^P\d+$/.test(product.id))), ids(products.filter(product => /^P\d+$/.test(product.id) && product.visible !== false && product.id !== 'P26')));
   const families = catalog.map(product => familyFor(product.id)).filter(Boolean);

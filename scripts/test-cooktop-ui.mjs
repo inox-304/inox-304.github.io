@@ -15,7 +15,7 @@ import { withBase } from '../src/lib/paths.ts';
 
 const rules = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const script = path => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
-const browserSource = ts.transpileModule(`${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const browserSource = ts.transpileModule(`${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function catalog() {
   const base = { id: 'COOK-A', slug: 'cocina-a', name: 'Cocina de prueba A', category: 'linea-caliente',
@@ -98,11 +98,14 @@ function fixture({ data = catalog(), preview = false, remoteRules } = {}) {
   const select = (selector, value) => { const node = root.querySelector(selector); assert.ok(node, selector); node.value = value; node.onchange(); };
   const selectCell = anchor => { const cell = root.querySelector(`[data-anchor="${anchor}"]`); assert.ok(cell, `cell ${anchor}`); cell.click(); };
   const moduleButton = name => root.querySelectorAll('.cooktop-module-option').find(option => option.querySelector('strong')?.textContent === name);
-  const chooseModule = name => { const option = moduleButton(name); assert.ok(option, name); assert.equal(option.disabled, false, `${name} must be eligible`); option.click(); };
+  const armModule = name => { const option = moduleButton(name); assert.ok(option, name); assert.equal(option.disabled, false, `${name} must be eligible`); option.click(); };
+  const chooseModule = name => { armModule(name); const apply = root.querySelector('.cooktop-apply'); assert.ok(apply); assert.equal(apply.disabled, false); apply.click(); };
+  const pick3d = anchor => window.cooktopTestApi.pickCooktopAnchor(root, detail.dataset.productDetail, anchor);
+  const selection = () => window.cooktopTestApi.readCooktop(root, detail.dataset.productDetail)?.selection;
   const variant = value => { nodes['[data-product-variant]'].value = value; nodes['[data-product-variant]'].onchange(); };
   const product = id => { location.href = `https://example.test${routes[id]}`; window.events.popstate(); };
   const quote = () => new URL(nodes['[data-product-quote]'].href).searchParams.get('text');
-  return { data, root, nodes, detail, document, events, requests, select, selectCell, chooseModule, moduleButton, variant, product, quote,
+  return { data, root, nodes, detail, document, events, requests, select, selectCell, chooseModule, armModule, moduleButton, pick3d, selection, variant, product, quote,
     summary: () => root.querySelector('.cooktop-summary')?.textContent || '', flush: () => new Promise(resolve => setImmediate(resolve)) };
 }
 
@@ -239,4 +242,120 @@ test('static remote rules are not requested for a distributed product', async ()
   assert.equal(f.root.hidden, true); assert.doesNotMatch(f.quote(), /Distribución solicitada/);
   assert.equal(f.requests.length, 0);
   assert.match(f.nodes['[data-product-price]'].textContent, /1[,.]400/);
+});
+
+test('palette arms a part without changing the kitchen; tapping its lower half places its full approved footprint', () => {
+  const f = fixture(), live = f.root.querySelector('.cooktop-status');
+  f.armModule('Plancha');
+  assert.equal(f.summary(), '6 hornillas comunes');
+  let interaction = f.events.filter(event => event.type === 'inox:cooktop-interaction').at(-1).detail.interaction;
+  assert.equal(interaction.moduleId, 'plate'); assert.deepEqual([...interaction.validCells], [0, 3]);
+  const lower = f.root.querySelector('[data-anchor="3"]'); lower.onmouseenter();
+  interaction = f.events.filter(event => event.type === 'inox:cooktop-interaction').at(-1).detail.interaction;
+  assert.deepEqual([...interaction.previewCells], [0, 3]);
+  assert.match(f.root.querySelector('[data-anchor="0"]').className, /is-preview-target/);
+  assert.match(lower.className, /is-preview-target/);
+  lower.onmouseleave(); assert.equal(f.events.at(-1).detail.interaction.previewCells.length, 0);
+  f.selectCell(3);
+  assert.equal(f.summary(), '4 hornillas comunes · 1 Plancha');
+  assert.equal(f.document.activeElement.dataset.anchor, '0');
+  assert.equal(f.root.querySelector('.cooktop-status'), live, 'live region remains mounted across redraws');
+  assert.equal(f.root.querySelector('.cooktop-apply'), null);
+});
+
+test('3D picks place the armed module, normalize covered anchors and can remove it to recover both burners', () => {
+  const f = fixture(); f.armModule('Plancha'); f.pick3d(3);
+  assert.equal(f.summary(), '4 hornillas comunes · 1 Plancha');
+  f.pick3d(3); assert.equal(f.document.activeElement.dataset.anchor, '0');
+  assert.equal(f.events.filter(event => event.type === 'inox:cooktop-interaction').at(-1).detail.interaction.anchor, 0);
+  f.root.querySelector('.cooktop-remove').click();
+  assert.equal(f.summary(), '6 hornillas comunes'); assert.equal(f.root.querySelectorAll('.cooktop-cell').length, 6);
+  assert.match(f.root.querySelector('.cooktop-status').textContent, /Recuperaste las hornillas/);
+});
+
+test('invalid placement preserves the existing neighbor and allows selecting another tool', () => {
+  const data = catalog(); data.products[0].cooktopConfig.modules.find(module => module.id === 'plate').anchors.six = [0, 1];
+  const f = fixture({ data }); f.selectCell(3); f.chooseModule('Wok'); f.armModule('Plancha');
+  f.selectCell(0);
+  assert.equal(f.summary(), '5 hornillas comunes · 1 Wok');
+  assert.equal(f.selection().placements.length, 1); assert.equal(f.selection().placements[0].anchor, 3);
+  assert.match(f.root.querySelector('.cooktop-status').textContent, /superponerse|Retira/);
+  f.armModule('Parrilla'); f.selectCell(4);
+  assert.equal(f.summary(), '3 hornillas comunes · 1 Wok · 1 Parrilla');
+});
+
+test('undo and redo restore surface, layout and energy together; a new edit clears redo', () => {
+  const f = fixture(); f.chooseModule('Plancha');
+  f.select('[aria-label="Base de la cocina"]', 'four');
+  assert.equal(f.summary(), '4 hornillas comunes');
+  f.root.querySelector('.cooktop-undo').click();
+  assert.equal(f.summary(), '4 hornillas comunes · 1 Plancha'); assert.equal(f.selection().layoutId, 'six');
+  f.root.querySelector('.cooktop-redo').click(); assert.equal(f.selection().layoutId, 'four');
+  f.root.querySelector('.cooktop-undo').click();
+  f.select('[aria-label="Energía de la superficie"]', 'electric');
+  assert.equal(f.root.querySelector('.cooktop-redo').disabled, true);
+  f.root.querySelector('.cooktop-undo').click(); assert.equal(f.selection().energy, 'gas'); assert.equal(f.selection().placements.length, 1);
+});
+
+function kitchenCatalog() {
+  const data = catalog();
+  data.products[0].cooktopConfig.kitchen = { family: 'central', ovens: ['none', 'gas', 'electric'], structures: ['open', 'cabinet'], supports: ['feet', 'wheels'],
+    materials: [{ id: 'thin', name: '304 mate', steel: '304', thicknessMm: 1 }, { id: 'thick', name: '304 mate reforzada', steel: '304', thicknessMm: 2 }],
+    dimensions: { widthMm: { min: 1200, max: 1800, step: 100 }, depthMm: { min: 700, max: 1000, step: 50 }, heightMm: { min: 850, max: 950, step: 50 } } };
+  return data;
+}
+
+test('owner-approved oven, structure, dimensions and worktop choices update the scene state and quotation with undo', () => {
+  const f = fixture({ data: kitchenCatalog() });
+  assert.match(f.root.textContent, /Cocina central/); assert.match(f.root.textContent, /1 · Horno/); assert.match(f.root.textContent, /2 · Estructura/); assert.match(f.root.textContent, /3 · Medidas y cubierta/);
+  f.select('[data-kitchen-field="oven"]', 'electric');
+  f.select('[data-kitchen-field="structure"]', 'cabinet');
+  f.select('[data-kitchen-field="support"]', 'wheels');
+  f.select('[data-kitchen-field="materialId"]', 'thick');
+  f.select('[data-kitchen-field="widthMm"]', '1500');
+  const chosen = f.selection().kitchen;
+  assert.equal(chosen.oven, 'electric'); assert.equal(chosen.structure, 'cabinet'); assert.equal(chosen.support, 'wheels'); assert.equal(chosen.materialId, 'thick'); assert.equal(chosen.widthMm, 1500);
+  assert.equal(f.document.activeElement.dataset.kitchenField, 'widthMm');
+  assert.match(f.quote(), /1500 × 700 × 850 mm/); assert.match(f.quote(), /Horno: eléctrico/);
+  assert.match(f.quote(), /Estructura: con gabinete/); assert.match(f.quote(), /Apoyos: ruedas/); assert.match(f.quote(), /Cubierta: 304 mate reforzada, acero 304, 2 mm/);
+  const updated = f.events.filter(event => event.type === 'inox:cooktop-updated').at(-1);
+  assert.equal(updated.detail.interactive, true); assert.equal(updated.detail.state.selection.kitchen.widthMm, 1500);
+  f.root.querySelector('.cooktop-undo').click(); assert.equal(f.selection().kitchen.widthMm, 1200); assert.equal(f.selection().kitchen.materialId, 'thick');
+});
+
+test('invalid or blank measurements and unapproved choices never reach selection or quotation', () => {
+  const f = fixture({ data: kitchenCatalog() });
+  for (const value of ['1250', '9000', '', 'Infinity']) {
+    f.select('[data-kitchen-field="widthMm"]', value);
+    assert.equal(f.selection().kitchen.widthMm, 1200); assert.equal(f.root.querySelector('[data-kitchen-field="widthMm"]').getAttribute('aria-invalid'), 'true');
+  }
+  f.select('[data-kitchen-field="oven"]', 'unapproved'); assert.equal(f.selection().kitchen.oven, 'none');
+  f.select('[data-kitchen-field="widthMm"]', '1600'); assert.equal(f.selection().kitchen.widthMm, 1600);
+  assert.equal(f.root.querySelector('[data-kitchen-field="widthMm"]').getAttribute('aria-invalid'), null);
+});
+
+test('unconfigured kitchen options stay absent instead of inventing owner permissions', () => {
+  const data = kitchenCatalog(); Object.assign(data.products[0].cooktopConfig.kitchen, { ovens: [], structures: [], supports: [], materials: [], dimensions: null });
+  const f = fixture({ data });
+  assert.equal(f.root.querySelectorAll('[data-kitchen-field]').length, 0);
+  assert.equal(f.selection().kitchen.oven, null); assert.equal(f.selection().kitchen.widthMm, null);
+  assert.match(f.root.textContent, /no ofrece opciones de horno/);
+});
+
+test('an identical hosted rules refresh preserves the customer configuration and its full quotation', async () => {
+  const data = kitchenCatalog();
+  const f = fixture({ data, remoteRules: { productId: 'COOK-A', cooktopConfig: data.products[0].cooktopConfig } });
+  f.select('[data-kitchen-field="oven"]', 'electric'); f.select('[data-kitchen-field="widthMm"]', '1500'); f.chooseModule('Plancha');
+  const before = JSON.stringify(f.selection()), quote = f.quote(); await f.flush();
+  assert.equal(JSON.stringify(f.selection()), before); assert.equal(f.quote(), quote);
+});
+
+test('switching SKU or independent variant cannot inherit an oven, dimensions or worktop configuration', () => {
+  const f = fixture({ data: kitchenCatalog() });
+  f.select('[data-kitchen-field="oven"]', 'electric'); f.select('[data-kitchen-field="widthMm"]', '1500');
+  f.variant('independent'); assert.doesNotMatch(f.quote(), /Horno:|Cubierta:|Medidas solicitadas/);
+  f.variant(''); assert.equal(f.selection().kitchen.oven, 'none'); assert.equal(f.selection().kitchen.widthMm, 1200);
+  f.select('[data-kitchen-field="oven"]', 'gas'); f.product('COOK-B');
+  assert.equal(f.selection().kitchen, undefined); assert.doesNotMatch(f.quote(), /Horno:|Cubierta:|Medidas solicitadas/);
+  f.product('ILUMI-DJ-181'); assert.equal(f.root.hidden, true); assert.doesNotMatch(f.quote(), /Horno:|Cubierta:|Medidas solicitadas/);
 });

@@ -1,5 +1,6 @@
 """Bounded, database-free validation of owner-defined cooktop options."""
 import re
+import math
 from collections import Counter
 
 
@@ -48,6 +49,65 @@ def _subset(value, choices, label):
     return list(items)
 
 
+def _optional_subset(value, choices, label):
+    items = _list(value, 0, len(choices), label)
+    if any(not isinstance(item, str) or item not in choices for item in items) or len(set(items)) != len(items):
+        _fail(f"{label}: elija opciones permitidas sin repetirlas.")
+    return list(items)
+
+
+def _kitchen_config(value):
+    data = _object(value, ("family", "ovens", "structures", "supports", "materials", "dimensions"), "Opciones de cocina")
+    if data["family"] not in ("linear", "central", "builtin", "home"):
+        _fail("Familia de cocina no válida.")
+    materials = []
+    identifiers = set()
+    for source in _list(data["materials"], 0, 24, "Materiales de la cubierta"):
+        item = _object(source, ("id", "name", "steel", "thicknessMm"), "Material de la cubierta")
+        identifier = _identifier(item["id"], "Material")
+        if identifier in identifiers:
+            _fail("Los materiales no pueden repetir identificadores.")
+        identifiers.add(identifier)
+        thickness = item["thicknessMm"]
+        if type(thickness) not in (int, float) or not 0 < thickness <= 20 or not math.isfinite(thickness):
+            _fail("Espesor de cubierta: use un número mayor que 0 y hasta 20 mm.")
+        materials.append({"id": identifier, "name": _name(item["name"], "Material"), "steel": _name(item["steel"], "Calidad de acero"), "thicknessMm": thickness})
+    dimensions = None
+    if data["dimensions"] is not None:
+        dimensions = {}
+        for axis, bounds in _object(data["dimensions"], ("widthMm", "depthMm", "heightMm"), "Medidas").items():
+            bounds = _object(bounds, ("min", "max", "step"), "Rango de medidas")
+            lower = _integer(bounds["min"], 1, 10000, "Medida mínima")
+            upper = _integer(bounds["max"], lower, 10000, "Medida máxima")
+            step = _integer(bounds["step"], 1, max(1, upper - lower), "Paso de medida")
+            dimensions[axis] = {"min": lower, "max": upper, "step": step}
+    return {"family": data["family"], "ovens": _optional_subset(data["ovens"], ("none", "gas", "electric"), "Hornos"),
+            "structures": _optional_subset(data["structures"], ("open", "cabinet"), "Estructuras"),
+            "supports": _optional_subset(data["supports"], ("feet", "wheels"), "Apoyos"), "materials": materials, "dimensions": dimensions}
+
+
+def _kitchen_selection(config, value):
+    chosen = _object(value, ("oven", "structure", "support", "materialId", "widthMm", "depthMm", "heightMm"), "Configuración elegida de cocina")
+    result = {}
+    for key, options in (("oven", config["ovens"]), ("structure", config["structures"]), ("support", config["supports"]), ("materialId", [item["id"] for item in config["materials"]])):
+        option = chosen[key]
+        if (not options and option is not None) or (options and (not isinstance(option, str) or option not in options)):
+            _fail("La opción de horno, estructura, apoyo o material no está autorizada para esta cocina.")
+        result[key] = option
+    for axis in ("widthMm", "depthMm", "heightMm"):
+        if config["dimensions"] is None:
+            if chosen[axis] is not None:
+                _fail("Las medidas de esta cocina todavía no están habilitadas.")
+            result[axis] = None
+        else:
+            bounds = config["dimensions"][axis]
+            value = _integer(chosen[axis], bounds["min"], bounds["max"], "Medida elegida")
+            if (value - bounds["min"]) % bounds["step"]:
+                _fail("La medida elegida no respeta los pasos permitidos por el propietario.")
+            result[axis] = value
+    return result
+
+
 def _cells(layout, module, anchor):
     total = layout["rows"] * layout["columns"]
     _integer(anchor, 0, total - 1, "Posición")
@@ -61,7 +121,10 @@ def validate_cooktop_config(value):
     """Return an independent whitelisted schema; {} means not configured."""
     if isinstance(value, dict) and not value:
         return {}
-    data = _object(value, ("version", "kind", "enabled", "energies", "defaultModuleId", "layouts", "modules"), "Configurador")
+    keys = ("version", "kind", "enabled", "energies", "defaultModuleId", "layouts", "modules")
+    if isinstance(value, dict) and "kitchen" in value:
+        keys += ("kitchen",)
+    data = _object(value, keys, "Configurador")
     if type(data["version"]) is not int or data["version"] != 1 or data["kind"] != "cooktop" or type(data["enabled"]) is not bool:
         _fail("Versión, tipo o estado del configurador no válidos.")
     energies = _subset(data["energies"], ("gas", "electric"), "Energías")
@@ -87,7 +150,7 @@ def validate_cooktop_config(value):
         if identifier in module_ids:
             _fail("Los módulos no pueden repetir identificadores.")
         module_ids.add(identifier)
-        if item["kind"] not in ("burner", "wok", "griddle", "grill", "other"):
+        if item["kind"] not in ("burner", "wok", "griddle", "grill", "fryer", "other"):
             _fail("Tipo de módulo no permitido.")
         module = {"id": identifier, "name": _name(item["name"], "Módulo"), "kind": item["kind"],
                   "width": _integer(item["width"], 1, 12, "Ancho"), "height": _integer(item["height"], 1, 3, "Alto"),
@@ -112,8 +175,11 @@ def validate_cooktop_config(value):
         total = layout["rows"] * layout["columns"]
         if set(default["anchors"][layout["id"]]) != set(range(total)) or default["maxQuantity"] < total:
             _fail("La hornilla de base debe poder cubrir todas las posiciones.")
-    return {"version": 1, "kind": "cooktop", "enabled": data["enabled"], "energies": energies,
-            "defaultModuleId": default_id, "layouts": layouts, "modules": modules}
+    result = {"version": 1, "kind": "cooktop", "enabled": data["enabled"], "energies": energies,
+              "defaultModuleId": default_id, "layouts": layouts, "modules": modules}
+    if "kitchen" in data:
+        result["kitchen"] = _kitchen_config(data["kitchen"])
+    return result
 
 
 def validate_product_cooktop_config(value, *, supply_type, category, equipment_family):
@@ -128,7 +194,8 @@ def validate_cooktop_selection(config, selection, *, allow_disabled=False):
     config = validate_cooktop_config(config)
     if not config or (not config["enabled"] and not allow_disabled):
         _fail("Este configurador no está habilitado.")
-    selection = _object(selection, ("layoutId", "energy", "placements"), "Selección")
+    keys = ("layoutId", "energy", "placements") + (("kitchen",) if "kitchen" in config else ())
+    selection = _object(selection, keys, "Selección")
     layout_id = _identifier(selection["layoutId"], "Distribución")
     layout = next((item for item in config["layouts"] if item["id"] == layout_id), None)
     if layout is None or selection["energy"] not in config["energies"]:
@@ -155,7 +222,10 @@ def validate_cooktop_selection(config, selection, *, allow_disabled=False):
             _fail("La selección supera la cantidad máxima permitida para este módulo.")
         covered.update(cells)
         placements.append({"moduleId": module_id, "anchor": placement["anchor"]})
-    return {"layoutId": layout_id, "energy": selection["energy"], "placements": placements}
+    result = {"layoutId": layout_id, "energy": selection["energy"], "placements": placements}
+    if "kitchen" in config:
+        result["kitchen"] = _kitchen_selection(config["kitchen"], selection["kitchen"])
+    return result
 
 
 def cooktop_selection_summary(config, selection):
@@ -169,5 +239,8 @@ def cooktop_selection_summary(config, selection):
         if anchors:
             occupied += len(anchors) * module["width"] * module["height"]
             module_counts.append({"moduleId": module["id"], "name": module["name"], "count": len(anchors), "anchors": anchors})
-    return {"layoutId": layout["id"], "energy": selection["energy"],
-            "remainingBurners": layout["rows"] * layout["columns"] - occupied, "moduleCounts": module_counts}
+    result = {"layoutId": layout["id"], "energy": selection["energy"],
+              "remainingBurners": layout["rows"] * layout["columns"] - occupied, "moduleCounts": module_counts}
+    if "kitchen" in selection:
+        result["kitchen"] = selection["kitchen"]
+    return result

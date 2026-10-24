@@ -1,5 +1,6 @@
 """Synthetic cooktop definitions only; Django creates an isolated test database."""
 import json
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,6 +34,116 @@ def cooktop_fixture(enabled=True):
 
 def selection(*placements, layout="six", energy="gas"):
     return {"layoutId": layout, "energy": energy, "placements": [{"moduleId": module, "anchor": anchor} for module, anchor in placements]}
+
+
+def kitchen_fixture():
+    return {"family": "central", "ovens": ["none", "gas", "electric"], "structures": ["open", "cabinet"], "supports": ["feet", "wheels"],
+            "materials": [{"id": "steel304-08", "name": "Acero 304 mate de prueba", "steel": "304 MATE", "thicknessMm": 0.8}],
+            "dimensions": {"widthMm": {"min": 1000, "max": 1400, "step": 100}, "depthMm": {"min": 600, "max": 800, "step": 50}, "heightMm": {"min": 900, "max": 900, "step": 1}}}
+
+
+def kitchen_selection():
+    return {"oven": "electric", "structure": "cabinet", "support": "wheels", "materialId": "steel304-08", "widthMm": 1200, "depthMm": 700, "heightMm": 900}
+
+
+class KitchenValidationTests(SimpleTestCase):
+    def test_complete_kitchen_options_are_whitelisted_and_copied_without_altering_surface(self):
+        config = {**cooktop_fixture(), "kitchen": kitchen_fixture()}
+        result = validate_cooktop_config(config)
+        self.assertEqual(result, config)
+        chosen = {**selection(("plate", 0), ("wok", 2)), "kitchen": kitchen_selection()}
+        self.assertEqual(validate_cooktop_selection(config, chosen), chosen)
+        summary = cooktop_selection_summary(config, chosen)
+        self.assertEqual(summary["remainingBurners"], 3)
+        self.assertEqual(summary["kitchen"], chosen["kitchen"])
+        result["kitchen"]["materials"][0]["name"] = "Other"
+        result["kitchen"]["dimensions"]["widthMm"]["min"] = 1
+        self.assertEqual(config["kitchen"]["materials"][0]["name"], "Acero 304 mate de prueba")
+        self.assertEqual(config["kitchen"]["dimensions"]["widthMm"]["min"], 1000)
+
+    def test_unconfigured_sections_require_null_and_do_not_invent_materials_or_dimensions(self):
+        blank = {"family": "home", "ovens": ["none", "gas", "electric"], "structures": [], "supports": [], "materials": [], "dimensions": None}
+        config = {**cooktop_fixture(), "kitchen": blank}
+        chosen = {**selection(), "kitchen": {"oven": "none", "structure": None, "support": None, "materialId": None, "widthMm": None, "depthMm": None, "heightMm": None}}
+        self.assertEqual(validate_cooktop_selection(config, chosen), chosen)
+        for field, value in (("structure", "open"), ("support", "feet"), ("materialId", "steel304-08"), ("widthMm", 1000)):
+            invalid = deepcopy(chosen); invalid["kitchen"][field] = value
+            with self.subTest(field=field), self.assertRaises(CooktopValidationError):
+                validate_cooktop_selection(config, invalid)
+
+    def test_legacy_configs_accept_only_legacy_selection_and_kitchen_configs_require_explicit_selection(self):
+        legacy = cooktop_fixture()
+        self.assertEqual(validate_cooktop_config(legacy), legacy)
+        self.assertNotIn("kitchen", cooktop_selection_summary(legacy, selection()))
+        with self.assertRaises(CooktopValidationError):
+            validate_cooktop_selection(legacy, {**selection(), "kitchen": kitchen_selection()})
+        with self.assertRaises(CooktopValidationError):
+            validate_cooktop_selection({**legacy, "kitchen": kitchen_fixture()}, selection())
+
+    def test_kitchen_rejects_extra_keys_duplicate_or_invalid_choices_and_material_types(self):
+        changes = [
+            (("privateCost",), 1), (("family",), "dispenser"), (("ovens",), ["gas", "gas"]), (("structures",), ["drawer"]), (("supports",), ["levitation"]),
+            (("materials",), [kitchen_fixture()["materials"][0]] * 2), (("materials",), [kitchen_fixture()["materials"][0]] * 25),
+            (("materials", 0, "id"), "invalid/id"), (("materials", 0, "name"), ""), (("materials", 0, "steel"), "\ud800"),
+            (("materials", 0, "thicknessMm"), True), (("materials", 0, "thicknessMm"), 0), (("materials", 0, "thicknessMm"), 20.1),
+            (("materials", 0, "thicknessMm"), 10 ** 400),
+            (("materials", 0, "thicknessMm"), float("inf")), (("materials", 0, "thicknessMm"), float("nan")), (("materials", 0, "privateCost"), 1),
+        ]
+        for path, value in changes:
+            data = kitchen_fixture(); current = data
+            for part in path[:-1]: current = current[part]
+            current[path[-1]] = value
+            with self.subTest(path=path, value=value), self.assertRaises(CooktopValidationError):
+                validate_cooktop_config({**cooktop_fixture(), "kitchen": data})
+        for invalid in (None, [], {}, False):
+            with self.subTest(invalid=invalid), self.assertRaises(CooktopValidationError):
+                validate_cooktop_config({**cooktop_fixture(), "kitchen": invalid})
+
+    def test_dimensions_require_all_axes_integer_bounds_and_real_steps(self):
+        invalid_dimensions = [
+            {}, {"widthMm": {"min": 1000, "max": 1400, "step": 100}},
+        ]
+        for key, value in (("min", 0), ("min", 1500), ("max", 10001), ("max", 1200.5), ("step", 0), ("step", 401), ("step", True)):
+            dimensions = deepcopy(kitchen_fixture()["dimensions"]); dimensions["widthMm"][key] = value; invalid_dimensions.append(dimensions)
+        dimensions = deepcopy(kitchen_fixture()["dimensions"]); dimensions["heightMm"]["step"] = 2; invalid_dimensions.append(dimensions)
+        for dimensions in invalid_dimensions:
+            with self.subTest(dimensions=dimensions), self.assertRaises(CooktopValidationError):
+                validate_cooktop_config({**cooktop_fixture(), "kitchen": {**kitchen_fixture(), "dimensions": dimensions}})
+
+    def test_selection_rejects_unapproved_options_and_off_step_out_of_bounds_or_null_measurements(self):
+        config = {**cooktop_fixture(), "kitchen": kitchen_fixture()}
+        cases = [("oven", "wood"), ("oven", None), ("structure", "drawers"), ("support", None), ("materialId", "other"),
+                 ("widthMm", 1101), ("widthMm", 1500), ("depthMm", 599), ("heightMm", None), ("heightMm", True), ("heightMm", 900.0), ("price", 1)]
+        for key, value in cases:
+            invalid = {**selection(), "kitchen": {**kitchen_selection(), key: value}}
+            with self.subTest(key=key, value=value), self.assertRaises(CooktopValidationError):
+                validate_cooktop_selection(config, invalid)
+
+    def test_fryer_is_a_real_bounded_surface_module_and_not_an_oven(self):
+        config = cooktop_fixture(); config["modules"][2].update(kind="fryer", name="Freidora de prueba")
+        self.assertEqual(validate_cooktop_config(config), config)
+        self.assertEqual(cooktop_selection_summary(config, selection(("plate", 0)))["remainingBurners"], 4)
+        with self.assertRaises(CooktopValidationError):
+            validate_cooktop_selection(config, selection(("plate", 3)))
+
+    def test_public_selection_endpoint_preserves_only_approved_kitchen_fields_and_rejects_forgery(self):
+        product = Product(code="KITCHEN-TEST", category="linea-caliente", supply_type="manufactured", equipment_family="cocinas", cooktop_config={**cooktop_fixture(), "kitchen": kitchen_fixture()}, is_published=True)
+        chosen = {**selection(("plate", 0)), "kitchen": kitchen_selection()}
+        request = RequestFactory().get("/api/catalog/cooktop/KITCHEN-TEST/check/", {"selection": json.dumps(chosen)})
+        with patch("catalog.views._cooktop_product", return_value=product):
+            response = check_cooktop_selection(request, product.code)
+            self.assertEqual(response.status_code, 200)
+            result = json.loads(response.content)
+            self.assertEqual(result["selection"], chosen)
+            self.assertEqual(result["summary"]["kitchen"], chosen["kitchen"])
+            self.assertNotIn("price", result)
+            for key, value in (("oven", "wood"), ("widthMm", 1050), ("unitCost", 1)):
+                invalid = {**chosen, "kitchen": {**chosen["kitchen"], key: value}}
+                request = RequestFactory().get("/api/catalog/cooktop/KITCHEN-TEST/check/", {"selection": json.dumps(invalid)})
+                with self.subTest(key=key):
+                    response = check_cooktop_selection(request, product.code)
+                    self.assertEqual(response.status_code, 400)
+                    self.assertFalse(json.loads(response.content)["valid"])
 
 
 class CooktopValidationTests(SimpleTestCase):

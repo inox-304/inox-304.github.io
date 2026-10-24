@@ -3,7 +3,7 @@ import { withBase } from '../lib/paths';
 import type { ModelViewerElement } from '@google/model-viewer';
 import { cooktopAssetFor } from '../lib/cooktop-assets';
 import { readCooktop, pickCooktopAnchor } from './cooktop-ui';
-import type { CooktopScene } from './cooktop-scene';
+import type { CooktopScene, CooktopInteraction, CooktopView } from './cooktop-scene';
 
 type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'supplyType' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
 let viewerModule: Promise<typeof import('@google/model-viewer')> | undefined;
@@ -42,6 +42,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   let viewer: ModelViewerElement | undefined;
   let modular: CooktopScene | undefined;
   let modularLoading = false;
+  let interaction: CooktopInteraction | null = null;
   const cooktopRoot = document.querySelector<HTMLElement>('[data-cooktop-root]');
   let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
   let doorFrame: number | undefined;
@@ -50,6 +51,17 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   doors.type = 'button'; doors.className = 'product-view-button'; doors.hidden = true;
   doors.textContent = 'Abrir puertas'; doors.setAttribute('aria-pressed', 'false');
   toolbar.append(doors);
+  const viewpoints = document.createElement('div');
+  viewpoints.className = 'product-photo-options'; viewpoints.hidden = true;
+  viewpoints.setAttribute('role', 'group'); viewpoints.setAttribute('aria-label', 'Ángulo de la cocina 3D');
+  for (const [view, label] of [['top', 'Superior'], ['front', 'Frente'], ['perspective', 'Perspectiva']] as [CooktopView, string][]) {
+    const viewButton = document.createElement('button');
+    viewButton.type = 'button'; viewButton.className = 'product-view-button'; viewButton.textContent = label;
+    viewButton.setAttribute('aria-label', `Vista ${label.toLowerCase()} de la cocina`);
+    viewButton.addEventListener('click', () => { modular?.setView(view); });
+    viewpoints.append(viewButton);
+  }
+  toolbar.append(viewpoints);
 
   function configureViewer() {
     if (!viewer || !product) return;
@@ -103,6 +115,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     viewer = undefined;
     modular?.dispose(); modular = undefined; modularLoading = false;
     doors.hidden = true;
+    viewpoints.hidden = true;
     host.replaceChildren(); host.hidden = true; help.hidden = true;
     message();
     button.setAttribute('aria-pressed', 'false'); button.removeAttribute('aria-busy');
@@ -160,9 +173,10 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         modular = scene; modularLoading = false;
         window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy');
         button.firstChild!.textContent = 'Volver a foto ';
-        help.hidden = false; help.textContent = `${navigationHelp} Toca una hornilla o módulo para elegir su posición. La distribución cambia al instante.`;
-        doors.hidden = !scene.hasDoors; doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
+        help.hidden = false; help.textContent = `${navigationHelp} Elige una pieza y toca una zona resaltada para colocarla. Vista ilustrativa: las medidas y detalles finales se confirman al cotizar.`;
         scene.update(latest.config, latest.selection);
+        doors.hidden = !scene.hasDoors; doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
+        scene.setInteraction(interaction); viewpoints.hidden = false;
         photos.querySelectorAll('button').forEach(photo => photo.setAttribute('aria-pressed', 'false'));
         if (focusViewer) host.querySelector('canvas')?.focus();
         return;
@@ -201,6 +215,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   }
   function update(next: MediaProduct | null) {
     const wasOpen = button.getAttribute('aria-pressed') === 'true';
+    if (product?.id !== next?.id) interaction = null;
     resetViewer(); message(); product = next; selectedPhoto = 0;
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
     sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
@@ -229,6 +244,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     const wasOpen = !!viewer || !!modular;
     const oldModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     selectedVariant = detail.variant;
+    if (selectedVariant) interaction = null;
     const nextModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     button.hidden = !nextModel; toolbar.hidden = !nextModel && sources.length < 2;
     if (oldModel !== nextModel || modular || modularLoading) { resetViewer(); if (wasOpen && nextModel) void showModel(false); }
@@ -238,10 +254,21 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     const detail = (event as CustomEvent<{ productId: string; interactive: boolean }>).detail;
     if (!product || product.id !== detail.productId || selectedVariant) return;
     const state = readCooktop(cooktopRoot, detail.productId);
-    if (!state) { if (modular || modularLoading) resetViewer(); return; }
-    if (modular) { modular.update(state.config, state.selection); return; }
+    if (!state) { interaction = null; if (modular || modularLoading) resetViewer(); return; }
+    if (modular) {
+      modular.update(state.config, state.selection);
+      doors.hidden = !modular.hasDoors;
+      if (doors.hidden) { doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas'; }
+      return;
+    }
     if (modularLoading) return; // Creation applies the newest selection after loading.
     if (cooktopAssetFor(detail.productId, product.model3d || '') && (detail.interactive || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
+  });
+  document.addEventListener('inox:cooktop-interaction', event => {
+    const detail = (event as CustomEvent<{ productId: string; interaction: CooktopInteraction | null }>).detail;
+    if (!product || product.id !== detail?.productId || selectedVariant || !readCooktop(cooktopRoot, detail.productId)) return;
+    interaction = detail.interaction;
+    modular?.setInteraction(interaction);
   });
   window.addEventListener('pagehide', resetViewer);
   try { update(JSON.parse(root.dataset.currentProduct ?? root.dataset.initialProduct ?? 'null')); }

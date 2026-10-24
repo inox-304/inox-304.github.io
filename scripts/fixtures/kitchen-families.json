@@ -1,0 +1,615 @@
+{
+  "linear": {
+    "version": 1,
+    "kind": "cooktop",
+    "enabled": true,
+    "energies": [
+      "gas"
+    ],
+    "defaultModuleId": "burner",
+    "layouts": [
+      {
+        "id": "linear1",
+        "name": "1 hornilla",
+        "rows": 1,
+        "columns": 1
+      },
+      {
+        "id": "linear2",
+        "name": "2 posiciones",
+        "rows": 1,
+        "columns": 2
+      },
+      {
+        "id": "linear3",
+        "name": "3 posiciones",
+        "rows": 1,
+        "columns": 3
+      },
+      {
+        "id": "linear4",
+        "name": "4 posiciones",
+        "rows": 1,
+        "columns": 4
+      },
+      {
+        "id": "linear5",
+        "name": "5 posiciones",
+        "rows": 1,
+        "columns": 5
+      }
+    ],
+    "modules": [
+      {
+        "id": "burner",
+        "name": "Hornilla normal",
+        "kind": "burner",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "linear1",
+          "linear2",
+          "linear3",
+          "linear4",
+          "linear5"
+        ],
+        "maxQuantity": 5,
+        "anchors": {
+          "linear1": [
+            0
+          ],
+          "linear2": [
+            0,
+            1
+          ],
+          "linear3": [
+            0,
+            1,
+            2
+          ],
+          "linear4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "linear5": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "id": "wok",
+        "name": "Quemador wok",
+        "kind": "wok",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "linear1",
+          "linear2",
+          "linear3",
+          "linear4",
+          "linear5"
+        ],
+        "maxQuantity": 5,
+        "anchors": {
+          "linear1": [
+            0
+          ],
+          "linear2": [
+            0,
+            1
+          ],
+          "linear3": [
+            0,
+            1,
+            2
+          ],
+          "linear4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "linear5": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      }
+    ],
+    "kitchen": {
+      "family": "linear",
+      "ovens": [],
+      "structures": [
+        "open",
+        "cabinet"
+      ],
+      "supports": [
+        "feet",
+        "wheels"
+      ],
+      "materials": [],
+      "dimensions": null
+    }
+  },
+  "central": {
+    "version": 1,
+    "kind": "cooktop",
+    "enabled": true,
+    "energies": [
+      "gas"
+    ],
+    "defaultModuleId": "burner",
+    "layouts": [
+      {
+        "id": "central4",
+        "name": "4 posiciones",
+        "rows": 2,
+        "columns": 2
+      },
+      {
+        "id": "central6",
+        "name": "6 posiciones",
+        "rows": 2,
+        "columns": 3
+      },
+      {
+        "id": "central8",
+        "name": "8 posiciones",
+        "rows": 2,
+        "columns": 4
+      },
+      {
+        "id": "central10",
+        "name": "10 posiciones",
+        "rows": 2,
+        "columns": 5
+      }
+    ],
+    "modules": [
+      {
+        "id": "burner",
+        "name": "Hornilla normal",
+        "kind": "burner",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "central4",
+          "central6",
+          "central8",
+          "central10"
+        ],
+        "maxQuantity": 10,
+        "anchors": {
+          "central4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "central6": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "central8": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "central10": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        }
+      },
+      {
+        "id": "wok",
+        "name": "Quemador wok",
+        "kind": "wok",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "central4",
+          "central6",
+          "central8",
+          "central10"
+        ],
+        "maxQuantity": 10,
+        "anchors": {
+          "central4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "central6": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "central8": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "central10": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        }
+      },
+      {
+        "id": "plate",
+        "name": "Plancha",
+        "kind": "griddle",
+        "width": 1,
+        "height": 2,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "central4",
+          "central6",
+          "central8",
+          "central10"
+        ],
+        "maxQuantity": 1,
+        "anchors": {
+          "central4": [
+            0,
+            1
+          ],
+          "central6": [
+            0,
+            1,
+            2
+          ],
+          "central8": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "central10": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "id": "grill",
+        "name": "Parrilla",
+        "kind": "grill",
+        "width": 1,
+        "height": 2,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "central4",
+          "central6",
+          "central8",
+          "central10"
+        ],
+        "maxQuantity": 1,
+        "anchors": {
+          "central4": [
+            0,
+            1
+          ],
+          "central6": [
+            0,
+            1,
+            2
+          ],
+          "central8": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "central10": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "id": "fryer",
+        "name": "Freidora",
+        "kind": "fryer",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "central4",
+          "central6",
+          "central8",
+          "central10"
+        ],
+        "maxQuantity": 1,
+        "anchors": {
+          "central4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "central6": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "central8": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "central10": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        }
+      }
+    ],
+    "kitchen": {
+      "family": "central",
+      "ovens": [
+        "none",
+        "gas",
+        "electric"
+      ],
+      "structures": [
+        "open",
+        "cabinet"
+      ],
+      "supports": [
+        "feet",
+        "wheels"
+      ],
+      "materials": [],
+      "dimensions": null
+    }
+  },
+  "builtin": {
+    "version": 1,
+    "kind": "cooktop",
+    "enabled": true,
+    "energies": [
+      "gas"
+    ],
+    "defaultModuleId": "burner",
+    "layouts": [
+      {
+        "id": "builtin2",
+        "name": "2 posiciones",
+        "rows": 1,
+        "columns": 2
+      },
+      {
+        "id": "builtin4",
+        "name": "4 posiciones",
+        "rows": 2,
+        "columns": 2
+      },
+      {
+        "id": "builtin6",
+        "name": "6 posiciones",
+        "rows": 2,
+        "columns": 3
+      }
+    ],
+    "modules": [
+      {
+        "id": "burner",
+        "name": "Hornilla normal",
+        "kind": "burner",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "builtin2",
+          "builtin4",
+          "builtin6"
+        ],
+        "maxQuantity": 6,
+        "anchors": {
+          "builtin2": [
+            0,
+            1
+          ],
+          "builtin4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "builtin6": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      {
+        "id": "wok",
+        "name": "Quemador wok",
+        "kind": "wok",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "builtin2",
+          "builtin4",
+          "builtin6"
+        ],
+        "maxQuantity": 6,
+        "anchors": {
+          "builtin2": [
+            0,
+            1
+          ],
+          "builtin4": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "builtin6": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      }
+    ],
+    "kitchen": {
+      "family": "builtin",
+      "ovens": [],
+      "structures": [],
+      "supports": [],
+      "materials": [],
+      "dimensions": null
+    }
+  },
+  "home": {
+    "version": 1,
+    "kind": "cooktop",
+    "enabled": true,
+    "energies": [
+      "gas"
+    ],
+    "defaultModuleId": "burner",
+    "layouts": [
+      {
+        "id": "home4",
+        "name": "4 posiciones",
+        "rows": 2,
+        "columns": 2
+      }
+    ],
+    "modules": [
+      {
+        "id": "burner",
+        "name": "Hornilla normal",
+        "kind": "burner",
+        "width": 1,
+        "height": 1,
+        "energies": [
+          "gas"
+        ],
+        "allowedLayouts": [
+          "home4"
+        ],
+        "maxQuantity": 4,
+        "anchors": {
+          "home4": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      }
+    ],
+    "kitchen": {
+      "family": "home",
+      "ovens": [
+        "electric",
+        "gas",
+        "none"
+      ],
+      "structures": [],
+      "supports": [],
+      "materials": [],
+      "dimensions": null
+    }
+  }
+}

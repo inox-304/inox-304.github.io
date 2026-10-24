@@ -1,35 +1,88 @@
 .product-detail-copy:has(.cooktop-configurator) { min-width: 0; }
 .cooktop-configurator { min-width: 0; margin: 24px 0; padding: clamp(16px, 2vw, 24px); border: 1px solid #c7d4de; border-radius: 14px; background: #fff; color: #18354c; }
 .cooktop-configurator[hidden] { display: none; }
-.cooktop-configurator h2 { margin: 0 0 10px; font-size: 1.25rem; letter-spacing: -.02em; }
+.cooktop-configurator h2 { margin: 0 0 10px; font-size: 1.35rem; letter-spacing: -.025em; }
+.cooktop-configurator h3 { font-size: .93rem; margin: 0 0 14px; letter-spacing: -.015em; }
 .cooktop-intro, .cooktop-note { font-size: .79rem; line-height: 1.65; color: #526b7d; margin: 0 0 18px; }
-.cooktop-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.cooktop-controls label { display: grid; gap: 7px; font-size: .75rem; font-weight: 600; }
-.cooktop-controls select { width: 100%; min-width: 0; border: 1px solid #bfcbd6; border-radius: 7px; padding: 10px; font: inherit; color: #16334a; background: #fff; }
-.cooktop-surface { background: #eaf0f4; border: 1px solid #c5d0d9; border-radius: 10px; padding: 10px; margin: 18px 0; overflow-x: auto; }
+.cooktop-step { padding: 20px 0; border-top: 1px solid #dce5eb; }
+.cooktop-step .cooktop-note { margin: 12px 0 0; }
+.cooktop-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cooktop-step label { display: grid; gap: 7px; font-size: .75rem; font-weight: 600; }
+.cooktop-step select, .cooktop-step input { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #bfcbd6; border-radius: 7px; padding: 11px 10px; font: inherit; font-size: .8rem; color: #16334a; background: #fff; }
+.cooktop-step input[aria-invalid=true] { border-color: #ae3d2d; background: #fff4f1; }
+.cooktop-dimensions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.cooktop-dimensions small { font-size: .62rem; font-weight: 400; color: #526b7d; line-height: 1.5; }
+.cooktop-surface { background: linear-gradient(135deg, #eaf0f4, #f5f8fa); border: 1px solid #c5d0d9; border-radius: 10px; padding: 10px; margin: 12px 0; overflow-x: auto; }
 .cooktop-direction { font-size: .6rem; letter-spacing: .12em; text-align: center; margin: 4px 0 10px; color: #526575; }
 .cooktop-direction:last-child { margin: 10px 0 4px; }
 .cooktop-grid { display: grid; gap: 6px; }
-.cooktop-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 14px 4px 8px; border-radius: 6px; border: 1px solid #a9bac9; background: #fcfdfe; color: #18354c; min-width: 0; cursor: pointer; font: inherit; }
+.cooktop-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 17px 4px 9px; border-radius: 6px; border: 1px solid #a9bac9; background: #fcfdfe; color: #18354c; min-width: 0; min-height: 76px; cursor: pointer; font: inherit; transition: background .15s, box-shadow .15s, opacity .15s; }
 .cooktop-cell strong { font-size: .65rem; overflow-wrap: anywhere; }
-.cooktop-cell[aria-pressed=true] { outline: 2px solid #285975; outline-offset: 0; background: #e0eff6; }
+.cooktop-cell[aria-pressed=true] { box-shadow: inset 0 0 0 2px #285975; background: #e0eff6; }
+.cooktop-cell.is-valid-target { border-color: #398275; background: #eaf6f0; box-shadow: inset 0 0 0 1px #8ab8a7; }
+.cooktop-cell.is-preview-target { background: #c8eadb; box-shadow: inset 0 0 0 3px #24765e; }
+.cooktop-cell.is-unavailable-target { opacity: .58; cursor: not-allowed; }
 .cooktop-position { position: absolute; left: 6px; top: 3px; font-size: .57rem; color: #526b7d; }
-.cooktop-module-symbol { width: 28px; height: 28px; border: 5px double #4b6271; border-radius: 50%; }
+.cooktop-module-symbol { display: block; flex-shrink: 0; box-sizing: border-box; width: 28px; height: 28px; border: 5px double #4b6271; border-radius: 50%; }
 .cooktop-kind-wok .cooktop-module-symbol { border-width: 7px; box-shadow: 0 0 0 2px #9faeba; width: 32px; height: 32px; }
-.cooktop-kind-griddle .cooktop-module-symbol, .cooktop-kind-grill .cooktop-module-symbol { border-radius: 3px; width: 65%; height: 45px; border: 2px solid #526b7d; background: #b9c7d1; }
+.cooktop-kind-griddle .cooktop-module-symbol, .cooktop-kind-grill .cooktop-module-symbol, .cooktop-kind-fryer .cooktop-module-symbol { border-radius: 3px; width: 65%; max-width: 64px; height: 40px; border: 2px solid #526b7d; background: #b9c7d1; }
 .cooktop-kind-grill .cooktop-module-symbol { background: repeating-linear-gradient(90deg,#516875 0 3px,#c3ced6 3px 8px); }
-.cooktop-options { margin: 0; border: 0; padding: 0; }
-.cooktop-options legend { font-size: .8rem; font-weight: 600; margin-bottom: 10px; }
+.cooktop-kind-fryer .cooktop-module-symbol { border: 5px double #526b7d; background: repeating-linear-gradient(0deg,transparent 0 6px,#9baeb9 6px 7px),repeating-linear-gradient(90deg,#e1e8eb 0 6px,#9baeb9 6px 7px); }
+.cooktop-options { margin: 0; border: 0; padding: 0; min-width: 0; }
+.cooktop-options legend { font-size: .76rem; font-weight: 600; margin-bottom: 10px; color: #526b7d; }
 .cooktop-module-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
-.cooktop-module-option { display: grid; gap: 4px; border: 1px solid #c5d0d9; border-radius: 7px; padding: 10px; text-align: left; color: #18354c; background: #fff; font: inherit; cursor: pointer; }
+.cooktop-module-option { position: relative; display: grid; grid-template-columns: 32px minmax(0,1fr); align-items: center; column-gap: 10px; row-gap: 4px; border: 1px solid #c5d0d9; border-radius: 8px; padding: 12px 10px; text-align: left; color: #18354c; background: #fff; font: inherit; cursor: pointer; }
+.cooktop-module-option .cooktop-module-symbol { grid-row: span 2; width: 27px; max-width: 27px; height: 27px; }
 .cooktop-module-option strong { font-size: .76rem; }
-.cooktop-module-option span, .cooktop-module-option small { font-size: .66rem; line-height: 1.5; }
-.cooktop-module-option[aria-pressed=true] { border-color: #285975; background: #edf6fa; }
+.cooktop-module-option span:not(.cooktop-module-symbol), .cooktop-module-option small { font-size: .66rem; line-height: 1.5; }
+.cooktop-module-option small { grid-column: 1 / -1; }
+.cooktop-module-option[aria-pressed=true] { border-color: #285975; background: #edf6fa; box-shadow: inset 0 0 0 1px #285975; }
 .cooktop-module-option:disabled { background: #f4f6f7; color: #697985; cursor: not-allowed; }
-.cooktop-summary { margin: 18px 0 12px; padding: 12px; background: #edf5f2; color: #254b41; font-size: .82rem; font-weight: 600; border-radius: 7px; }
-.cooktop-reset { border: 0; background: transparent; padding: 6px 0; text-decoration: underline; text-underline-offset: 3px; color: #285975; cursor: pointer; font: inherit; font-size: .75rem; }
-.cooktop-status { font-size: .76rem; line-height: 1.6; color: #254b41; }
-.cooktop-note { margin: 12px 0 0; border-top: 1px solid #dae2e8; padding-top: 12px; }
+.cooktop-placement-hint { font-size: .76rem; line-height: 1.6; margin: 14px 0 0; color: #526b7d; }
+.cooktop-selection-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cooktop-selected-position { width: 100%; font-size: .74rem; margin: 1px 0 4px; color: #526b7d; }
+.cooktop-apply, .cooktop-cancel, .cooktop-remove, .cooktop-undo, .cooktop-redo { min-height: 40px; border: 1px solid #bfcbd6; border-radius: 7px; background: #fff; padding: 9px 12px; font: inherit; font-size: .72rem; color: #18354c; cursor: pointer; }
+.cooktop-apply { background: #1d4963; color: #fff; border-color: #1d4963; font-weight: 600; }
+.cooktop-remove { border-style: dashed; }
+.cooktop-configurator button:disabled { opacity: .6; cursor: not-allowed; }
+.cooktop-summary { margin: 0 0 12px; padding: 14px; background: #edf5f2; color: #254b41; font-size: .82rem; font-weight: 600; border-radius: 8px; line-height: 1.65; }
+.cooktop-history { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cooktop-reset { border: 0; background: transparent; padding: 10px 4px; text-decoration: underline; text-underline-offset: 3px; color: #285975; cursor: pointer; font: inherit; font-size: .72rem; }
+.cooktop-content > .cooktop-note { margin: 16px 0 0; }
+.cooktop-status { font-size: .76rem; line-height: 1.6; color: #254b41; margin: 12px 0 0; }
+.cooktop-status:empty { margin: 0; }
 .cooktop-draft { background: #fff4d9; padding: 10px; font-size: .75rem; border-radius: 6px; }
-.cooktop-configurator button:focus-visible, .cooktop-configurator select:focus-visible { outline: 3px solid #296686; outline-offset: 3px; }
-@media(max-width:420px) { .cooktop-controls { grid-template-columns: 1fr; } .cooktop-cell strong { font-size: .6rem; } }
+.cooktop-configurator button:focus-visible, .cooktop-configurator select:focus-visible, .cooktop-configurator input:focus-visible { outline: 3px solid #296686; outline-offset: 3px; }
+@media(max-width:420px) { .cooktop-controls { grid-template-columns: 1fr; } .cooktop-cell strong { font-size: .6rem; } .cooktop-module-option { column-gap: 7px; padding: 10px 7px; } .cooktop-dimensions { gap: 6px; } }
+@media(prefers-reduced-motion:reduce) { .cooktop-cell { transition: none; } }
+
+/* Keep the live kitchen visible while a phone user edits its controls below. */
+@media (max-width: 900px) and (min-height: 560px) {
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) {
+    position: sticky; top: 8px; z-index: 12; align-self: start; width: 100%; min-width: 0;
+    background: #f1f4f8; border-radius: 10px; padding: 6px; box-sizing: border-box;
+    box-shadow: 0 8px 24px #102b4033;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) .product-media-frame {
+    height: clamp(170px, 34svh, 300px); border-radius: 6px; overflow: hidden;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) .product-detail-photo {
+    height: 100%; aspect-ratio: auto;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) .product-media-toolbar {
+    flex-wrap: nowrap; justify-content: flex-start; gap: 7px; padding-top: 6px;
+    overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) .product-photo-options {
+    flex-wrap: nowrap; flex-shrink: 0;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) .product-view-button {
+    flex-shrink: 0; white-space: nowrap; min-height: 40px; padding: 9px 11px;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .product-media:has([data-model-host][data-cooktop-scene-state="ready"]:not([hidden])) .product-media-help {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .product-detail-grid:has(.cooktop-configurator:not([hidden])) .cooktop-configurator :is(button, select, input) {
+    scroll-margin-top: calc(34svh + 80px);
+  }
+}

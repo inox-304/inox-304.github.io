@@ -54,10 +54,10 @@ function fixture(base = product('P04'), deferNative = false) {
   const loadSceneModule = async () => ({ createCooktopScene(host, url, options) {
     let resolve;
     const promise = new Promise(done => { resolve = done; });
-    const call = { url, options, updates: [], disposed: 0, doorStates: [], complete() {
+    const call = { url, options, updates: [], interactions: [], views: [], disposed: 0, doorStates: [], hasDoors: true, complete() {
       this.canvas = new Element('canvas'); host.append(this.canvas);
       const self = this;
-      resolve({ hasDoors: true, update(c, s) { self.updates.push({ config: structuredClone(c), selection: structuredClone(s) }); }, setDoors(open) { self.doorStates.push(open); }, dispose() { self.disposed++; self.canvas.remove(); } });
+      resolve({ get hasDoors() { return self.hasDoors; }, update(c, s) { self.updates.push({ config: structuredClone(c), selection: structuredClone(s) }); if (s.kitchen) self.hasDoors = s.kitchen.oven === 'gas' || s.kitchen.oven === 'electric' || s.kitchen.structure === 'cabinet'; }, setInteraction(value) { self.interactions.push(structuredClone(value)); }, setView(view) { self.views.push(view); }, setDoors(open) { self.doorStates.push(open); }, dispose() { self.disposed++; self.canvas.remove(); } });
     } };
     calls.push(call); return promise;
   } });
@@ -77,10 +77,37 @@ function fixture(base = product('P04'), deferNative = false) {
 }
 
 test('only the exact approved source or opaque media ID may choose a modular chassis', () => {
+  assert.equal(cooktopAssetFor('P01', '/media/8bc924d3-b775-51ce-8e0c-ce7acf353a59/'), '/models/inox/cooktop-parametric-v1.glb');
+  assert.equal(cooktopAssetFor('INOX-COC-EMP', '/models/inox/cocina-empotrada-4-zonas-v1.glb'), '/models/inox/cooktop-parametric-v1.glb');
   assert.equal(cooktopAssetFor('P04', models.P04), '/models/inox/cooktop-p04-v1.glb');
   assert.equal(cooktopAssetFor('P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330/'), '/models/inox/cooktop-p04-v1.glb');
   assert.equal(cooktopAssetFor('P04', '/admin/catalog/mediaasset/a5c077e3-be87-5d5a-9aaf-1ebcced04330/file/'), '/models/inox/cooktop-p04-v1.glb');
   for (const [id, url] of [['P04', '/models/new-sketchup.glb'], ['P04', models.P05], ['P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330-extra/'], ['ILUMI-DJ-181', models.P04], ['__proto__', models.P04]]) assert.equal(cooktopAssetFor(id, url), '');
+});
+
+test('interaction previews survive loading and reopening, ignore another SKU and offer three camera views', async () => {
+  const f = fixture(), interaction = { anchor: 0, moduleId: 'plate', validCells: [0, 1, 2], previewCells: [0, 3] };
+  f.dispatch('inox:cooktop-interaction', { productId: 'P04', interaction }); f.changed(); await f.flush();
+  f.calls[0].complete(); await f.flush(); assert.deepEqual(f.calls[0].interactions.at(-1), interaction);
+  f.dispatch('inox:cooktop-interaction', { productId: 'P05', interaction: null }); assert.deepEqual(f.calls[0].interactions.at(-1), interaction);
+  const buttons = f.nodes['media-toolbar'].querySelectorAll('button');
+  for (const label of ['Superior', 'Frente', 'Perspectiva']) buttons.find(button => button.textContent === label).click();
+  assert.deepEqual(f.calls[0].views, ['top', 'front', 'perspective']); assert.equal(f.calls[0].canvas.focused, undefined);
+  f.nodes['show-model'].click(); f.nodes['show-model'].click(); await f.flush();
+  f.calls[1].complete(); await f.flush(); assert.deepEqual(f.calls[1].interactions.at(-1), interaction);
+  f.dispatch('inox:cooktop-interaction', { productId: 'P04', interaction: null }); assert.equal(f.calls[1].interactions.at(-1), null);
+  f.pagehide();
+});
+
+test('door control follows real geometry when adding and removing an oven after the viewer loads', async () => {
+  const f = fixture(), state = initial(); state.selection.kitchen = { oven: 'none', structure: 'open' };
+  f.setState(state); f.changed(); await f.flush(); f.calls[0].complete(); await f.flush();
+  const doors = f.nodes['media-toolbar'].querySelectorAll('button').find(button => button.textContent === 'Abrir puertas');
+  assert.equal(doors.hidden, true);
+  state.selection.kitchen.oven = 'electric'; f.setState(state); f.changed(); assert.equal(doors.hidden, false);
+  doors.click(); assert.deepEqual(f.calls[0].doorStates, [true]);
+  state.selection.kitchen.oven = 'none'; f.setState(state); f.changed(); assert.equal(doors.hidden, true);
+  assert.equal(doors.getAttribute('aria-pressed'), 'false'); assert.equal(doors.textContent, 'Abrir puertas'); f.pagehide();
 });
 
 test('an interactive selection opens 3D and pending creation applies the latest selection without reloading', async () => {

@@ -30,14 +30,14 @@ export const products: Product[] = [
   {
     "id": "P01",
     "slug": "cocina-semiindustrial-4-hornillas-horno-electrico",
-    "name": "Cocina semiindustrial 4 hornillas + horno eléctrico",
+    "name": "Cocina de casa semiindustrial · 4 hornillas",
     "category": "linea-caliente",
-    "summary": "Cocina de cuatro hornillas con horno eléctrico y rostizador para el hogar o el negocio. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
+    "summary": "Modelo fijo de cuatro hornillas para casa o negocio. Elige horno a gas, eléctrico o sin horno; la fotografía muestra la versión con horno. Personalización 3D ilustrativa; detalles finales de fabricación a confirmar.",
     "features": [
       "4 parrillas de fierro fundido",
       "Quemadores de 4\" de fierro fundido",
-      "Horno eléctrico con rostizador incorporado",
-      "Función gratinado",
+      "Horno a gas, eléctrico o sin horno",
+      "Cuatro hornillas fijas; el horno se elige por separado",
       "Estructura resistente y excelente acabado"
     ],
     "image": "/images/products/cocina-semiindustrial-4-hornillas-horno-electrico.webp",
@@ -49,16 +49,16 @@ export const products: Product[] = [
   {
     "id": "P02",
     "slug": "cocina-industrial-de-3-hornillas",
-    "name": "Cocina industrial de 3 hornillas",
+    "name": "Cocina lineal · 1 a 5 hornillas",
     "category": "linea-caliente",
-    "summary": "Tres hornillas con controles independientes, estructura reforzada y repisa inferior para cocinas profesionales. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
+    "summary": "Elige de una a cinco hornillas en una sola fila y sustituye las que necesites por quemadores wok. La fotografía muestra una base de tres hornillas. Configura la estructura y los apoyos en el visor; medidas y fabricación a confirmar.",
     "features": [
-      "3 hornillas de alta potencia con controles independientes",
+      "1 a 5 posiciones en una sola fila",
       "Acero inoxidable AISI 304",
       "Estructura reforzada en tubo rectangular de 6\" x 2\"",
       "Parrillas de fierro fundido importado",
-      "Repisa inferior",
-      "Patas antideslizantes; fabricación a medida"
+      "Quemadores normales o wok según la selección",
+      "Base abierta o cerrada; patas o ruedas según la selección"
     ],
     "image": "/images/products/cocina-industrial-de-3-hornillas.jpg",
     "featured": true,
@@ -87,13 +87,13 @@ export const products: Product[] = [
   {
     "id": "P04",
     "slug": "cocina-industrial-4-hornillas-tipo-isla-plancha-ho",
-    "name": "Cocina industrial 4 hornillas tipo isla + plancha + horno (CIH-4P)",
+    "name": "Cocina central configurable (CIH-4P)",
     "category": "linea-caliente",
-    "summary": "Cuatro hornillas, plancha y horno integrados en una cocina de diseño tipo isla. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
+    "summary": "Base central de 4, 6, 8 o 10 posiciones. Combina hornillas, wok, plancha, parrilla y freidora; después elige horno, estructura y apoyos. La fotografía muestra una de las combinaciones. Visualización 3D ilustrativa; medidas y fabricación a confirmar.",
     "features": [
-      "4 hornillas de alta potencia",
-      "Plancha incorporada",
-      "Horno para cocinar a la par distintos platillos",
+      "Base de 4, 6, 8 o 10 posiciones",
+      "Módulos de hornilla, wok, plancha, parrilla y freidora",
+      "Horno a gas, eléctrico o sin horno",
       "Diseño tipo isla en acero inoxidable"
     ],
     "image": "/images/products/cocina-industrial-4-hornillas-tipo-isla-plancha-ho.webp",
@@ -105,13 +105,13 @@ export const products: Product[] = [
   {
     "id": "P05",
     "slug": "cocina-industrial-tipo-isla-4-parrillas-plancha-ho",
-    "name": "Cocina industrial tipo isla 4 parrillas + plancha + horno (CÓD-CHI-04)",
+    "name": "Cocina central configurable (CÓD-CHI-04)",
     "category": "linea-caliente",
-    "summary": "Equipo tipo isla con cuatro parrillas, plancha y horno para diferentes preparaciones. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
+    "summary": "Base central de 4, 6, 8 o 10 posiciones con módulos intercambiables. Personaliza la superficie, el horno, la estructura y los apoyos. La fotografía conserva la combinación original de este diseño; el visor presenta tu solicitud de forma ilustrativa.",
     "features": [
-      "4 parrillas clásicas",
-      "1 plancha",
-      "Horno incorporado",
+      "Base de 4, 6, 8 o 10 posiciones",
+      "Plancha, parrilla y freidora que sustituyen hornillas",
+      "Horno, estructura y apoyos seleccionables",
       "Acero inoxidable"
     ],
     "image": "/images/products/cocina-industrial-tipo-isla-4-parrillas-plancha-ho.webp",
@@ -1400,6 +1400,21 @@ export const products: Product[] = [
     "equipmentFamily": "envasadoras-vacio",
     "capacity": "Sellado de 260 × 8 mm",
     "showPrice": false,
+    "featured": false
+  },
+  {
+    "id": "INOX-COC-EMP",
+    "slug": "cocina-empotrada-configurable",
+    "name": "Cocina empotrada · 2, 4 o 6 hornillas",
+    "category": "linea-caliente",
+    "supplyType": "manufactured",
+    "brand": "INOX 304",
+    "equipmentFamily": "cocinas",
+    "summary": "Superficie empotrada de fabricación propia. Elige 2, 4 o 6 hornillas y los quemadores wok de tu configuración. Imagen y modelo 3D ilustrativos; las medidas de encastre y especificaciones finales se confirman al cotizar.",
+    "features": ["2, 4 o 6 posiciones de cocción", "Hornilla normal o quemador wok", "Instalación empotrada; encastre por confirmar", "Fabricación a pedido"],
+    "image": "/images/products/cocina-empotrada-4-zonas-v1.webp",
+    "model3d": "/models/inox/cocina-empotrada-4-zonas-v1.glb",
+    "modelPoster": "/images/products/cocina-empotrada-4-zonas-v1.webp",
     "featured": false
   }
 ];

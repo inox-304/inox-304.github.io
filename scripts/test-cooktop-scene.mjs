@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls as ActualOrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as rules from '../src/lib/cooktop-config.ts';
 import { readCooktopSurface, planCooktopParts, disposeCooktopResources } from '../src/scripts/cooktop-scene.ts';
+import { createKitchenGeometry, createFryerTemplate } from '../src/scripts/kitchen-geometry.ts';
 
 const config = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const surface = { minX: -0.715, maxX: 0.715, minZ: -0.39, maxZ: 0.39, y: 0.819 };
@@ -71,6 +72,43 @@ test('shared geometry, materials and texture bitmaps are released exactly once',
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1, image: 1 });
 });
 
+function kitchenConfig(family = 'central') {
+  const configured = structuredClone(config);
+  configured.kitchen = { family, ovens: ['none', 'gas', 'electric'], structures: ['open', 'cabinet'], supports: ['feet', 'wheels'],
+    materials: [{ id: '304-12', name: 'Acero 304 mate 1,2 mm', steel: '304', thicknessMm: 1.2 }], dimensions: null };
+  configured.modules.push({ id: 'fryer', name: 'Freidora', kind: 'fryer', width: 1, height: 2, energies: ['gas'], allowedLayouts: ['six'], maxQuantity: 2, anchors: { six: [0, 1, 2] } });
+  return configured;
+}
+
+test('all four kitchen families have distinct chassis and confirmed dimensions control physical bounds', () => {
+  const dimensions = [];
+  for (const family of ['linear', 'central', 'builtin', 'home']) {
+    const cfg = kitchenConfig(family), state = rules.initialCooktopSelection(cfg);
+    const geometry = createKitchenGeometry(cfg, state), size = new THREE.Box3().setFromObject(geometry.root).getSize(new THREE.Vector3());
+    assert.equal(geometry.root.userData.family, family); assert.equal(geometry.root.userData.dimensionsVerified, false);
+    assert.equal(geometry.root.userData.steel, '304'); assert.equal(geometry.root.userData.thicknessMm, 1.2);
+    if (family === 'builtin') { assert.ok(size.y < .25); assert.equal(geometry.root.getObjectByName('Pata'), undefined); }
+    dimensions.push(size.toArray().map(value => value.toFixed(3)).join(',')); disposeCooktopResources(geometry.root);
+  }
+  assert.equal(new Set(dimensions).size, 4);
+  const cfg = kitchenConfig(), state = rules.initialCooktopSelection(cfg);
+  Object.assign(state.kitchen, { widthMm: 1800, depthMm: 900, heightMm: 950 });
+  const built = createKitchenGeometry(cfg, state);
+  assert.equal(built.root.userData.dimensionsVerified, true);
+  assert.ok(Math.abs(built.surface.maxX - built.surface.minX - 1.73) < 1e-8);
+  assert.ok(Math.abs(built.surface.maxZ - built.surface.minZ - .83) < 1e-8);
+  disposeCooktopResources(built.root);
+});
+
+test('fryer has its own tank, basket and handle and replaces the complete occupied footprint', () => {
+  const cfg = kitchenConfig(), state = rules.initialCooktopSelection(cfg); state.placements = [{ moduleId: 'fryer', anchor: 0 }];
+  const planned = planCooktopParts(cfg, state, surface), fry = planned.find(part => part.template === 'Fryer');
+  assert.deepEqual(fry.cells, [0, 3]); assert.equal(planned.filter(part => part.template === 'BurnerGas').length, 4);
+  const template = createFryerTemplate(), bounds = new THREE.Box3().setFromObject(template).getSize(new THREE.Vector3());
+  assert.ok(template.children.length > 50); assert.ok(bounds.x <= 1 && bounds.z <= 1 && bounds.y > .1);
+  disposeCooktopResources(template);
+});
+
 async function fixture(code = 'p04', realControls = false) {
   const asset = await model(code), frames = new Map(), renders = [], errors = [], picks = [];
   let serial = 0, time = 0, renderer, observer, orbit;
@@ -109,7 +147,7 @@ async function fixture(code = 'p04', realControls = false) {
     THREE: { ...THREE, WebGLRenderer: Renderer, PMREMGenerator: PMREM }, GLTFLoader: class { async loadAsync() { return asset; } },
     OrbitControls: realControls ? RealControls : Controls, RoomEnvironment: Environment, ResizeObserver: Observer, URL, Map, Set,
     window: { devicePixelRatio: 1, matchMedia: () => ({ matches: false }) }, performance: { now: () => time },
-    requestAnimationFrame: fn => { frames.set(++serial, fn); return serial; }, cancelAnimationFrame: id => frames.delete(id), ...rules,
+    requestAnimationFrame: fn => { frames.set(++serial, fn); return serial; }, cancelAnimationFrame: id => frames.delete(id), createKitchenGeometry, createFryerTemplate, ...rules,
   };
   runInNewContext(source, context);
   const controller = await context.subject.createCooktopScene(host, '/models/test.glb', { onPick: anchor => picks.push(anchor), onError: error => errors.push(error) });
@@ -152,6 +190,73 @@ test('door opening and closing animate original pivots without a permanent rende
   assert.ok(pivot.quaternion.angleTo(closed) < 0.00001); assert.equal(f.frames.size, 0);
   f.controller.dispose();
   const withoutDoors = await fixture('p02'); assert.equal(withoutDoors.controller.hasDoors, false); withoutDoors.controller.dispose();
+});
+
+test('parametric oven, cabinet and wheels genuinely replace geometry while module edits keep the camera', async () => {
+  const f = await fixture(), cfg = kitchenConfig(), state = rules.initialCooktopSelection(cfg);
+  f.controller.update(cfg, state); f.draw();
+  assert.equal(f.asset.scene.getObjectByName('CooktopChassis').visible, false); assert.equal(f.controller.hasDoors, false);
+  assert.equal(f.asset.scene.getObjectByName('Puerta_horno_configurable'), undefined);
+  state.kitchen.oven = 'electric'; f.controller.update(cfg, state); f.draw();
+  assert.equal(f.controller.hasDoors, true); assert.ok(f.asset.scene.getObjectByName('Horno_electrico'));
+  let door = f.asset.scene.getObjectByName('Puerta_horno_configurable'); assert.ok(door);
+  const camera = f.renders.at(-1).camera, position = camera.position.clone();
+  f.controller.setDoors(true); f.draw(430); assert.ok(door.rotation.x > 1);
+  state.placements = [{ moduleId: 'fryer', anchor: 0 }]; f.controller.update(cfg, state); f.draw();
+  assert.equal(f.asset.scene.getObjectByName('Puerta_horno_configurable'), door);
+  assert.ok(camera.position.equals(position)); assert.equal(f.frames.size, 0);
+  const released = []; f.asset.scene.getObjectByName('CooktopParametricChassis').traverse(mesh => { if (mesh.isMesh) mesh.geometry.addEventListener('dispose', () => released.push(mesh.geometry)); });
+  state.kitchen.oven = 'none'; state.kitchen.structure = 'cabinet'; state.kitchen.support = 'wheels';
+  f.controller.update(cfg, state); f.draw(); assert.ok(released.length > 0);
+  assert.equal(f.asset.scene.getObjectByName('Puerta_horno_configurable'), undefined);
+  assert.ok(f.asset.scene.getObjectByName('Rueda')); assert.ok(f.controller.hasDoors);
+  state.kitchen.structure = 'open'; f.controller.update(cfg, state); f.draw(); assert.equal(f.controller.hasDoors, false);
+  f.controller.update(config, selected()); f.draw(); assert.equal(f.asset.scene.getObjectByName('CooktopChassis').visible, true);
+  assert.equal(f.asset.scene.getObjectByName('CooktopParametricChassis'), undefined); f.controller.dispose();
+});
+
+test('placement previews only color reusable overlays and explicit camera views retain external focus', async () => {
+  const f = await fixture(); f.controller.update(config, selected()); f.draw();
+  const parts = f.asset.scene.getObjectByName('CooktopSelectedModules'), originals = [...parts.children];
+  const camera = f.renders.at(-1).camera, originalPosition = camera.position.clone();
+  const interaction = { anchor: 0, moduleId: 'plate', validCells: [0, 1, 2], previewCells: [0, 3] };
+  f.controller.setInteraction(interaction); interaction.previewCells.push(5); f.draw();
+  assert.deepEqual(parts.children, originals); assert.ok(camera.position.equals(originalPosition));
+  const hints = f.asset.scene.getObjectByName('CooktopPlacementHints');
+  assert.equal(hints.children[0].userData.hintState, 'preview'); assert.equal(hints.children[3].userData.hintState, 'preview');
+  assert.equal(hints.children[2].userData.hintState, 'valid'); assert.equal(hints.children[5].visible, false);
+  f.controller.setView('top'); f.draw(); assert.equal(f.host.dataset.cooktopView, 'top');
+  assert.ok(camera.position.y > camera.position.z); assert.equal(f.document.activeElement, null);
+  const point = new THREE.Vector3(-.4766667, surface.y + .006, .195).project(camera);
+  const pointer = { pointerId: 1, button: 0, clientX: (point.x + 1) * 320, clientY: (1 - point.y) * 240 };
+  f.renderer.domElement.emit('pointerdown', pointer); f.renderer.domElement.emit('pointerup', pointer);
+  assert.deepEqual(f.picks, [], 'covered second row is not a valid anchor for an armed plate');
+  f.controller.setInteraction(null); f.draw(); assert.equal(hints.visible, false);
+  const resources = new Set(); hints.traverse(mesh => { if (mesh.isMesh) { resources.add(mesh.geometry); resources.add(mesh.material); } });
+  const disposed = new Map(); resources.forEach(resource => resource.addEventListener('dispose', () => disposed.set(resource, (disposed.get(resource) || 0) + 1)));
+  f.controller.dispose(); assert.equal(disposed.size, resources.size); assert.ok([...disposed.values()].every(value => value === 1));
+});
+
+test('new layout and confirmed dimensions refit the chassis without resetting the orbit angle', async () => {
+  const f = await fixture(), cfg = kitchenConfig(), state = rules.initialCooktopSelection(cfg);
+  f.controller.update(cfg, state); f.controller.setView('front'); f.draw();
+  const camera = f.renders.at(-1).camera;
+  const direction = camera.position.clone().sub(f.orbit.target).normalize(), oldDistance = camera.position.distanceTo(f.orbit.target);
+  const smaller = structuredClone(cfg);
+  smaller.layouts[0].columns = 2;
+  smaller.modules = smaller.modules.filter(module => module.kind === 'burner');
+  smaller.modules[0].anchors.six = [0, 1, 2, 3];
+  f.controller.update(smaller, rules.initialCooktopSelection(smaller)); f.draw();
+  assert.ok(camera.position.distanceTo(f.orbit.target) < oldDistance);
+  assert.ok(camera.position.clone().sub(f.orbit.target).normalize().distanceTo(direction) < 1e-8);
+  cfg.kitchen.dimensions = { widthMm: { min: 1800, max: 2400, step: 100 }, depthMm: { min: 900, max: 1200, step: 100 }, heightMm: { min: 900, max: 1100, step: 100 } };
+  const measured = rules.initialCooktopSelection(cfg); f.controller.update(cfg, measured); f.draw();
+  const firstDistance = camera.position.distanceTo(f.orbit.target);
+  measured.kitchen.widthMm = 2400; f.controller.update(cfg, measured); f.draw();
+  assert.ok(camera.position.distanceTo(f.orbit.target) > firstDistance);
+  assert.ok(camera.position.clone().sub(f.orbit.target).normalize().distanceTo(direction) < 1e-8);
+  const fittedPosition = camera.position.clone(); measured.kitchen.oven = 'gas'; f.controller.update(cfg, measured); f.draw();
+  assert.ok(camera.position.equals(fittedPosition)); f.controller.dispose();
 });
 
 test('ray picking selects a real module while drag and multi-touch gestures do not pick', async () => {

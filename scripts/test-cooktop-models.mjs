@@ -57,4 +57,18 @@ for(const spec of kitchenSpecs){
  const height=node=>new T.Box3().setFromObject(node).getSize(new T.Vector3()).y;assert(height(wok)>height(plate)*2);
  reports.push({id:spec.id,bytes:report.bytes,triangles:report.triangles,templates:bank.children.length,doorPreserved:!spec.open,chassisMatchesLegacy:true});
 }
+for (const filename of ['cooktop-parametric-v1.glb', 'cocina-empotrada-4-zonas-v1.glb']) {
+ const {gltf,report}=await load(`public/models/inox/${filename}`);
+ assert.equal(gltf.scene.userData.visualOnly,true);assert.equal(gltf.scene.userData.dimensionsVerified,false);
+ const bank=gltf.scene.getObjectByName('CooktopTemplates');
+ if(filename.startsWith('cooktop-')) {
+  assert.equal(gltf.scene.userData.cooktop.parametricOnly,true);assert.equal(bank.children.length,6);
+  assert.ok(bank.getObjectByName('Fryer'));assert.ok(gltf.scene.getObjectByName('CooktopChassis'));
+ } else {
+  assert.equal(bank,undefined);assert.ok(gltf.scene.getObjectByName('CooktopParametricChassis'));
+  assert.equal(gltf.scene.children.filter(node=>node.name.startsWith('BurnerGas')).length,4);
+  assert.ok(new T.Box3().setFromObject(gltf.scene).getSize(new T.Vector3()).y<.3);
+ }
+ reports.push({id:filename,bytes:report.bytes,triangles:report.triangles,templates:bank?.children.length??0,illustrative:true});
+}
 console.log(JSON.stringify({passed:reports.length,assets:reports}));

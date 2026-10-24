@@ -25,6 +25,16 @@
 .cooktop-grid button[data-covered="true"] { background: #d9eee5; color: #173e32; border-color: #559276; }
 .cooktop-preview { border: 1px solid #afc6d8; background: var(--darkened-bg, #f4f7fa); }
 .cooktop-preview .cooktop-fields { margin-bottom: 14px; }
+.cooktop-preview-position { display: block; margin-bottom: 8px; font-size: 10px; font-weight: 400; line-height: 1.4; }
+.cooktop-preview .cooktop-grid strong { display: block; }
+.cooktop-preview .cooktop-grid button[data-kind="griddle"] { background: #e9edf2; color: #24364c; border-color: #8496a8; }
+.cooktop-preview .cooktop-grid button[data-kind="grill"] { background: #ede9e4; color: #493d30; border-color: #9c8c78; }
+.cooktop-preview .cooktop-grid button[data-kind="wok"] { background: #e1eef7; color: #164568; border-color: #6898bc; }
+.cooktop-preview .cooktop-grid button:disabled { opacity: .65; }
+.cooktop-trial-summary { font-weight: 600; color: var(--body-loud-color, #18354d); }
+.cooktop-trial-status { min-height: 20px; color: var(--body-quiet-color, #516579); }
+.cooktop-material-fields { margin: 14px 0; padding-bottom: 14px; border-bottom: 1px solid var(--border-color, #d5e0e8); }
+.cooktop-preview .cooktop-grid button[data-kind="fryer"] { background: #fff2dc; color: #634417; border-color: #b58b4a; }
 .cooktop-hint, .cooktop-status { color: var(--body-quiet-color, #516579); }
 .cooktop-status { min-height: 22px; }
 .cooktop-errors { padding: 12px 16px; border-left: 4px solid var(--error-fg, #b23b3b); background: #fff1f1; color: #8d2424; }

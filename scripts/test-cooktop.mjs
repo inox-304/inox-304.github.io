@@ -1,11 +1,83 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseCooktopConfig,initialCooktopSelection,placeCooktopModule,validateCooktopSelection,cooktopSummary,cooktopQuoteSummary,moduleCells} from '../src/lib/cooktop-config.ts';
+import {parseCooktopConfig,initialCooktopSelection,placeCooktopModule,previewCooktopPlacement,validateCooktopSelection,cooktopSummary,cooktopQuoteSummary,moduleCells} from '../src/lib/cooktop-config.ts';
 const source=JSON.parse(readFileSync(new URL('./fixtures/cooktop.json',import.meta.url),'utf8'));
 const config=parseCooktopConfig(source);
 const fresh=()=>initialCooktopSelection(config);
+
+function kitchenRules() {
+ const value=structuredClone(source);
+ value.kitchen={family:'central',ovens:['electric','gas','none'],structures:['open','cabinet'],supports:['feet','wheels'],materials:[{id:'steel304',name:'304 mate 1.2 mm',steel:'304 MATE',thicknessMm:1.2}],dimensions:{widthMm:{min:1200,max:1800,step:100},depthMm:{min:600,max:900,step:50},heightMm:{min:800,max:1000,step:10}}};
+ return value;
+}
+
+test('kitchen extension keeps oven independent from surface and includes exact options in the quote',()=>{
+ const rules=parseCooktopConfig(kitchenRules()), initial=initialCooktopSelection(rules);
+ assert.equal(initial.energy,'gas'); assert.equal(initial.kitchen.oven,'electric');
+ const selected=placeCooktopModule(rules,{...initial,kitchen:{...initial.kitchen,structure:'cabinet',support:'wheels',widthMm:1500}},'plate',0);
+ assert.equal(selected.kitchen.widthMm,1500);
+ const quote=cooktopQuoteSummary(rules,selected);
+ for(const phrase of ['superficie Gas','Horno: eléctrico','con gabinete','ruedas','acero 304 MATE','1.2 mm','1500 × 600 × 800 mm']) assert.ok(quote.includes(phrase),phrase);
+});
+
+test('kitchen options reject forged materials, foreign choices, unaligned dimensions and missing selections',()=>{
+ const rules=parseCooktopConfig(kitchenRules()), initial=initialCooktopSelection(rules);
+ for(const patch of [{oven:'steam'},{structure:'other'},{support:'tracks'},{materialId:'unapproved'},{widthMm:1250},{depthMm:950},{heightMm:true}]) assert.throws(()=>validateCooktopSelection(rules,{...initial,kitchen:{...initial.kitchen,...patch}}));
+ assert.throws(()=>validateCooktopSelection(rules,{layoutId:initial.layoutId,energy:initial.energy,placements:[]}));
+ assert.throws(()=>validateCooktopSelection(config,{...fresh(),kitchen:initial.kitchen}));
+});
+
+test('unconfirmed structure, support, measurements and materials are null and cannot be invented',()=>{
+ const source=kitchenRules(); Object.assign(source.kitchen,{structures:[],supports:[],materials:[],dimensions:null});
+ const rules=parseCooktopConfig(source), initial=initialCooktopSelection(rules);
+ assert.deepEqual(initial.kitchen,{oven:'electric',structure:null,support:null,materialId:null,widthMm:null,depthMm:null,heightMm:null});
+ for(const patch of [{structure:'open'},{support:'feet'},{materialId:'steel304'},{widthMm:1200}]) assert.throws(()=>validateCooktopSelection(rules,{...initial,kitchen:{...initial.kitchen,...patch}}));
+ assert.doesNotMatch(cooktopQuoteSummary(rules,initial),/Cubierta:|Medidas solicitadas|Estructura:|Apoyos:/);
+});
+
+test('kitchen schemas reject unknown keys, duplicate materials and invalid thickness/ranges',()=>{
+ for(const mutate of [v=>v.kitchen.other=true,v=>v.kitchen.family='juice',v=>v.kitchen.ovens.push('gas'),v=>v.kitchen.materials.push(v.kitchen.materials[0]),v=>v.kitchen.materials[0].thicknessMm=true,v=>v.kitchen.materials[0].thicknessMm=Infinity,v=>v.kitchen.materials[0].thicknessMm=0,v=>v.kitchen.materials[0].thicknessMm=21,v=>v.kitchen.dimensions.widthMm.step=0,v=>v.kitchen.dimensions.widthMm.max=1100,v=>delete v.kitchen.dimensions.depthMm]) {
+  const bad=kitchenRules();mutate(bad);assert.throws(()=>parseCooktopConfig(bad));
+ }
+});
+
+test('fryer is validated as a distinct authorized module and still obeys occupancy rules',()=>{
+ const value=kitchenRules(); value.modules[2].kind='fryer';value.modules[2].name='Freidora';
+ const rules=parseCooktopConfig(value), initial=initialCooktopSelection(rules);
+ const state=placeCooktopModule(rules,initial,'plate',0);
+ assert.equal(cooktopSummary(rules,state).burners,4);
+ assert.match(cooktopQuoteSummary(rules,state),/Freidora: posiciones 1, 4/);
+ assert.throws(()=>validateCooktopSelection(rules,{...state,placements:[...state.placements,{moduleId:'wok',anchor:3}]}),/superponerse/);
+});
+
+test('preview accepts either half of a two-position module without silently replacing neighbors',()=>{
+ const preview=previewCooktopPlacement(config,fresh(),'plate',3);
+ assert.equal(preview.anchor,0);assert.deepEqual(preview.cells,[0,3]);
+ assert.equal(cooktopSummary(config,preview.selection).burners,4);
+ const removed=previewCooktopPlacement(config,preview.selection,'burner',3);
+ assert.deepEqual(removed.cells,[0,3]);assert.deepEqual(removed.selection.placements,[]);
+ const blocked=placeCooktopModule(config,fresh(),'wok',0);
+ assert.throws(()=>previewCooktopPlacement(config,blocked,'plate',3));
+ assert.deepEqual(blocked.placements,[{moduleId:'wok',anchor:0}]);
+});
 test('empty config does not offer invented options',()=>{for(const value of [undefined,null,{}]) assert.equal(parseCooktopConfig(value),null);});
+
+test('the four owner-requested families expose only their corresponding capacities and modules',()=>{
+ const families=JSON.parse(readFileSync(new URL('./fixtures/kitchen-families.json',import.meta.url),'utf8'));
+ for(const [family,capacities] of Object.entries({linear:[1,2,3,4,5],central:[4,6,8,10],builtin:[2,4,6],home:[4]})) {
+  const rules=parseCooktopConfig(families[family]);
+  assert.deepEqual(rules.layouts.map(l=>l.rows*l.columns),capacities);
+  assert.equal(rules.kitchen.family,family);
+  for(const layout of rules.layouts) assert.equal(cooktopSummary(rules,{...initialCooktopSelection(rules),layoutId:layout.id}).burners,layout.rows*layout.columns);
+  assert.deepEqual(rules.kitchen.materials,[]); assert.equal(rules.kitchen.dimensions,null);
+ }
+ assert.deepEqual(families.home.modules.map(m=>m.kind),['burner']);
+ assert.deepEqual(families.home.kitchen.ovens,['electric','gas','none']);
+ assert.deepEqual(families.linear.modules.map(m=>m.kind),['burner','wok']);
+ assert.deepEqual(families.builtin.modules.map(m=>m.kind),['burner','wok']);
+ assert.deepEqual(families.central.modules.map(m=>m.kind),['burner','wok','griddle','grill','fryer']);
+});
 
 function fiveColumnRules() {
  const value=structuredClone(source);

@@ -8,6 +8,7 @@ export type ProductImageBounds = {
 // non-white pixels below 245 plus a 1.2% canvas safety margin for highlights/shadows.
 // These values affect presentation only; source images retain their complete canvases.
 export const productImageBounds: Record<string, ProductImageBounds> = {
+  '/images/products/cocina-empotrada-4-zonas-v1.webp': { width: 1200, height: 1200, bounds: { x: 33, y: 320, width: 1096, height: 694 } },
   '/images/products/cocina-semiindustrial-4-hornillas-horno-electrico.webp': { width: 1203, height: 1307, bounds: { x: 0, y: 39, width: 1167, height: 1261 } },
   '/images/products/cocina-industrial-de-3-hornillas.jpg': { width: 1586, height: 992, bounds: { x: 0, y: 90, width: 1524, height: 902 } },
   '/images/products/cocina-industrial-de-3-parrillas.webp': { width: 1400, height: 1025, bounds: { x: 0, y: 20, width: 1400, height: 977 } },
