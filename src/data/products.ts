@@ -4,6 +4,7 @@
 import type { ProductCategory } from './categories.ts';
 import type { ProductOrigin, CmsVariant } from '../lib/cms.ts';
 import { ovenOptions } from './oven-options.ts';
+import { withPublishedCooktops } from './cooktop-published.ts';
 export { categories, type ProductCategory } from './categories.ts';
 
 export type Product = ProductOrigin & {
@@ -1427,4 +1428,4 @@ const baseProducts: Product[] = [
     "featured": false
   }
 ];
-export const products: Product[] = ovenOptions(baseProducts);
+export const products: Product[] = ovenOptions(withPublishedCooktops(baseProducts));

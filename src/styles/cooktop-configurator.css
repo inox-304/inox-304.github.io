@@ -1,6 +1,11 @@
 .product-detail-copy:has(.cooktop-configurator) { min-width: 0; }
 .cooktop-configurator { min-width: 0; margin: 24px 0; padding: clamp(16px, 2vw, 24px); border: 1px solid #c7d4de; border-radius: 14px; background: #fff; color: #18354c; }
 .cooktop-configurator[hidden] { display: none; }
+.cooktop-connection { margin: 20px 0 12px; padding: 14px 16px; border: 1px solid #cad8e2; border-radius: 8px; background: #f0f6fa; color: #294d67; font-size: .83rem; line-height: 1.6; }
+.cooktop-connection[hidden], .cooktop-connection [hidden] { display: none; }
+.cooktop-connection p { margin: 0; }
+.cooktop-connection button { margin-top: 10px; padding: 9px 14px; border: 1px solid #7999b0; border-radius: 5px; background: #fff; color: #183f5b; font: inherit; font-weight: 600; cursor: pointer; }
+.cooktop-connection button:focus-visible { outline: 3px solid #296686; outline-offset: 3px; }
 .cooktop-configurator h2 { margin: 0 0 10px; font-size: 1.35rem; letter-spacing: -.025em; }
 .cooktop-configurator h3 { font-size: .93rem; margin: 0 0 14px; letter-spacing: -.015em; }
 .cooktop-intro, .cooktop-note { font-size: .79rem; line-height: 1.65; color: #526b7d; margin: 0 0 18px; }

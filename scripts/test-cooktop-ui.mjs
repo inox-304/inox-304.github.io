@@ -16,7 +16,7 @@ import { renderVariantOptions } from '../src/scripts/variant-options-ui.ts';
 
 const rules = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const script = path => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
-const browserSource = ts.transpileModule(`${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const browserSource = ts.transpileModule(`${script('../src/lib/cooktop-sync.ts')}\n${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function catalog() {
   const base = { id: 'COOK-A', slug: 'cocina-a', name: 'Cocina de prueba A', category: 'linea-caliente',
@@ -35,7 +35,7 @@ function catalog() {
     settings: { empresa: 'INOX 304', contacto_principal: 'ventas' } };
 }
 
-function fixture({ data = catalog(), preview = false, remoteRules } = {}) {
+function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl } = {}) {
   let document;
   class Element {
     constructor(tag = 'div') {
@@ -76,24 +76,28 @@ function fixture({ data = catalog(), preview = false, remoteRules } = {}) {
     '[data-product-summary]', '[data-product-origin]', '[data-product-category]', '[data-product-id-label]', '[data-product-caption]',
     '.product-detail-photo', '.equipment-image', '[data-product-features]', '[data-product-category-link]', '[data-product-quote]',
     '[data-product-quote-note]', '[data-product-price]', '[data-product-unit]', '[data-product-availability]', '[data-product-variant]',
-    '[data-product-variant-label]', '[data-product-commerce]', '[data-product-technical-sheet]', '[data-product-media]', '[data-cooktop-root]'];
+    '[data-product-variant-label]', '[data-product-commerce]', '[data-product-technical-sheet]', '[data-product-media]', '[data-cooktop-root]', '[data-cooktop-connection]'];
   const nodes = Object.fromEntries(selectors.map(selector => [selector, new Element()]));
   const root = nodes['[data-cooktop-root]']; root.hidden = true;
   const detail = new Element(); detail.dataset.productDetail = data.products[0].id;
   detail.querySelector = selector => nodes[selector] || null;
   detail.querySelectorAll = selector => nodes[selector] ? [nodes[selector]] : [];
   const routes = Object.fromEntries(data.products.map(product => [product.id, `/catalogo/${product.slug}/`]));
-  const bootstrap = new Element('script'); bootstrap.textContent = JSON.stringify({ mode: 'static', preview, routes, data, ...(remoteRules !== undefined ? { cooktopOrigin: 'https://panel.example.test' } : {}) });
+  const bootstrap = new Element('script'); bootstrap.textContent = JSON.stringify({ mode: 'static', preview, routes, data, ...(remoteRules !== undefined || fetchImpl ? { cooktopOrigin: 'https://panel.example.test' } : {}) });
   const events = [], requests = [];
   document = { activeElement: null, documentElement: new Element(), title: '',
     querySelector: selector => selector === '#inox-cms-bootstrap' ? bootstrap : selector === '[data-product-detail]' ? detail : null,
     querySelectorAll: () => [], createElement: tag => new Element(tag), dispatchEvent: event => events.push(event) };
   const location = new URL(`https://example.test${routes[data.products[0].id]}`);
-  const window = { events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: () => 1, clearTimeout() {} };
+  const timers = new Map(); let timerId = 0;
+  const setTimer = (callback, delay) => { timers.set(++timerId, { callback, delay }); return timerId; };
+  const clearTimer = id => timers.delete(id);
+  const window = { events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: setTimer, clearTimeout: clearTimer };
   const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; } };
   runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...cooktop, ...cooktopAssets,
     catalogSearchText, getProductStage, withBase, renderVariantOptions, document, location, window, history, URL, URLSearchParams, CustomEvent, AbortController, Error,
-    fetch: async (url, options) => { requests.push({ url: String(url), options }); return { ok: true, json: async () => structuredClone(remoteRules) }; },
+    setTimeout: setTimer, clearTimeout: clearTimer,
+    fetch: async (url, options) => { requests.push({ url: String(url), options }); return fetchImpl ? fetchImpl(url, options) : { ok: true, json: async () => structuredClone(remoteRules) }; },
     Option: class extends Element { constructor(text, value) { super('option'); this.textContent = text; this.value = value; } },
   });
   const select = (selector, value) => { const node = root.querySelector(selector); assert.ok(node, selector); node.value = value; node.onchange(); };
@@ -107,6 +111,8 @@ function fixture({ data = catalog(), preview = false, remoteRules } = {}) {
   const product = id => { location.href = `https://example.test${routes[id]}`; window.events.popstate(); };
   const quote = () => new URL(nodes['[data-product-quote]'].href).searchParams.get('text');
   return { data, root, nodes, detail, document, events, requests, select, selectCell, chooseModule, armModule, moduleButton, pick3d, selection, variant, product, quote,
+    connection: nodes['[data-cooktop-connection]'],
+    fireTimers: delay => { for (const [id, timer] of [...timers]) if (timer.delay === delay) { timers.delete(id); timer.callback(); } },
     summary: () => root.querySelector('.cooktop-summary')?.textContent || '', flush: () => new Promise(resolve => setImmediate(resolve)) };
 }
 
@@ -243,6 +249,100 @@ test('static remote rules are not requested for a distributed product', async ()
   assert.equal(f.root.hidden, true); assert.doesNotMatch(f.quote(), /Distribución solicitada/);
   assert.equal(f.requests.length, 0);
   assert.match(f.nodes['[data-product-price]'].textContent, /1[,.]400/);
+});
+
+test('published controls work immediately during a slow request and survive network failure with selection and undo', async () => {
+  let reject;
+  const f = fixture({ fetchImpl: () => new Promise((_resolve, fail) => { reject = fail; }) });
+  assert.equal(f.root.hidden, false); assert.match(f.connection.textContent, /Puedes personalizar ahora/);
+  f.chooseModule('Plancha'); const selection = JSON.stringify(f.selection()); const quote = f.quote();
+  f.fireTimers(5000); assert.match(f.connection.textContent, /tardando.*seguir personalizando/);
+  reject(new Error('Offline')); await f.flush();
+  assert.equal(f.root.hidden, false); assert.equal(JSON.stringify(f.selection()), selection); assert.equal(f.quote(), quote);
+  assert.match(f.connection.textContent, /tus cambios se conservan/);
+  assert.equal(f.connection.querySelector('[data-cooktop-retry]').hidden, false);
+  f.root.querySelector('.cooktop-undo').click(); assert.equal(f.summary(), '6 hornillas comunes');
+});
+
+test('retry keeps a chosen wok and confirms unchanged rules without resetting its history', async () => {
+  let attempts = 0, resolve;
+  const f = fixture({ fetchImpl: () => ++attempts === 1 ? Promise.reject(new Error('Offline')) : new Promise(done => { resolve = done; }) });
+  await f.flush(); f.chooseModule('Wok');
+  const selection = JSON.stringify(f.selection());
+  const focusedInput = f.root.querySelector('select'); focusedInput.focus();
+  const retry = f.connection.querySelector('[data-cooktop-retry]'); retry.click(); retry.click();
+  assert.equal(attempts, 2); assert.equal(f.root.hidden, false);
+  resolve({ ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: rules }) }); await f.flush();
+  assert.equal(JSON.stringify(f.selection()), selection); assert.equal(f.connection.hidden, true);
+  assert.equal(f.root.querySelector('select'), focusedInput, 'unchanged rules must keep the input node mounted');
+  assert.equal(f.document.activeElement, focusedInput);
+  f.root.querySelector('.cooktop-undo').click(); assert.equal(f.summary(), '6 hornillas comunes');
+});
+
+test('first visit without a snapshot shows loading then an actionable error, and retry recovers', async () => {
+  const data = catalog(); data.products[0].cooktopConfig = null;
+  let attempts = 0;
+  const f = fixture({ data, fetchImpl: async () => { if (++attempts === 1) throw new Error('Offline'); return { ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: rules }) }; } });
+  assert.equal(f.connection.hidden, false); assert.match(f.connection.textContent, /Cargando las opciones/);
+  await f.flush(); assert.equal(f.root.hidden, true); assert.match(f.connection.textContent, /No pudimos cargar/);
+  f.connection.querySelector('[data-cooktop-retry]').click(); await f.flush();
+  assert.equal(f.root.hidden, false); assert.equal(f.connection.hidden, true); assert.equal(f.summary(), '6 hornillas comunes');
+});
+
+test('timeout retains the configuration and late replies cannot undo a successful retry', async () => {
+  const pending = [];
+  const f = fixture({ fetchImpl: () => new Promise(resolve => pending.push(resolve)) });
+  f.chooseModule('Plancha'); f.fireTimers(65000);
+  assert.match(f.connection.textContent, /tus cambios se conservan/); assert.match(f.summary(), /Plancha/);
+  f.connection.querySelector('[data-cooktop-retry]').click();
+  pending[1]({ ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: rules }) }); await f.flush();
+  pending[0]({ ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: null }) }); await f.flush();
+  assert.equal(f.root.hidden, false); assert.match(f.summary(), /Plancha/); assert.equal(f.connection.hidden, true);
+});
+
+test('explicit owner removal clears choices and is not resurrected from the snapshot on return', async () => {
+  let attempts = 0;
+  const f = fixture({ fetchImpl: async () => { if (++attempts > 1) throw new Error('Offline'); return { ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: null }) }; } });
+  f.chooseModule('Plancha'); await f.flush();
+  assert.equal(f.root.hidden, true); assert.doesNotMatch(f.quote(), /Plancha|Distribución solicitada/);
+  assert.match(f.connection.textContent, /ya no tiene personalización/);
+  f.product('COOK-B'); await f.flush(); f.product('COOK-A'); await f.flush();
+  assert.equal(f.root.hidden, true); assert.match(f.connection.textContent, /No pudimos cargar/);
+});
+
+test('failed background refresh does not show kitchen status for ovens or independent variants', async () => {
+  const data = catalog(); data.products[0].equipmentFamily = 'hornos'; data.products[0].cooktopConfig = null;
+  const oven = fixture({ data, fetchImpl: async () => { throw new Error('Offline'); } }); await oven.flush();
+  assert.equal(oven.root.hidden, true); assert.equal(oven.connection.hidden, true);
+  const kitchen = fixture({ fetchImpl: async () => { throw new Error('Offline'); } });
+  kitchen.variant('independent'); await kitchen.flush();
+  assert.equal(kitchen.connection.hidden, true); assert.equal(kitchen.root.hidden, true);
+  kitchen.variant(''); assert.equal(kitchen.root.hidden, false); assert.equal(kitchen.connection.hidden, false);
+});
+
+test('a late response for an abandoned SKU cannot update another kitchen or its quote', async () => {
+  const pending = [];
+  const f = fixture({ fetchImpl: () => new Promise(resolve => pending.push(resolve)) });
+  f.product('COOK-B'); f.chooseModule('Wok'); const quote = f.quote();
+  pending[0]({ ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: null }) }); await f.flush();
+  assert.equal(f.detail.dataset.productDetail, 'COOK-B'); assert.equal(f.root.hidden, false); assert.equal(f.quote(), quote);
+  pending[1]({ ok: true, json: async () => ({ productId: 'COOK-B', cooktopConfig: rules }) }); await f.flush();
+  assert.match(f.summary(), /Wok/); assert.equal(f.connection.hidden, true);
+});
+
+test('a compatible owner update preserves the arrangement while a removed module resets with an explanation', async () => {
+  for (const compatible of [true, false]) {
+    let resolve;
+    const f = fixture({ fetchImpl: () => new Promise(done => { resolve = done; }) });
+    f.chooseModule('Plancha');
+    const updated = structuredClone(rules);
+    if (compatible) updated.layouts[0].name = 'Base renovada';
+    else updated.modules = updated.modules.filter(module => module.id !== 'plate');
+    resolve({ ok: true, json: async () => ({ productId: 'COOK-A', cooktopConfig: updated }) }); await f.flush();
+    if (compatible) { assert.match(f.summary(), /Plancha/); f.root.querySelector('.cooktop-undo').click(); }
+    else assert.match(f.root.querySelector('.cooktop-status').textContent, /actualizó.*Restablecimos/);
+    assert.equal(f.summary(), '6 hornillas comunes');
+  }
 });
 
 test('palette arms a part without changing the kitchen; tapping its lower half places its full approved footprint', () => {

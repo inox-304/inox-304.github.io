@@ -31,9 +31,21 @@ export function renderCooktop(root: HTMLElement, config: CooktopConfig | null, p
   const key = `${productId}:${JSON.stringify(rules)}`;
   let view = views.get(root);
   if (!view || view.key !== key) {
+    const previous = view?.productId === productId ? view : undefined;
+    let selection = initialCooktopSelection(rules);
+    let preserved = false;
+    if (previous) {
+      try { selection = validateCooktopSelection(rules, previous.selection); preserved = true; }
+      catch { /* A confirmed owner change can invalidate a previous arrangement. */ }
+    }
+    const validHistory = (history: CooktopSelection[]) => history.flatMap(entry => {
+      try { return [validateCooktopSelection(rules, entry)]; } catch { return []; }
+    });
     const content = el('div', '', 'cooktop-content'), status = el('p', '', 'cooktop-status');
     status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite'); status.setAttribute('aria-atomic', 'true');
-    view = { key, productId, config: rules, selection: initialCooktopSelection(rules), anchor: 0, armed: null, past: [], future: [], content, status, onChange };
+    if (previous && !preserved) status.textContent = 'El taller actualizó las opciones disponibles. Restablecimos la distribución porque la anterior ya no es compatible.';
+    const layout = rules.layouts.find(item => item.id === selection.layoutId)!;
+    view = { key, productId, config: rules, selection, anchor: preserved ? Math.min(previous!.anchor, layout.rows * layout.columns - 1) : 0, armed: null, past: preserved ? validHistory(previous!.past) : [], future: preserved ? validHistory(previous!.future) : [], content, status, onChange };
     views.set(root, view); root.replaceChildren(content, status);
   }
   view.onChange = onChange; root.hidden = false;

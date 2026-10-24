@@ -6,6 +6,8 @@ import { additionalsQuoteSummary, createAdditionalOption, reconcileAdditionalSel
 import { catalogSearchText } from '../lib/catalog-controls';
 import { catalogFamilyProducts, getProductFamily } from '../lib/product-families';
 import { parseCooktopConfig, type CooktopConfig } from '../lib/cooktop-config';
+import { hasCooktopAsset } from '../lib/cooktop-assets';
+import { startCooktopSync, type CooktopSyncStatus } from '../lib/cooktop-sync';
 import { renderCooktop } from './cooktop-ui';
 import { renderVariantOptions } from './variant-options-ui';
 
@@ -16,7 +18,10 @@ try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { 
 const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
 let lastApplied = '';
 let currentData: CmsData | undefined;
-let cooktopRequest: AbortController | undefined;
+let cooktopSync: ReturnType<typeof startCooktopSync> | undefined;
+// Current-session server decisions take precedence over the published snapshot,
+// including an explicit removal. Never share rules between product identities.
+const verifiedCooktops = new Map<string, CooktopConfig | null>();
 let additionalSelection: AdditionalSelection = { productId: '', ids: [] };
 const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card-template]')?.content.querySelector<HTMLElement>('.product-card') || document.querySelector<HTMLElement>('.product-card');
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
@@ -99,7 +104,9 @@ function fillCards(container: Element, products: CmsProduct[], data: CmsData) {
 
 function updateDetail(data: CmsData, selectedProductId?: string) {
   const detail = document.querySelector<HTMLElement>('[data-product-detail]'); if (!detail) return;
-  cooktopRequest?.abort();
+  cooktopSync?.dispose(); cooktopSync = undefined;
+  const connection = detail.querySelector<HTMLElement>('[data-cooktop-connection]');
+  if (connection) { connection.hidden = true; connection.replaceChildren(); }
   const productId = selectedProductId || payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
   const slug = apiMode ? catalogSlug(location.pathname) : '';
   const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
@@ -183,6 +190,35 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   let cooktopRules: CooktopConfig | null = null;
   try { if (product.supplyType === 'manufactured' && product.category === 'linea-caliente' && product.equipmentFamily === 'cocinas') cooktopRules = parseCooktopConfig(product.cooktopConfig); } catch { /* Invalid rules must never create options. */ }
   const cooktopRoot = detail.querySelector<HTMLElement>('[data-cooktop-root]');
+  const cooktopCandidate = product.category === 'linea-caliente' && product.supplyType !== 'distributed';
+  const syncAllowed = !apiMode && !!payload?.cooktopOrigin && !payload.preview && cooktopCandidate;
+  if (syncAllowed && verifiedCooktops.has(product.id)) cooktopRules = verifiedCooktops.get(product.id)!;
+  let connectionState: CooktopSyncStatus | undefined;
+  let retryRules: (() => void) | undefined;
+  const updateConnection = () => {
+    if (!connection) return;
+    const kitchen = product.equipmentFamily === 'cocinas' || hasCooktopAsset(product.id) || !!cooktopRules;
+    connection.hidden = !!variants?.value || !connectionState || connectionState === 'ready' || !kitchen;
+    if (connection.hidden) return;
+    const available = !!cooktopRules?.enabled;
+    const messages = {
+      loading: available ? 'Puedes personalizar ahora. Comprobando las últimas opciones del taller…' : 'Cargando las opciones de personalización…',
+      slow: available ? 'El taller está tardando en responder. Puedes seguir personalizando con las opciones publicadas.' : 'El taller está tardando en responder. Las opciones aparecerán aquí cuando termine la conexión.',
+      error: available ? 'No pudimos actualizar las opciones. Puedes seguir personalizando; tus cambios se conservan. Confirmaremos la configuración al cotizar.' : 'No pudimos cargar la personalización. Revisa tu conexión y vuelve a intentarlo.',
+      disabled: 'Este equipo ya no tiene personalización habilitada por el taller.',
+      ready: '',
+    };
+    let message = connection.querySelector<HTMLElement>('[data-cooktop-connection-message]');
+    let retry = connection.querySelector<HTMLButtonElement>('[data-cooktop-retry]');
+    if (!message || !retry) {
+      message = document.createElement('p'); message.dataset.cooktopConnectionMessage = '';
+      message.setAttribute('role', 'status'); message.setAttribute('aria-live', 'polite');
+      retry = document.createElement('button'); retry.type = 'button'; retry.dataset.cooktopRetry = ''; retry.textContent = 'Reintentar conexión';
+      retry.onclick = () => retryRules?.(); connection.replaceChildren(message, retry);
+    }
+    message.textContent = messages[connectionState!];
+    retry.hidden = connectionState !== 'error'; retry.disabled = connectionState !== 'error';
+  };
   const updateQuote = () => {
     const variant = product.variants?.find(item => item.id === variants?.value);
     const configuration = family?.selectorLabel ? family.members.find(member => member.product.id === product.id)?.label : '';
@@ -197,6 +233,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     if (!cooktopRoot) return;
     // A different SKU/variant has not inherited approval for this base's modules.
     renderCooktop(cooktopRoot, variants?.value ? null : cooktopRules, product.id, text => { configuredSurface = text; updateConfiguredPrice(); updateQuote(); }, payload?.preview === true, product.model3d);
+    updateConnection();
   };
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? productQuoteNote(product) : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);
@@ -271,25 +308,20 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   }
   updateExtraSummary(); updateQuote();
   updateCooktop();
-  // Pages stays static, but owner-approved rules come directly from the hosted panel.
-  // This endpoint exposes public configuration only and never receives a session cookie.
-  const cooktopCandidate = product.category === 'linea-caliente' && product.supplyType !== 'distributed';
-  if (!apiMode && payload?.cooktopOrigin && cooktopRoot && !payload.preview && cooktopCandidate) {
-    const controller = new AbortController(); cooktopRequest = controller;
-    const timer = window.setTimeout(() => controller.abort(), 65000);
-    try {
-      const origin = new URL(payload.cooktopOrigin);
-      if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/') throw new Error('Invalid configuration origin');
-      void fetch(new URL(`/api/catalog/${encodeURIComponent(product.id)}/cooktop/`, origin), { credentials: 'omit', cache: 'no-store', signal: controller.signal })
-        .then(response => { if (!response.ok) throw new Error('Unavailable rules'); return response.json(); })
-        .then(value => {
-          if (controller.signal.aborted || !cooktopCandidate || detail.dataset.productDetail !== product.id || value.productId !== product.id) return;
-          const config = parseCooktopConfig(value.cooktopConfig);
-          cooktopRules = config?.enabled ? config : null; updateCooktop();
-        })
-        .catch(() => { if (!controller.signal.aborted && detail.dataset.productDetail === product.id) { cooktopRules = null; updateCooktop(); } })
-        .finally(() => window.clearTimeout(timer));
-    } catch { window.clearTimeout(timer); cooktopRules = null; updateCooktop(); }
+  // The approved published rules work immediately. A failed update never erases them.
+  if (syncAllowed && cooktopRoot) {
+    cooktopSync = startCooktopSync({
+      origin: payload!.cooktopOrigin!, productId: product.id,
+      onStatus: status => { connectionState = status; updateConnection(); },
+      onConfig: config => {
+        verifiedCooktops.set(product.id, config);
+        const changed = JSON.stringify(cooktopRules) !== JSON.stringify(config);
+        cooktopRules = config;
+        // An unchanged background confirmation must not replace focused inputs.
+        if (changed) updateCooktop();
+      },
+    });
+    retryRules = cooktopSync.retry;
   }
   const charges = detail.querySelector<HTMLElement>('[data-product-charges]');
   if (charges) {
