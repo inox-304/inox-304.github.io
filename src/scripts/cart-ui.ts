@@ -1,7 +1,7 @@
 import { cartQuoteSummary, initialCartSelection, validateCartSelection, moveCartModule, toggleCartModule, reconcileCartSelection, type CartConfig, type CartSelection, type CartModuleId } from '../lib/cart-config.ts';
 import { cartAssetFor } from '../lib/cart-assets.ts';
 
-type View = { productId: string; key: string; config: CartConfig; selection: CartSelection; armed: CartModuleId | null; past: CartSelection[]; future: CartSelection[]; changed: (summary: string) => void; refresh: () => void; pick?: (index: number) => void };
+type View = { productId: string; key: string; config: CartConfig; selection: CartSelection; armed: CartModuleId | null; past: CartSelection[]; future: CartSelection[]; changed: (summary: string) => void; refresh: () => void; pick?: (index: number) => void; move?: (id: CartModuleId, index: number) => void };
 const views = new WeakMap<HTMLElement, View>();
 const copy = (value: CartSelection): CartSelection => ({ included: [...value.included], order: [...value.order] });
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '') => { const node = document.createElement(tag); node.textContent = text; return node; };
@@ -12,6 +12,13 @@ export function readCart(root: HTMLElement | null, productId: string) {
 export function pickCartPosition(root: HTMLElement | null, productId: string, position: number) {
   const view = root ? views.get(root) : undefined;
   if (view?.productId === productId && Number.isInteger(position) && position >= 0 && position < 4) view.pick?.(position);
+}
+/** A completed 3D drag commits once and uses the grabbed module, not a prior selection. */
+export function dropCartModule(root: HTMLElement | null, productId: string, moduleId: CartModuleId, position: number) {
+  const view = root ? views.get(root) : undefined;
+  if (view?.productId !== productId || !Number.isInteger(position) || position < 0 || position >= 4
+    || !view.selection.included.includes(moduleId) || !view.config.modules.some(item => item.id === moduleId)) return;
+  view.move?.(moduleId, position);
 }
 
 /** Product-bound state survives network confirmation, slow requests and renderer retries. */
@@ -35,7 +42,7 @@ export function renderCart(root: HTMLElement, config: CartConfig | null, product
   const view: View = { productId, key, config, selection, armed: previous?.armed || null, past: preserved ? history(previous!.past) : [], future: preserved ? history(previous!.future) : [], changed: onChange, refresh: () => {} };
   views.set(root, view); root.hidden = false;
   const title = el('h2', 'Arma tu carrito');
-  const intro = el('p', 'Elige el equipamiento y acomódalo a tu manera. Pulsa Mover en un equipo y después toca su nueva posición, aquí o en el 3D. Si hay otro equipo, intercambian lugares.');
+  const intro = el('p', 'Acomódalo a tu manera: arrastra un equipo en el 3D y suéltalo en su nueva posición. Si hay otro, intercambian lugares. También puedes usar Mover o elegir una posición aquí.');
   const distribution = el('div'); distribution.className = 'cart-distribution';
   const board = el('div'); board.className = 'cart-layout'; board.setAttribute('role', 'group'); board.setAttribute('aria-label', 'Distribución del carrito, mirando el frente');
   distribution.append(el('h3', 'Distribución de izquierda a derecha'), el('p', 'Mirando el frente del carrito. Cada equipo conserva su espacio; no se enciman las piezas.'), board);
@@ -66,6 +73,7 @@ export function renderCart(root: HTMLElement, config: CartConfig | null, product
     apply(next, `${labelFor(id)} ahora está en la posición ${index + 1}.${occupied !== id && view.selection.included.includes(occupied) ? ` Intercambió lugar con ${labelFor(occupied)}.` : ''}`);
     view.refresh(); focus();
   };
+  view.move = move;
   view.pick = index => {
     if (view.armed) move(view.armed, index);
     else {

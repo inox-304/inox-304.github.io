@@ -5,7 +5,7 @@ import { cooktopAssetFor } from '../lib/cooktop-assets';
 import { readCooktop, pickCooktopAnchor } from './cooktop-ui';
 import type { CooktopScene, CooktopInteraction, CooktopView } from './cooktop-scene';
 import { cartAssetFor } from '../lib/cart-assets';
-import { readCart, pickCartPosition } from './cart-ui';
+import { readCart, pickCartPosition, dropCartModule } from './cart-ui';
 import type { CartScene } from './cart-scene';
 
 type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'supplyType' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
@@ -205,6 +205,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         const scene = await createCartScene(host, withBase(cartAsset), {
           onError: () => { if (request === revision) failed(); },
           onPickPosition: position => { if (request === revision) pickCartPosition(cartRoot, productId, position); },
+          onMoveModule: (moduleId, position) => { if (request === revision) dropCartModule(cartRoot, productId, moduleId, position); },
         });
         if (request !== revision) { scene.dispose(); return; }
         const latest = readCart(cartRoot, productId);
@@ -213,7 +214,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         if (request !== revision) return;
         scene.setActivePosition(latest.activePosition);
         window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy'); button.firstChild!.textContent = 'Volver a foto ';
-        help.hidden = false; help.textContent = `${navigationHelp} Pulsa Mover en un equipo y toca su destino aquí o en el esquema. Ver encimera facilita acomodarlos. Ocultar el toldo es solo para inspección; sigue incluido. Vista ilustrativa, a confirmar con el taller.`;
+        help.hidden = false; help.textContent = 'Arrastra un equipo y suéltalo en la posición resaltada para intercambiarlo. Arrastra el fondo para girar; usa la rueda o dos dedos para acercar. Ver encimera facilita acomodarlos. Esc cancela el arrastre. También puedes elegir posiciones con los controles. Ocultar el toldo es solo para inspección; sigue incluido. Vista ilustrativa, a confirmar con el taller.';
         canopy.hidden = false; canopyVisible = true; canopy.textContent = 'Ocultar toldo'; canopy.setAttribute('aria-pressed', 'false');
         viewpoints.hidden = false;
         const top = viewpoints.querySelector<HTMLButtonElement>('[data-model-view="top"]'); if (top) top.textContent = 'Ver encimera';
@@ -308,7 +309,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (wasOpen && model) void showModel(false);
   }
   button.addEventListener('click', () => { void showModel(); });
-  root.addEventListener('keydown', event => { if (event.key === 'Escape' && (viewer || modular || cartScene)) { selectPhoto(selectedPhoto); button.focus(); } });
+  root.addEventListener('keydown', event => { if (!event.defaultPrevented && event.key === 'Escape' && (viewer || modular || cartScene)) { selectPhoto(selectedPhoto); button.focus(); } });
   document.addEventListener('inox:product-updated', event => {
     update((event as CustomEvent<{ product: MediaProduct | null }>).detail.product);
   });

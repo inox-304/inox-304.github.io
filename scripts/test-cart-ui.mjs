@@ -11,7 +11,7 @@ const moduleIds = config.modules.map(item => item.id);
 const plain = value => JSON.parse(JSON.stringify(value));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const script = path => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
-const source = ts.transpileModule(`${script('../src/scripts/cart-ui.ts')}\n${script('../src/lib/cart-sync.ts')}\nglobalThis.api = { renderCart, readCart, startCartSync, pickCartPosition };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const source = ts.transpileModule(`${script('../src/scripts/cart-ui.ts')}\n${script('../src/lib/cart-sync.ts')}\nglobalThis.api = { renderCart, readCart, startCartSync, pickCartPosition, dropCartModule };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function fixture(initial = config) {
   let document, currentId = 'P15', currentModel = CART_ASSET, quote = '', now = 0, timerId = 0;
@@ -91,8 +91,32 @@ function fixture(initial = config) {
   render(initial);
   return { root, document, events, quotes, requests, statuses, timers, render, input, toggle, button, click, selection, connect, respond, tick, arm, position, positionSelect, move,
     pick: (index, id = currentId) => context.api.pickCartPosition(root, id, index),
+    drop: (moduleId, index, id = currentId) => context.api.dropCartModule(root, id, moduleId, index),
     quote: () => quote, read: id => context.api.readCart(root, id) };
 }
+
+test('a 3D drop uses the grabbed module and creates one reversible selection and quote', () => {
+  const f = fixture(); f.arm('plancha');
+  const before = f.selection();
+  f.drop('freidora', 0);
+  assert.deepEqual(f.selection().order, ['freidora', 'broastera', 'conservadora', 'plancha']);
+  assert.match(f.quote(), /Posición 1: Freidora de papas/);
+  assert.match(f.quote(), /Posición 2: Broastera de pollo/);
+  f.click('Deshacer'); assert.deepEqual(f.selection(), before);
+  assert.equal(f.button('Deshacer').disabled, true, 'drag adds one history step');
+  f.click('Rehacer'); assert.equal(f.selection().order[0], 'freidora');
+  const events = f.events.length; f.drop('freidora', 0);
+  assert.equal(f.events.length, events + 1, 'same-position drop changes focus only');
+});
+
+test('3D drops cannot revive omitted equipment or alter another product', () => {
+  const f = fixture(); f.toggle('freidora', false); const before = f.selection();
+  for (const [id, position, productId] of [['freidora', 0, 'P15'], ['plancha', 1, 'P16'], ['plancha', -1, 'P15'], ['plancha', 4, 'P15'], ['plancha', .5, 'P15'], ['not-approved', 0, 'P15']]) f.drop(id, position, productId);
+  assert.deepEqual(f.selection(), before);
+  f.drop('plancha', 1); assert.equal(f.selection().order[1], 'plancha');
+  assert.deepEqual(f.selection().included, before.included);
+  assert.match(f.quote(), /Posición 4: Superficie de trabajo/);
+});
 
 test('four published stations render immediately and all sixteen choices emit the exact 3D selection', () => {
   for (let mask = 0; mask < 16; mask++) {

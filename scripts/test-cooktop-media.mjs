@@ -22,7 +22,7 @@ const source = ts.transpileModule(readFileSync(new URL('../src/scripts/product-m
   .replace("import('./cooktop-scene')", 'loadSceneModule()').replace("import('./cart-scene')", 'loadCartModule()').replace("import('@google/model-viewer')", 'loadNativeModule()');
 
 function fixture(base = product('P04'), deferNative = false, { failInitialCartUpdate = false } = {}) {
-  const calls = [], cartCalls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [], cartPicks = [], frames = new Map();
+  const calls = [], cartCalls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [], cartPicks = [], cartMoves = [], frames = new Map();
   let currentState = initial(), stateProduct = base.id, timerId = 0;
   let currentCart = base.id === 'P15' ? cartInitial() : null, cartProductId = base.id;
   let finishNativeLoad;
@@ -99,12 +99,13 @@ function fixture(base = product('P04'), deferNative = false, { failInitialCartUp
     cooktopAssetFor, readCooktop: (_root, id) => id === stateProduct ? currentState : null,
     cartAssetFor, readCart: (_root, id) => id === cartProductId ? currentCart : null, loadCartModule,
     pickCartPosition: (_root, id, position) => cartPicks.push({id,position}),
+    dropCartModule: (_root, id, moduleId, position) => cartMoves.push({id,moduleId,position}),
     pickCooktopAnchor: (_root, id, anchor) => picks.push({ id, anchor }), loadSceneModule,
     loadNativeModule: () => nativeModule, cancelAnimationFrame(id) { frames.delete(id); }, requestAnimationFrame(callback) { frames.set(++timerId, callback); return timerId; },
     performance: { now: () => 0 }, matchMedia: () => ({ matches: true }), console,
   });
   const changed = (interactive = true, id = stateProduct) => dispatch('inox:cooktop-updated', { productId: id, interactive });
-  return { nodes, calls, cartCalls, timers, picks, cartPicks, changed, dispatch, finishNativeLoad,
+  return { nodes, calls, cartCalls, timers, picks, cartPicks, cartMoves, changed, dispatch, finishNativeLoad,
     cartChanged(interactive = true, id = cartProductId) { dispatch('inox:cart-updated', { productId: id, interactive }); },
     setCartState(state, id = cartProductId) { currentCart = state; cartProductId = id; },
     frame() { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(500)); },
@@ -113,6 +114,17 @@ function fixture(base = product('P04'), deferNative = false, { failInitialCartUp
     flush: () => new Promise(resolve => setImmediate(resolve)),
   };
 }
+
+test('cart drag completion is product-bound and obsolete scene callbacks cannot commit it', async () => {
+  const f = fixture(cartProduct()); f.cartChanged(); await f.flush();
+  f.cartCalls[0].complete(); await f.flush();
+  f.cartCalls[0].options.onMoveModule('freidora', 0);
+  assert.deepEqual(f.cartMoves, [{id:'P15',moduleId:'freidora',position:0}]);
+  f.dispatch('inox:product-updated', {product:product('P04')});
+  f.cartCalls[0].options.onMoveModule('plancha', 1);
+  assert.equal(f.cartMoves.length, 1);
+  f.pagehide();
+});
 
 test('only the exact approved source or opaque media ID may choose a modular chassis', () => {
   assert.equal(cooktopAssetFor('P01', '/media/8bc924d3-b775-51ce-8e0c-ce7acf353a59/'), '/models/inox/cooktop-parametric-v1.glb');

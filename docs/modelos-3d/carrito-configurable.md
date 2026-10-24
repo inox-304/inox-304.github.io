@@ -8,7 +8,9 @@ El archivo original `modulo-de-comida-4-en-1-v1.glb` y la primera versión confi
 
 ## Uso
 
-Pulsa **Mover** en un equipo y elige una de las cuatro posiciones en el esquema o directamente en el 3D. También puedes usar el selector de posición de cada equipo. **Ver encimera** oculta el toldo para inspeccionar las estaciones. Las posiciones se leen de izquierda a derecha mirando el frente. La cotización incluye ese mismo orden, también los espacios libres. Deshacer, Rehacer y Restablecer conservan juntos la distribución y los adicionales.
+Arrastra directamente un equipo en el 3D y suéltalo sobre otra posición. Una copia translúcida sigue el puntero y el destino se resalta en verde. Al soltar se intercambian las estaciones completas. **Ver encimera** oculta el toldo para facilitar el gesto; arrastrar el fondo sigue girando la cámara. Escape o soltar fuera de la encimera cancela el movimiento. Un segundo dedo cancela el arrastre antes de iniciar el gesto de cámara.
+
+Como alternativa accesible, pulsa **Mover** y elige una posición en el esquema o en el 3D, o usa el selector de posición de cada equipo. Las posiciones se leen de izquierda a derecha mirando el frente. La cotización incluye ese mismo orden, también los espacios libres. Deshacer, Rehacer y Restablecer conservan juntos la distribución y los adicionales; cada arrastre completado ocupa un solo paso en el historial.
 
 La selección contiene `included` y `order`. `order` siempre incluye los cuatro identificadores una sola vez, incluso cuando una estación queda como superficie de trabajo. Se mantienen 24 distribuciones y 16 combinaciones de equipamiento. El servidor acepta selecciones antiguas sin `order` con el orden original. El esquema publicado permite seguir personalizando si el servidor falla; una revocación explícita del propietario sí se respeta.
 

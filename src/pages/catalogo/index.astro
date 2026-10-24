@@ -11,16 +11,28 @@ import { apiMode } from '../../data/cms-mode';
 import '../../styles/catalog.css';
 ---
 <Layout title="Catálogo de equipos" description="Explora nuestros equipos de línea fría, línea caliente, línea neutra y mobiliario. Encuentra tu equipo y solicita una cotización personalizada.">
-  <section class="page-intro catalog-intro"><div class="shell"><nav class="breadcrumbs" aria-label="Ruta de navegación"><a href={withBase('/')}>Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Catálogo</span></nav><div class="section-heading"><div><span class="eyebrow">CATÁLOGO / INOX 304</span><h1>Equipa tu<br/><em>siguiente paso.</em></h1></div><p>Encuentra tu equipo por nombre, código o línea.<br/>Revisa sus detalles y conversemos sobre tu proyecto.</p></div></div></section>
+  <section class="page-intro catalog-intro"><div class="shell"><nav class="breadcrumbs" aria-label="Ruta de navegación"><a href={withBase('/')}>Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Catálogo</span></nav><div class="section-heading"><div><span class="eyebrow">CATÁLOGO / INOX 304</span><h1>Encuentra tu<br/><em>próximo equipo.</em></h1></div><p>Para la cocina que imaginas.<br/>Equipos, capacidades y soluciones a tu medida.</p></div>
+    <div class="catalog-search-panel">
+      <label class="catalog-search-label" for="catalog-search">¿Qué estás buscando?</label>
+      <form class="catalog-tools catalog-search-form" role="search" aria-label="Buscar equipos">
+        <div class="search-field">
+          <Icon name="search" size={26}/>
+          <input id="catalog-search" type="search" name="buscar" placeholder="Cocinas, hornos, carritos…" aria-label="Buscar equipos por nombre, código o capacidad" aria-describedby="catalog-search-hint catalog-search-feedback" maxlength="160" autocomplete="off" enterkeyhint="search" aria-controls="catalog-results"/>
+          <button type="button" class="catalog-search-clear" id="clear-search-query" aria-label="Borrar búsqueda" hidden><span aria-hidden="true">×</span></button>
+          <kbd class="catalog-search-key" aria-hidden="true">/</kbd>
+        </div>
+        <button class="catalog-search-submit" type="submit">Buscar <Icon name="arrow" size={20}/></button>
+      </form>
+      <div class="catalog-search-meta"><p id="catalog-search-hint">Por nombre, código o capacidad. Prueba «P15» o «20 litros».</p><p id="catalog-search-feedback" role="status" aria-live="polite" aria-atomic="true">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} equipos para explorar`}</p></div>
+    </div>
+    <div class="catalog-quick-search" role="group" aria-label="Búsquedas rápidas"><span>Explora</span>{[{ label: 'Cocinas', query: 'cocina' }, { label: 'Carritos', query: 'carrito' }, { label: 'Hornos', query: 'horno' }, { label: 'Lavaderos', query: 'lavadero' }, { label: 'ILUMI', query: 'ilumi' }].map(item => <button type="button" data-search-query={item.query} aria-pressed="false" aria-controls="catalog-results">{item.label}<Icon name="diagonal" size={13}/></button>)}</div>
+  </div></section>
   <section class="section-light catalog-section"><div class="shell">
     <div class="catalog-controls">
-      <form class="catalog-tools" role="search" aria-label="Buscar equipos">
-        <label class="search-field"><Icon name="search"/><span class="sr-only">Nombre, código o característica del equipo</span><input id="catalog-search" type="search" name="buscar" placeholder="Cocina, lavadero, código de equipo…" maxlength="160" autocomplete="off" enterkeyhint="search" aria-controls="catalog-results"/></label>
-        <label class="catalog-sort">Ordenar por<select id="catalog-order" name="orden" aria-controls="catalog-results"><option value="catalogo">Orden del catálogo</option><option value="nombre">Nombre: A a Z</option></select></label>
-      </form>
+      <div class="catalog-filter-heading"><span class="eyebrow">EXPLORA POR LÍNEA</span><label class="catalog-sort">Ordenar por<select id="catalog-order" name="orden" aria-controls="catalog-results"><option value="catalogo">Orden del catálogo</option><option value="nombre">Nombre: A a Z</option></select></label></div>
       <div class="filter-pills category-strip" role="group" aria-label="Filtrar por línea de equipos"><button type="button" class="active filter-all" data-filter="todos" aria-pressed="true" aria-controls="catalog-results"><Icon name="plus" size={18}/><span>Todos</span><span class="filter-count" data-filter-count aria-hidden="true">{catalogProducts.length}</span></button>{categories.map(category => <button type="button" data-filter={category.id} aria-pressed="false" aria-controls="catalog-results"><CategoryIcon category={category.id}/><span>{category.shortName}</span><span class="filter-count" data-filter-count aria-hidden="true">{catalogProducts.filter(product => product.category === category.id).length}</span></button>)}</div>
     </div>
-    <div class="catalog-results-heading"><div><h2 id="catalog-heading">Todos los equipos</h2><p id="result-count" class="results-count" role="status" aria-live="polite" aria-atomic="true">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} equipos`}</p></div><button type="button" class="catalog-reset" id="clear-catalog" data-catalog-reset hidden>Limpiar filtros <span aria-hidden="true">×</span></button></div>
+    <div class="catalog-results-heading"><div><h2 id="catalog-heading" tabindex="-1">Todos los equipos</h2><p id="result-count" class="results-count">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} equipos`}</p></div><button type="button" class="catalog-reset" id="clear-catalog" data-catalog-reset hidden>Limpiar filtros <span aria-hidden="true">×</span></button></div>
     <p id="catalog-loading" class="catalog-loading" hidden={!apiMode}>Estamos preparando los equipos del catálogo.</p>
     <div id="catalog-unavailable" class="empty-state" hidden><Icon name="search" size={34}/><h2>No pudimos cargar los equipos.</h2><p>Revisa tu conexión y vuelve a intentarlo. También puedes consultarnos directamente.</p><div class="catalog-empty-actions"><button type="button" class="button button-dark" id="retry-catalog">Volver a intentar <Icon/></button><a class="text-link dark-link" href={withBase('/contacto/')}>Contactar con INOX 304 <Icon name="diagonal"/></a></div></div>
     <div class="product-grid catalog-grid" id="catalog-results" data-cms-products="all" data-catalog-mode={apiMode ? 'api' : 'static'} aria-labelledby="catalog-heading" aria-busy={apiMode ? 'true' : 'false'}>{catalogProducts.map((product, index) => <ProductCard product={product} products={visibleProducts} index={index}/>)}</div>
