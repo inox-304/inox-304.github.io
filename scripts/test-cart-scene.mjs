@@ -9,8 +9,8 @@ import { OrbitControls as ActualOrbitControls } from 'three/addons/controls/Orbi
 import { CART_MODULE_NODES, createCartSceneGraph, disposeCartResources } from '../src/lib/cart-scene-graph.ts';
 
 const ids = Object.keys(CART_MODULE_NODES);
-async function model() {
-  const bytes = readFileSync(new URL('../public/models/inox/modulo-de-comida-4-en-1-configurable-v1.glb', import.meta.url));
+async function model(version = 1) {
+  const bytes = readFileSync(new URL(`../public/models/inox/modulo-de-comida-4-en-1-configurable-v${version}.glb`, import.meta.url));
   return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
 }
 
@@ -68,9 +68,87 @@ test('shared GLTF resources and decoded textures are released once', () => {
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1, image: 1 });
 });
 
+const permutations = values => values.length ? values.flatMap((value, index) => permutations(values.filter((_, i) => i !== index)).map(tail => [value, ...tail])) : [[]];
+const near = (a, b, label = '') => assert.ok(Math.abs(a - b) < 0.000001, `${label}: ${a} != ${b}`);
+
+test('all 384 movable layouts preserve equipment size and align independent decks without overlaps or drift', async () => {
+  const { scene } = await model(2), graph = createCartSceneGraph(scene), metadata = scene.userData.cart;
+  assert.equal(graph.canReorder, true);
+  const chassis = scene.getObjectByName('CartChassis');
+  const snapshot = node => { const list = []; node.traverse(part => list.push([part.uuid, part.position.toArray(), part.scale.toArray(), part.visible, part.geometry?.uuid])); return list; };
+  const chassisBefore = snapshot(chassis), resources = [];
+  scene.traverse(node => { if (node.isMesh) resources.push([node, node.geometry, node.material, node.scale.toArray()]); });
+  const dimensions = Object.fromEntries(metadata.modules.map(entry => [entry.id, new THREE.Box3().setFromObject(scene.getObjectByName(entry.node)).getSize(new THREE.Vector3())]));
+  for (const order of permutations(ids)) for (let mask = 0; mask < 16; mask++) {
+    const included = ids.filter((_, index) => mask & (1 << index));
+    graph.update(included, order); assert.deepEqual(graph.order, order);
+    let right = metadata.layout.minX;
+    for (const station of graph.stations) {
+      const entry = metadata.modules.find(item => item.id === station.id);
+      const deck = new THREE.Box3().setFromObject(scene.getObjectByName(entry.deckNode));
+      near(deck.min.x, right, 'adjacent deck edge'); right = deck.max.x;
+      near(deck.max.x - deck.min.x, station.width, 'deck width');
+      for (const key of ['node', 'coverNode']) {
+        const node = scene.getObjectByName(entry[key]), bounds = new THREE.Box3().setFromObject(node);
+        assert.ok(bounds.min.x >= deck.min.x - 0.000001 && bounds.max.x <= deck.max.x + 0.000001, `${entry.id} ${key} must stay inside its station`);
+        assert.equal(graph.positionForObject(node.children[0]), station.index);
+        if (key === 'node') {
+          const size = bounds.getSize(new THREE.Vector3()); near(size.x, dimensions[entry.id].x); near(size.y, dimensions[entry.id].y); near(size.z, dimensions[entry.id].z);
+          assert.equal(node.visible, included.includes(entry.id));
+        } else assert.equal(node.visible, !included.includes(entry.id));
+      }
+    }
+    near(right, metadata.layout.maxX, 'countertop right edge');
+    assert.deepEqual(snapshot(chassis), chassisBefore);
+  }
+  for (const [mesh, geometry, material, scale] of resources) { assert.equal(mesh.geometry, geometry); assert.equal(mesh.material, material); assert.deepEqual(mesh.scale.toArray(), scale); }
+  graph.update(ids, ids); metadata.modules.forEach(entry => near(scene.getObjectByName(entry.node).position.x, 0, 'return to authored position'));
+  assert.equal(graph.positionForObject(chassis.children[0]), null);
+  const copy = graph.stations; copy[0].centerX = 999; assert.notEqual(graph.stations[0].centerX, 999);
+  disposeCartResources(scene);
+});
+
+test('the real fryer opening moves with the fryer and leaves steel at the previous position', async () => {
+  const { scene } = await model(2), graph = createCartSceneGraph(scene), decks = scene.getObjectByName('CartDecks');
+  const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0);
+  const deckHit = x => { scene.updateMatrixWorld(true); ray.set(new THREE.Vector3(x, 2, .02), down); return ray.intersectObject(decks, true); };
+  const authoredFryerCenter = -.138;
+  for (const order of permutations(ids)) {
+    graph.update(ids, order);
+    const fryer = scene.getObjectByName('Fryer'), cutout = scene.getObjectByName('FryerDeck');
+    near(fryer.position.x, cutout.position.x, 'cutout and equipment travel together');
+    assert.equal(deckHit(authoredFryerCenter + fryer.position.x).length, 0, 'no solid deck may cover the well');
+  }
+  graph.update(ids, [...ids].reverse());
+  assert.ok(deckHit(authoredFryerCenter).length > 0, 'previous fryer position becomes an intact other station');
+  graph.update([], [...ids].reverse());
+  ray.set(new THREE.Vector3(authoredFryerCenter + scene.getObjectByName('Fryer').position.x, 2, .02), down);
+  assert.ok(ray.intersectObject(scene.getObjectByName('FryerCover'), true).length > 0, 'omitting the fryer closes its relocated well');
+  disposeCartResources(scene);
+});
+
+test('invalid orders are atomic and only the versioned segmented deck contract can move stations', async () => {
+  const { scene } = await model(2), graph = createCartSceneGraph(scene), order = [...ids].reverse(); graph.update(['freidora'], order);
+  const positions = scene.userData.cart.modules.map(entry => scene.getObjectByName(entry.node).position.toArray());
+  for (const invalid of [null, {}, [], ids.slice(1), [...ids, 'wok'], ['plancha', 'plancha', 'freidora', 'broastera'], ['__proto__', ...ids.slice(1)]]) {
+    assert.throws(() => graph.update([], invalid)); assert.deepEqual(graph.order, order); assert.deepEqual(graph.included, ['freidora']);
+    assert.deepEqual(scene.userData.cart.modules.map(entry => scene.getObjectByName(entry.node).position.toArray()), positions);
+  }
+  const legacy = await model(); const legacyGraph = createCartSceneGraph(legacy.scene);
+  assert.equal(legacyGraph.canReorder, false); assert.throws(() => legacyGraph.update(ids, order));
+  disposeCartResources(scene); disposeCartResources(legacy.scene);
+  for (const mutate of [
+    root => { root.userData.cart.layout.minX = -100; },
+    root => { root.userData.cart.modules[0].width = .99; },
+    root => { root.userData.cart.modules[1].deckNode = 'BroasterDeck'; },
+    root => { root.getObjectByName('FryerDeck').clear(); },
+    root => { root.getObjectByName('CartChassis').add(root.getObjectByName('FryerDeck')); },
+  ]) { const { scene } = await model(2); mutate(scene); assert.throws(() => createCartSceneGraph(scene)); disposeCartResources(scene); }
+});
+
 const source = ts.transpileModule(readFileSync(new URL('../src/scripts/cart-scene.ts', import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '') + '\nglobalThis.subject = { createCartScene };', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-async function fixture() {
-  const asset = await model(), frames = new Map(), renders = [], errors = [];
+async function fixture(version = 1) {
+  const asset = await model(version), frames = new Map(), renders = [], errors = [], picks = [], renderers = [], queuedLoads = [];
   let serial = 0, renderer, observer, orbit;
   class Element {
     constructor(tag) { this.tagName = tag; this.dataset = {}; this.style = {}; this.children = []; this.events = new Map(); this.clientWidth = 640; this.clientHeight = 480; this.hidden = false; this.ownerDocument = document; }
@@ -82,6 +160,7 @@ async function fixture() {
     emit(type, data = {}) { this.events.get(type)?.forEach(fn => fn({ type, preventDefault() {}, ...data })); }
     getBoundingClientRect() { return { left: 0, top: 0, width: 640, height: 480 }; }
     getRootNode() { return document; }
+    setPointerCapture() {} releasePointerCapture() {}
     focus() { document.activeElement = this; }
   }
   const document = { baseURI: 'https://inox.example/', createElement: tag => new Element(tag), activeElement: null, events: new Map(),
@@ -89,7 +168,7 @@ async function fixture() {
     removeEventListener(type, fn) { this.events.get(type)?.delete(fn); } };
   const host = new Element('div');
   class Renderer {
-    constructor() { renderer = this; this.domElement = new Element('canvas'); this.shadowMap = {}; this.disposed = 0; this.lost = 0; }
+    constructor() { renderer = this; renderers.push(this); this.domElement = new Element('canvas'); this.shadowMap = {}; this.disposed = 0; this.lost = 0; }
     setPixelRatio() {} setSize() {}
     render(scene, camera) { camera.updateMatrixWorld(); renders.push({ scene, camera, position: camera.position.clone() }); }
     dispose() { this.disposed++; } forceContextLoss() { this.lost++; }
@@ -99,16 +178,48 @@ async function fixture() {
   class PMREM { fromScene() { return { texture: new THREE.Texture(), dispose() {} }; } dispose() {} }
   class Observer { constructor(callback) { observer = this; this.callback = callback; } observe() {} disconnect() { this.disconnected = true; } }
   const context = {
-    THREE: { ...THREE, WebGLRenderer: Renderer, PMREMGenerator: PMREM }, GLTFLoader: class { async loadAsync() { return asset; } },
+    THREE: { ...THREE, WebGLRenderer: Renderer, PMREMGenerator: PMREM }, GLTFLoader: class { async loadAsync() { const load = queuedLoads.shift(); return load ? load() : asset; } },
     OrbitControls: Controls, RoomEnvironment: Environment, ResizeObserver: Observer, URL, Map, Set,
     window: { devicePixelRatio: 1 }, createCartSceneGraph, disposeCartResources,
     requestAnimationFrame: fn => { frames.set(++serial, fn); return serial; }, cancelAnimationFrame: id => frames.delete(id),
   };
   runInNewContext(source, context);
-  const controller = await context.subject.createCartScene(host, '/models/cart.glb', { onError: error => errors.push(error) });
+  const controller = await context.subject.createCartScene(host, '/models/cart.glb', { onError: error => errors.push(error), onPickPosition: position => picks.push(position) });
   function draw() { const pending = [...frames.values()]; frames.clear(); pending.forEach(fn => fn()); }
-  return { controller, host, asset, frames, renders, errors, draw, renderer, observer, orbit, document };
+  function createScene(load) { queuedLoads.push(load); return context.subject.createCartScene(host, '/models/cart.glb', { onError: error => errors.push(error), onPickPosition: position => picks.push(position) }); }
+  return { controller, host, asset, frames, renders, errors, picks, draw, renderer, renderers, observer, orbit, document, createScene };
 }
+
+test('replaced scene callbacks and disposal cannot alter the state or renderer of its replacement', async () => {
+  const f = await fixture(2), replacement = await model(2), newer = await f.createScene(async () => replacement);
+  const order = ['plancha', 'freidora', 'conservadora', 'broastera'];
+  newer.update(['plancha'], order); newer.setActivePosition(0); f.draw();
+  const state = { ...f.host.dataset }, currentCanvas = f.renderers.at(-1).domElement, renders = f.renders.length;
+  f.controller.update(['wok']); f.controller.setView('front'); f.controller.setActivePosition(3); f.controller.setCanopyVisible(false); f.controller.focus();
+  f.renderer.domElement.emit('webglcontextlost'); f.observer.callback(); f.draw();
+  assert.deepEqual(f.host.dataset, state); assert.equal(f.errors.length, 0); assert.equal(f.document.activeElement, null); assert.equal(f.renders.length, renders);
+  f.controller.dispose();
+  assert.deepEqual(f.host.dataset, state); assert.deepEqual(f.host.children.filter(child => child.tagName === 'canvas'), [currentCanvas]);
+  assert.equal(f.renderers.at(-1).disposed, 0); newer.update(ids, order); f.draw(); assert.equal(f.host.dataset.cartSceneState, 'ready');
+  newer.dispose(); assert.deepEqual(f.host.dataset, {});
+});
+
+test('a GLTF request finishing after a newer scene is ready is discarded before creating a renderer or publishing state', async () => {
+  const f = await fixture(2); f.controller.dispose();
+  const olderAsset = await model(2), newerAsset = await model(2);
+  let release; const delayed = new Promise(resolve => { release = resolve; });
+  const older = f.createScene(() => delayed), rejection = assert.rejects(older, error => error.name === 'AbortError');
+  const newer = await f.createScene(async () => newerAsset), order = [...ids].reverse();
+  newer.update(['freidora'], order); newer.setActivePosition(2); f.draw();
+  const state = { ...f.host.dataset }, rendererCount = f.renderers.length, currentCanvas = f.renderers.at(-1).domElement;
+  let disposedGeometry = 0; olderAsset.scene.getObjectByName('Fryer').children[0].geometry.addEventListener('dispose', () => disposedGeometry++);
+  release(olderAsset); await rejection; f.draw();
+  assert.equal(f.renderers.length, rendererCount, 'late load must not create a WebGL renderer'); assert.equal(disposedGeometry, 1, 'late GLTF resources must be released');
+  assert.deepEqual(f.host.dataset, state); assert.equal(f.errors.length, 0);
+  assert.deepEqual(f.host.children.filter(child => child.tagName === 'canvas'), [currentCanvas]);
+  assert.equal(f.host.children.length, 2, 'only the current canvas and current message remain');
+  newer.update(ids, order); f.draw(); assert.equal(f.host.dataset.cartSceneState, 'ready'); newer.dispose();
+});
 
 test('live module switches preserve camera and zoom, coalesce rapid input, and stop rendering while idle', async () => {
   const f = await fixture(); f.draw(); assert.equal(f.frames.size, 0);
@@ -119,6 +230,48 @@ test('live module switches preserve camera and zoom, coalesce rapid input, and s
   assert.equal(f.asset.scene.getObjectByName('Fryer').visible, false); assert.equal(f.asset.scene.getObjectByName('Warmer').visible, true);
   assert.equal(f.host.dataset.cartIncluded, 'conservadora,plancha');
   assert.equal(f.document.activeElement, null); f.controller.dispose();
+});
+
+test('reordering keeps the camera and inspection state while showing temporary, correctly sized station guides', async () => {
+  const f = await fixture(2); f.controller.setCanopyVisible(false); f.controller.setView('top'); f.draw();
+  const { camera, scene } = f.renders.at(-1), position = camera.position.clone(), target = f.orbit.target.clone();
+  const guides = scene.getObjectByName('CartPositionGuides'); assert.equal(guides.visible, false);
+  f.controller.setActivePosition(0); f.draw(); assert.equal(guides.visible, true);
+  const geometryDisposals = Array(4).fill(0), materialDisposals = Array(4).fill(0);
+  guides.children.forEach((line, i) => { line.geometry.addEventListener('dispose', () => geometryDisposals[i]++); line.material.addEventListener('dispose', () => materialDisposals[i]++); });
+  const order = ['plancha', 'conservadora', 'broastera', 'freidora'];
+  f.controller.update(ids, order); f.controller.setActivePosition(2); f.controller.update(['plancha'], order);
+  assert.equal(f.frames.size, 1); f.draw(); assert.equal(f.frames.size, 0);
+  assert.ok(camera.position.equals(position)); assert.ok(f.orbit.target.equals(target));
+  assert.equal(f.asset.scene.getObjectByName('CartCanopy').visible, false);
+  assert.equal(f.host.dataset.cartOrder, order.join(',')); assert.equal(f.host.dataset.cartActivePosition, '2');
+  let left = f.asset.scene.userData.cart.layout.minX;
+  order.forEach((id, index) => {
+    const module = f.asset.scene.userData.cart.modules.find(item => item.id === id), line = guides.children[index];
+    near(line.position.x, left + module.width / 2); left += module.width;
+    const size = new THREE.Box3().setFromObject(line).getSize(new THREE.Vector3()); near(size.x, module.width - .006);
+    assert.equal(line.material.opacity, index === 2 ? 1 : .4);
+  });
+  f.controller.setActivePosition(4); assert.equal(f.host.dataset.cartActivePosition, '2');
+  f.controller.setActivePosition(null); f.draw(); assert.equal(guides.visible, false);
+  f.controller.dispose(); f.controller.dispose(); assert.deepEqual(geometryDisposals, [1, 1, 1, 1]); assert.deepEqual(materialDisposals, [1, 1, 1, 1]);
+});
+
+test('picking visible 3D stations follows their reordered positions and ignores orbit drags and roof occlusion', async () => {
+  const f = await fixture(2); const order = ['plancha', 'broastera', 'conservadora', 'freidora'];
+  f.controller.update([], order); f.controller.setCanopyVisible(false); f.controller.setView('top'); f.draw();
+  const canvas = f.renderer.domElement, camera = f.renders.at(-1).camera;
+  const clickStation = (id, drag = 0) => {
+    const entry = f.asset.scene.userData.cart.modules.find(item => item.id === id), node = f.asset.scene.getObjectByName(entry.coverNode);
+    const point = new THREE.Vector3(entry.centerX + node.position.x, .795, .005).project(camera);
+    const pointer = { button: 0, buttons: 1, pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: (point.x + 1) * 320, clientY: (1 - point.y) * 240 };
+    canvas.emit('pointerdown', pointer); canvas.emit('pointerup', { ...pointer, buttons: 0, clientX: pointer.clientX + drag });
+  };
+  order.forEach(id => clickStation(id)); assert.deepEqual(f.picks, [0, 1, 2, 3]);
+  clickStation('plancha', 12); assert.equal(f.picks.length, 4);
+  f.controller.setCanopyVisible(true); f.draw(); clickStation('conservadora'); assert.equal(f.picks.length, 4, 'roof must occlude the workstation');
+  f.controller.setCanopyVisible(false); f.draw(); clickStation('conservadora'); assert.equal(f.picks.at(-1), 2);
+  f.controller.dispose(); assert.equal([...canvas.events.values()].every(listeners => listeners.size === 0), true);
 });
 
 test('invalid selections show an error instead of stale 3D and a valid retry recovers', async () => {

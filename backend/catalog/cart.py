@@ -47,21 +47,30 @@ def validate_cart_selection(config, value):
     config = validate_cart_config(config)
     if not config or not config["enabled"]:
         raise CartValidationError("Este configurador no está habilitado.")
-    data = _object(value, ("included",), "Selección del carrito")
+    # Older clients retain the original arrangement when they omit order.
+    has_order = isinstance(value, dict) and "order" in value
+    data = _object(value, ("included", "order") if has_order else ("included",), "Selección del carrito")
     included = data["included"]
     if not isinstance(included, list) or len(included) > 4:
         raise CartValidationError("Elija hasta cuatro módulos del carrito.")
     allowed = {module["id"] for module in config["modules"]}
     if any(not isinstance(key, str) or key not in allowed for key in included) or len(set(included)) != len(included):
         raise CartValidationError("La selección contiene módulos no aprobados o repetidos.")
-    # Product order, rather than client order, is canonical for quotes and auditing.
-    return {"included": [module["id"] for module in config["modules"] if module["id"] in included]}
+    order = data["order"] if has_order else list(MODULE_IDS)
+    if not isinstance(order, list) or len(order) != len(MODULE_IDS) or any(not isinstance(key, str) or key not in MODULE_IDS for key in order) or len(set(order)) != len(MODULE_IDS):
+        raise CartValidationError("Cada posición debe contener una estación del carrito, sin repetirla.")
+    # Inclusion stays canonical; station order is the customer's exact left-to-right arrangement.
+    # Unapproved equipment can occupy a placeholder but is never included or named publicly.
+    return {"included": [module["id"] for module in config["modules"] if module["id"] in included], "order": list(order)}
 
 
 def cart_selection_summary(config, selection):
     config = validate_cart_config(config)
     chosen = validate_cart_selection(config, selection)
+    labels = {module["id"]: module["label"] for module in config["modules"]}
     return {
-        "included": [module["label"] for module in config["modules"] if module["id"] in chosen["included"]],
+        "included": [labels[key] for key in chosen["order"] if key in chosen["included"]],
         "omitted": [module["label"] for module in config["modules"] if module["id"] not in chosen["included"]],
+        "orientation": "left-to-right-from-front",
+        "positions": [{"position": index + 1, "moduleId": key if key in chosen["included"] else None, "label": labels[key] if key in chosen["included"] else "Superficie de trabajo", "included": key in chosen["included"]} for index, key in enumerate(chosen["order"])],
     }

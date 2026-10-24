@@ -1,7 +1,7 @@
 {
   "version": 1,
   "productId": "P15",
-  "model3d": "/models/inox/modulo-de-comida-4-en-1-configurable-v1.glb",
+  "model3d": "/models/inox/modulo-de-comida-4-en-1-configurable-v2.glb",
   "cartConfig": {
     "version": 1,
     "enabled": true,

@@ -5,7 +5,7 @@ import { cooktopAssetFor } from '../lib/cooktop-assets';
 import { readCooktop, pickCooktopAnchor } from './cooktop-ui';
 import type { CooktopScene, CooktopInteraction, CooktopView } from './cooktop-scene';
 import { cartAssetFor } from '../lib/cart-assets';
-import { readCart } from './cart-ui';
+import { readCart, pickCartPosition } from './cart-ui';
 import type { CartScene } from './cart-scene';
 
 type MediaProduct = Pick<CmsProduct, 'name' | 'image'> & Partial<Pick<CmsProduct, 'id' | 'supplyType' | 'gallery' | 'model3d' | 'modelPoster' | 'variants' | 'doorAnimation'>>;
@@ -202,14 +202,18 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         if (request !== revision || !product) return;
         host.hidden = false;
         const productId = product.id!;
-        const scene = await createCartScene(host, withBase(cartAsset), { onError: () => { if (request === revision) failed(); } });
+        const scene = await createCartScene(host, withBase(cartAsset), {
+          onError: () => { if (request === revision) failed(); },
+          onPickPosition: position => { if (request === revision) pickCartPosition(cartRoot, productId, position); },
+        });
         if (request !== revision) { scene.dispose(); return; }
         const latest = readCart(cartRoot, productId);
         if (!latest) { scene.dispose(); resetViewer(); return; }
-        cartScene = scene; cartLoading = false; scene.update(latest.selection.included);
+        cartScene = scene; cartLoading = false; scene.update(latest.selection.included, latest.selection.order);
         if (request !== revision) return;
+        scene.setActivePosition(latest.activePosition);
         window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy'); button.firstChild!.textContent = 'Volver a foto ';
-        help.hidden = false; help.textContent = `${navigationHelp} El equipamiento cambia al marcar sus opciones. Ocultar el toldo solo facilita ver la encimera: sigue incluido en el carrito. Vista ilustrativa, a confirmar con el taller.`;
+        help.hidden = false; help.textContent = `${navigationHelp} Pulsa Mover en un equipo y toca su destino aquí o en el esquema. Ver encimera facilita acomodarlos. Ocultar el toldo es solo para inspección; sigue incluido. Vista ilustrativa, a confirmar con el taller.`;
         canopy.hidden = false; canopyVisible = true; canopy.textContent = 'Ocultar toldo'; canopy.setAttribute('aria-pressed', 'false');
         viewpoints.hidden = false;
         const top = viewpoints.querySelector<HTMLButtonElement>('[data-model-view="top"]'); if (top) top.textContent = 'Ver encimera';
@@ -354,9 +358,14 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (!product || product.id !== detail.productId || selectedVariant) return;
     const state = readCart(cartRoot, detail.productId);
     if (!state) { if (cartScene || cartLoading) resetViewer(); return; }
-    if (cartScene) { cartScene.update(state.selection.included); return; }
+    if (cartScene) { cartScene.update(state.selection.included, state.selection.order); cartScene?.setActivePosition(state.activePosition); return; }
     if (cartLoading) return; // First load always applies the latest choice, not the initiating choice.
     if (cartAssetFor(detail.productId, product.model3d || '') && (detail.interactive || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
+  });
+  document.addEventListener('inox:cart-focus', event => {
+    const detail = (event as CustomEvent<{ productId: string; position: number | null }>).detail;
+    if (!product || product.id !== detail.productId || selectedVariant || !readCart(cartRoot, detail.productId)) return;
+    cartScene?.setActivePosition(detail.position);
   });
   window.addEventListener('pagehide', resetViewer);
   try { update(JSON.parse(root.dataset.currentProduct ?? root.dataset.initialProduct ?? 'null')); }

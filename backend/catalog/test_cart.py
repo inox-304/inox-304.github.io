@@ -1,5 +1,6 @@
 """Synthetic data only; test DB is independent from hosted catalog data."""
 import json
+from itertools import permutations
 from unittest.mock import patch
 
 from django.contrib import admin
@@ -42,14 +43,49 @@ class CartSchemaTests(SimpleTestCase):
 
     def test_selection_is_bounded_by_product_approval_and_keeps_canonical_order(self):
         config = cart_fixture()
-        self.assertEqual(validate_cart_selection(config, {"included": ["plancha", "freidora"]}), {"included": ["freidora", "plancha"]})
-        self.assertEqual(cart_selection_summary(config, {"included": ["plancha"]}), {"included": ["Plancha"], "omitted": ["Broastera", "Freidora", "Conservadora"]})
-        self.assertEqual(validate_cart_selection(config, {"included": []}), {"included": []})
+        self.assertEqual(validate_cart_selection(config, {"included": ["plancha", "freidora"]}), {"included": ["freidora", "plancha"], "order": list(MODULE_IDS)})
+        summary = cart_selection_summary(config, {"included": ["plancha"]})
+        self.assertEqual(summary["included"], ["Plancha"])
+        self.assertEqual(summary["omitted"], ["Broastera", "Freidora", "Conservadora"])
+        self.assertEqual(summary["orientation"], "left-to-right-from-front")
+        self.assertEqual(summary["positions"][3], {"position": 4, "moduleId": "plancha", "label": "Plancha", "included": True})
+        self.assertEqual(validate_cart_selection(config, {"included": []}), {"included": [], "order": list(MODULE_IDS)})
         config["modules"] = config["modules"][:1]
         for value in (None, [], {"included": "broastera"}, {"included": ["broastera"] * 2}, {"included": ["freidora"]}, {"included": [[]]}, {"included": [True]}, {"included": [], "cost": 1}):
             with self.subTest(value=value), self.assertRaises(CartValidationError): validate_cart_selection(config, value)
         for disabled in ({}, cart_fixture(False)):
             with self.assertRaises(CartValidationError): validate_cart_selection(disabled, {"included": []})
+
+    def test_all_24_orders_and_16_inclusion_masks_are_exact_and_independently_copied(self):
+        config, count = cart_fixture(), 0
+        for order in permutations(MODULE_IDS):
+            for mask in range(16):
+                included = [key for index, key in enumerate(MODULE_IDS) if mask & (1 << index)]
+                value = {"included": list(reversed(included)), "order": list(order)}
+                selected = validate_cart_selection(config, value)
+                self.assertEqual(selected, {"included": included, "order": list(order)})
+                summary = cart_selection_summary(config, selected)
+                self.assertEqual(summary["included"], [key.capitalize() for key in order if key in included])
+                self.assertEqual(summary["orientation"], "left-to-right-from-front")
+                self.assertEqual(summary["positions"], [{"position": i+1, "moduleId": key if key in included else None, "label": key.capitalize() if key in included else "Superficie de trabajo", "included": key in included} for i,key in enumerate(order)])
+                selected["order"].reverse(); selected["included"].reverse()
+                self.assertEqual(value["order"], list(order)); self.assertEqual(value["included"], list(reversed(included)))
+                count += 1
+        self.assertEqual(count, 384)
+
+    def test_malformed_orders_and_unapproved_active_modules_are_rejected(self):
+        config = cart_fixture()
+        for order in (None, {}, "plancha", [], list(MODULE_IDS[:3]), list(MODULE_IDS)+["plancha"], ["plancha"]*4, ["wok"]+list(MODULE_IDS[1:]), [True]+list(MODULE_IDS[1:]), [[]]+list(MODULE_IDS[1:])):
+            with self.subTest(order=order), self.assertRaises(CartValidationError):
+                validate_cart_selection(config, {"included": [], "order": order})
+        config["modules"] = [config["modules"][-1]]
+        value = {"included": ["plancha"], "order": ["plancha","conservadora","broastera","freidora"]}
+        self.assertEqual(validate_cart_selection(config, value), value)
+        summary = cart_selection_summary(config, value)
+        self.assertEqual(summary["included"], ["Plancha"])
+        self.assertTrue(all(p["label"] == "Superficie de trabajo" and p["moduleId"] is None for p in summary["positions"][1:]))
+        with self.assertRaises(CartValidationError):
+            validate_cart_selection(config, {**value,"included":["plancha","freidora"]})
 
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"], SECURITY_OWNER_USERNAME="cart-owner@example.test")
@@ -90,6 +126,14 @@ class CartProductTests(TestCase):
         result = self.client.get(self.check_url, {"selection": '{"included":["plancha"]}'})
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.json()["summary"]["included"], ["Plancha"])
+        self.assertEqual(result.json()["selection"]["order"], list(MODULE_IDS))
+        selected = {"included": ["plancha","freidora"], "order": ["plancha","broastera","conservadora","freidora"]}
+        arranged = self.client.get(self.check_url, {"selection": json.dumps(selected)})
+        self.assertEqual(arranged.status_code, 200)
+        self.assertEqual(arranged.json()["selection"]["order"], selected["order"])
+        self.assertEqual(arranged.json()["summary"]["positions"][0]["moduleId"], "plancha")
+        self.assertEqual(arranged.json()["summary"]["positions"][1]["moduleId"], None)
+        self.assertEqual(arranged.json()["summary"]["positions"][3]["moduleId"], "freidora")
         self.assertNotContains(result, "price")
         for origin in ("https://other.example", "https://inox-304.github.io.evil.example", "null"):
             self.assertNotIn("Access-Control-Allow-Origin", self.client.get(self.url, HTTP_ORIGIN=origin))
@@ -98,7 +142,7 @@ class CartProductTests(TestCase):
         self.assertEqual(list(Product.objects.values()), before); self.assertEqual(AuditLog.objects.count(), audit_count)
 
     def test_selection_rejects_duplicate_json_keys_malformed_and_multiple_payloads(self):
-        for raw in ("", "x" * 1001, "{", "null", '{"included":[],"included":["plancha"]}', '{"included":["wok"]}', '{"included":["plancha","plancha"]}', '{"included":[],"price":1}'):
+        for raw in ("", "x" * 1001, "{", "null", '{"included":[],"included":["plancha"]}', '{"included":["wok"]}', '{"included":["plancha","plancha"]}', '{"included":[],"price":1}', '{"included":[],"order":[]}', '{"included":[],"order":null}', '{"included":[],"order":["plancha","plancha","plancha","plancha"]}', '{"included":[],"order":[],"order":["broastera","freidora","conservadora","plancha"]}'):
             with self.subTest(raw=raw[:40]):
                 response = self.client.get(self.check_url, {"selection": raw})
                 self.assertEqual(response.status_code, 400); self.assertFalse(response.json()["valid"])
