@@ -26,6 +26,15 @@
 .inox-step-heading p { font-size: 13px; line-height: 1.6; margin: 0; color: var(--body-quiet-color); }
 #inox-step-progress { white-space: nowrap; font-size: 12px; padding-top: 3px; }
 .inox-editor-notice { padding: 14px 18px; background: var(--inox-soft); border-radius: 8px; }
+.inox-variant-batch { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--inox-edge); max-width: 780px; }
+.inox-variant-batch h3 { margin: 0 0 12px; font-size: 16px; }
+.inox-variant-batch label { display: block !important; float: none !important; width: auto !important; margin-bottom: 8px; font-weight: 600; }
+.inox-variant-batch textarea { display: block; box-sizing: border-box; width: 100%; max-width: 100%; padding: 12px; border: 1px solid var(--inox-edge); border-radius: 7px; font: inherit; background: var(--inox-surface); color: var(--body-fg); }
+.inox-variant-batch p { font-size: 12px; line-height: 1.6; }
+.inox-variant-batch button { padding: 11px 16px; font: inherit; cursor: pointer; }
+.inox-variant-batch [data-inox-variant-status] { min-height: 20px; }
+.inox-variant-batch [data-inox-variant-status][data-error="true"] { color: var(--error-fg); }
+.inox-variant-batch textarea:focus-visible, .inox-variant-batch button:focus-visible { outline: 3px solid var(--link-fg); outline-offset: 3px; }
 .inox-editor-enhanced .module { margin-bottom: 20px; }
 .inox-editor-enhanced .inox-upload-card { margin: 14px; padding: 18px; background: var(--inox-surface); border: 1px dashed var(--inox-edge); border-radius: 10px; }
 .inox-upload-card[data-upload-state="selected"] { border-style: solid; border-color: var(--link-fg); }

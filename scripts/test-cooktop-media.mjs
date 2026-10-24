@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { cooktopAssetFor } from '../src/lib/cooktop-assets.ts';
+import { parseCooktopConfig, initialCooktopSelection, placeCooktopModule, cooktopSummary } from '../src/lib/cooktop-config.ts';
+import { planCooktopParts } from '../src/scripts/cooktop-scene.ts';
+import { products } from '../src/data/products.ts';
 
 const config = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const initial = () => ({ config: structuredClone(config), selection: { layoutId: 'six', energy: 'gas', placements: [] } });
@@ -83,6 +86,25 @@ test('only the exact approved source or opaque media ID may choose a modular cha
   assert.equal(cooktopAssetFor('P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330/'), '/models/inox/cooktop-p04-v1.glb');
   assert.equal(cooktopAssetFor('P04', '/admin/catalog/mediaasset/a5c077e3-be87-5d5a-9aaf-1ebcced04330/file/'), '/models/inox/cooktop-p04-v1.glb');
   for (const [id, url] of [['P04', '/models/new-sketchup.glb'], ['P04', models.P05], ['P04', '/media/a5c077e3-be87-5d5a-9aaf-1ebcced04330-extra/'], ['ILUMI-DJ-181', models.P04], ['__proto__', models.P04]]) assert.equal(cooktopAssetFor(id, url), '');
+});
+
+test('P03 keeps its own media and accepts the approved lineal rule set without inheriting central modules', () => {
+  const product = products.find(item => item.id === 'P03');
+  const rules = parseCooktopConfig(JSON.parse(readFileSync(new URL('./fixtures/kitchen-families.json', import.meta.url), 'utf8')).linear);
+  assert.equal(product.supplyType, 'manufactured'); assert.equal(product.equipmentFamily, 'cocinas');
+  assert.equal(product.slug, 'cocina-industrial-de-3-parrillas');
+  assert.equal(product.image, '/images/products/cocina-industrial-de-3-parrillas.webp');
+  assert.equal(cooktopAssetFor('P03', product.model3d), '/models/inox/cooktop-p03-v1.glb');
+  assert.equal(cooktopAssetFor('P03', '/media/43865e50-eceb-5b9f-ad52-2a39854c7b54/'), '/models/inox/cooktop-p03-v1.glb');
+  assert.deepEqual(rules.modules.map(module => module.kind), ['burner', 'wok']);
+  assert.deepEqual(rules.kitchen.ovens, []);
+  for (const layout of rules.layouts) {
+    const state = { ...initialCooktopSelection(rules), layoutId: layout.id };
+    const selected = placeCooktopModule(rules, state, 'wok', layout.columns - 1);
+    assert.equal(cooktopSummary(rules, selected).burners, layout.columns - 1);
+    const parts = planCooktopParts(rules, selected, { minX: -.715, maxX: .715, minZ: -.25, maxZ: .25, y: .819 });
+    assert.equal(parts.length, layout.columns); assert.equal(parts.filter(part => part.template === 'Wok').length, 1);
+  }
 });
 
 test('interaction previews survive loading and reopening, ignore another SKU and offer three camera views', async () => {
@@ -188,5 +210,25 @@ test('a new SketchUp model never auto-opens the old modular chassis', async () =
   f.changed(); await f.flush(); assert.equal(f.calls.length, 0);
   f.nodes['show-model'].click(); await f.flush();
   assert.equal(f.calls.length, 0); assert.ok(f.nodes['model-host'].querySelector('model-viewer'));
+  f.pagehide();
+});
+
+test('variant photo isolates the gallery and changing GLB keeps 360 open with the correct poster', async () => {
+  const base = { ...product('P30'), model3d: '/models/base.glb', gallery: ['/images/products/other-view.jpg'] };
+  const f = fixture(base);
+  f.nodes['show-model'].click(); await f.flush();
+  const previous = f.nodes['model-host'].querySelector('model-viewer');
+  assert.equal(previous.source, base.model3d);
+  f.dispatch('inox:configuration-updated', { productId: 'P30', variant: { id: 'large', image: '/images/products/large.jpg', model3d: '/models/large.glb' } });
+  await f.flush();
+  const changed = f.nodes['model-host'].querySelector('model-viewer');
+  assert.equal(changed.source, '/models/large.glb');
+  assert.equal(changed.getAttribute('poster'), '/images/products/large.jpg');
+  assert.equal(f.nodes['photo-options'].children.length, 1);
+  assert.equal(f.nodes['gallery-photo'].hidden, true);
+  assert.equal(f.nodes['show-model'].getAttribute('aria-pressed'), 'true');
+  f.dispatch('inox:configuration-updated', { productId: 'P30' }); await f.flush();
+  assert.equal(f.nodes['model-host'].querySelector('model-viewer').source, base.model3d);
+  assert.equal(f.nodes['photo-options'].children.length, 2);
   f.pagehide();
 });

@@ -43,6 +43,16 @@ type FamilyDefinition = {
 
 const definitions: readonly FamilyDefinition[] = [
   {
+    // Owner-confirmed central-kitchen versions. Group listings only: each SKU
+    // retains its own approved cooktop rules, photographs and model references.
+    id: 'inox-cocinas-centrales', name: 'Cocina central configurable', label: 'Versión',
+    selectorLabel: 'Versión', cardAction: 'Elegir versión', cardSummary: '2 versiones · de 4 a 10 posiciones',
+    models: [
+      { productId: 'P05', label: 'CÓD-CHI-04', capacity: 10 },
+      { productId: 'P04', label: 'CIH-4P', capacity: 10, priority: 1 },
+    ],
+  },
+  {
     // Owner-confirmed equivalent base sink: the drainers are an additional option.
     // Keep both original products, models and routes for their respective setup.
     id: 'inox-lavadero-dos-pozas', name: 'Lavadero de 2 pozas', label: 'Adicional de escurridor',
@@ -50,6 +60,16 @@ const definitions: readonly FamilyDefinition[] = [
     models: [
       { productId: 'P26', label: 'Sin escurridor', capacity: 2 },
       { productId: 'P25', label: 'Con escurridor (vasos/platos/cubiertos)', capacity: 2, priority: 1 },
+    ],
+  },
+  {
+    // Both original blender designs are owner-confirmed variations. The source
+    // lists available capacities per design, not one exact volume for each GLB.
+    id: 'inox-licuadoras-industriales', name: 'Licuadora industrial', label: 'Modelo',
+    selectorLabel: 'Variación', cardAction: 'Elegir variación', cardSummary: '2 modelos · capacidades de 10 a 25 L',
+    models: [
+      { productId: 'P31', label: 'Modelo con base', capacity: 20 },
+      { productId: 'P30', label: 'Modelo industrial', capacity: 25 },
     ],
   },
   {

@@ -13,7 +13,7 @@ from django.views.decorators.http import require_safe
 from security.passkeys import is_owner
 
 from .audit import TRACKED_MODELS, audit_context
-from .forms import GalleryInlineFormSet, ProductAdminForm, ProductAdditionalForm, ProductImageForm, ProductVariantForm, persist_uploads
+from .forms import GalleryInlineFormSet, VariantInlineFormSet, ProductAdminForm, ProductAdditionalForm, ProductImageForm, ProductVariantForm, persist_uploads
 from .models import AuditLog, BusinessSettings, Contact, MediaAsset, Product, ProductAdditional, ProductImage, ProductVariant
 from .serializers import catalog_product_queryset, public_catalog_data, public_product
 
@@ -46,20 +46,32 @@ class AuditedAdmin(admin.ModelAdmin):
 class ProductVariantInline(admin.StackedInline):
     model = ProductVariant
     form = ProductVariantForm
+    formset = VariantInlineFormSet
     extra = 0
+    max_num = 100
     fieldsets = (
         (None, {"fields": ("name", "manufacturing_code")}),
         ("Precio y disponibilidad", {"fields": (("price", "cost"), "availability")}),
-        ("Modelo y ficha de esta variación", {"fields": ("model_upload", "technical_upload", "current_files")}),
-        ("Reutilizar archivos guardados", {"fields": ("model_asset", "technical_asset"), "classes": ("collapse",)}),
+        ("Foto, modelo y ficha de esta variación", {"fields": ("image_upload", "image_current", "model_upload", "technical_upload", "current_files")}),
+        ("Reutilizar archivos guardados", {"fields": ("image_asset", "model_asset", "technical_asset"), "classes": ("collapse",)}),
         ("Puertas y acabados del 3D", {"fields": ("material_variant", "door_animation"), "classes": ("collapse",)}),
         ("Visibilidad", {"fields": (("is_active", "order"),)}),
     )
-    readonly_fields = ("current_files",)
-    autocomplete_fields = ("model_asset", "technical_asset")
+    readonly_fields = ("image_current", "current_files")
+    autocomplete_fields = ("image_asset", "model_asset", "technical_asset")
     classes = ("inox-step", "inox-step-variants")
     verbose_name = "variación"
     verbose_name_plural = "Variaciones (opcional)"
+
+    def get_max_num(self, request, obj=None, **kwargs):
+        return max(self.max_num, obj.variants.count()) if obj and obj.pk else self.max_num
+
+    @admin.display(description="Foto guardada")
+    def image_current(self, obj):
+        if not obj.image_asset_id:
+            return "Sin foto propia: usará la imagen principal del equipo."
+        url = reverse("admin:catalog_media_download", args=(obj.image_asset_id,))
+        return format_html('<a href="{}" target="_blank" rel="noopener"><img src="{}" alt="Foto guardada de la variación" loading="lazy" style="max-width:160px;max-height:120px;object-fit:contain;display:block">Abrir foto guardada</a>', url, url)
 
     @admin.display(description="Archivos guardados")
     def current_files(self, obj):
@@ -203,7 +215,7 @@ class ProductAdmin(AuditedAdmin):
             if asset:
                 item[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
         for variant_data, variant in zip(item["variants"], product.variants.all()):
-            for field, asset in (("model3d", variant.model_asset), ("technicalSheet", variant.technical_asset)):
+            for field, asset in (("image", variant.image_asset), ("model3d", variant.model_asset), ("technicalSheet", variant.technical_asset)):
                 if asset:
                     variant_data[field] = reverse("admin:catalog_media_download", args=(asset.pk,))
         item["gallery"] = [reverse("admin:catalog_media_download", args=(image.asset_id,)) if image.asset_id else image.url for image in product.gallery_images.all()]

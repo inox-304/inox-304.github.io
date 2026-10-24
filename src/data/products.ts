@@ -69,14 +69,17 @@ export const products: Product[] = [
   {
     "id": "P03",
     "slug": "cocina-industrial-de-3-parrillas",
-    "name": "Cocina industrial de 3 parrillas (CÓD-CIF-03)",
+    "name": "Cocina lineal configurable (CÓD-CIF-03)",
     "category": "linea-caliente",
-    "summary": "Cocina de tres quemadores con superficie amplia de cocción y repisa inferior. Visualización 3D aproximada a partir de fotografías; proporciones ilustrativas, medidas finales a confirmar.",
+    "supplyType": "manufactured",
+    "equipmentFamily": "cocinas",
+    "summary": "Elige de una a cinco hornillas en una sola fila y sustituye las que necesites por quemadores wok. La fotografía muestra la versión de tres quemadores con repisa inferior. Configura base abierta o cerrada y patas o ruedas; visualización 3D ilustrativa, medidas y fabricación a confirmar.",
     "features": [
       "Acero inoxidable",
-      "3 quemadores de alta potencia",
-      "Repisa inferior",
-      "Ideal para restaurantes, cafeterías y cocinas profesionales"
+      "1 a 5 posiciones de cocción en una sola fila",
+      "Hornilla normal o quemador wok según la selección",
+      "Base abierta o cerrada; patas o ruedas según la selección",
+      "La fotografía muestra la versión de tres quemadores"
     ],
     "image": "/images/products/cocina-industrial-de-3-parrillas.webp",
     "featured": false,
@@ -1269,6 +1272,7 @@ export const products: Product[] = [
   },
   {
     "id": "ILUMI-BIT-270",
+    "visible": false,
     "slug": "ilumi-bit-270",
     "name": "Batidora de inmersión ILUMI BIT-270 · 270 W",
     "category": "linea-neutra",
@@ -1296,6 +1300,7 @@ export const products: Product[] = [
   },
   {
     "id": "ILUMI-BIT-350",
+    "visible": false,
     "slug": "ilumi-bit-350",
     "name": "Batidora de inmersión ILUMI BIT-350 · 350 W",
     "category": "linea-neutra",
@@ -1323,6 +1328,7 @@ export const products: Product[] = [
   },
   {
     "id": "ILUMI-BIT-500",
+    "visible": false,
     "slug": "ilumi-bit-500",
     "name": "Batidora de inmersión ILUMI BIT-500 · 500 W",
     "category": "linea-neutra",
@@ -1350,6 +1356,7 @@ export const products: Product[] = [
   },
   {
     "id": "ILUMI-BIT-750",
+    "visible": false,
     "slug": "ilumi-bit-750",
     "name": "Batidora de inmersión ILUMI BIT-750 · 750 W",
     "category": "linea-neutra",

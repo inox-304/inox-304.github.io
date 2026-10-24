@@ -58,7 +58,7 @@ export function parsePublicCatalog(input: unknown, options: { preview?: boolean 
     if (item.visible !== true) throw new Error('Unpublished catalog product');
     const variants = list(item.variants ?? [], 100).map(value => {
       const variant = record(value);
-      return { id: identifier(variant.id), name: string(variant.name, 250), price: amount(variant.price), availability: string(variant.availability ?? '', 250), model3d: asset(variant.model3d, modelUrl), technicalSheet: asset(variant.technicalSheet, documentUrl), materialVariant: string(variant.materialVariant ?? '', 120), doorAnimation: string(variant.doorAnimation ?? '', 120) };
+      return { id: identifier(variant.id), name: string(variant.name, 250), price: amount(variant.price), availability: string(variant.availability ?? '', 250), image: asset(variant.image, imageUrl), model3d: asset(variant.model3d, modelUrl), technicalSheet: asset(variant.technicalSheet, documentUrl), materialVariant: string(variant.materialVariant ?? '', 120), doorAnimation: string(variant.doorAnimation ?? '', 120) };
     });
     const additionalCharges = list(item.additionalCharges ?? [], 100).map(value => {
       const charge = record(value);

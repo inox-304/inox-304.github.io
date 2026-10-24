@@ -197,7 +197,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       element.setAttribute('camera-orbit', '35deg 72deg 120%');
       element.setAttribute('min-camera-orbit', 'auto 10deg auto');
       element.setAttribute('max-camera-orbit', 'auto 90deg 140%');
-      const poster = imageUrl(product.modelPoster || product.image);
+      const poster = imageUrl(selectedVariant?.image || product.modelPoster || product.image);
       if (poster) element.setAttribute('poster', withBase(poster));
       element.addEventListener('load', () => {
         if (request !== revision) return;
@@ -213,23 +213,30 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       element.src = withBase(model);
     } catch (error) { console.warn('INOX 360: viewer initialization failed.', error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error'); failed(); }
   }
-  function update(next: MediaProduct | null) {
-    const wasOpen = button.getAttribute('aria-pressed') === 'true';
-    if (product?.id !== next?.id) interaction = null;
-    resetViewer(); message(); product = next; selectedPhoto = 0;
+  function updatePhotos() {
+    selectedPhoto = 0;
     galleryImage.onload = null; galleryImage.onerror = null; galleryImage.removeAttribute('src'); gallery.hidden = true;
-    sources = next ? [...new Set([next.image, ...(next.gallery || [])].map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9) : [];
-    const variantSelect = document.querySelector<HTMLSelectElement>('[data-product-variant]');
-    selectedVariant = next?.variants?.find(item => item.id === variantSelect?.value);
-    const model = next ? modelUrl(selectedVariant?.model3d || next.model3d || '') : '';
+    // A version with its own photo must not show the base version's gallery.
+    const images = selectedVariant?.image ? [selectedVariant.image] : product ? [product.image, ...(product.gallery || [])] : [];
+    sources = [...new Set(images.map(imageUrl).filter(Boolean).map(value => withBase(value)))].slice(0, 9);
+    const model = product ? modelUrl(selectedVariant?.model3d || product.model3d || '') : '';
     button.hidden = !model; toolbar.hidden = !model && sources.length < 2;
     photos.replaceChildren();
     if (!toolbar.hidden) sources.forEach((_source, index) => {
       const photo = document.createElement('button');
       photo.type = 'button'; photo.className = 'product-view-button'; photo.textContent = index === 0 ? 'Foto principal' : `Vista ${index + 1}`;
-      photo.setAttribute('aria-pressed', String(index === 0));
+      photo.setAttribute('aria-pressed', String(index === 0 && button.getAttribute('aria-pressed') !== 'true'));
       photo.addEventListener('click', () => selectPhoto(index)); photos.append(photo);
     });
+  }
+  function update(next: MediaProduct | null) {
+    const wasOpen = button.getAttribute('aria-pressed') === 'true';
+    if (product?.id !== next?.id) interaction = null;
+    resetViewer(); message(); product = next;
+    const variantSelect = document.querySelector<HTMLSelectElement>('[data-product-variant]');
+    selectedVariant = next?.variants?.find(item => item.id === variantSelect?.value);
+    updatePhotos();
+    const model = next ? modelUrl(selectedVariant?.model3d || next.model3d || '') : '';
     // A capacity change keeps the chosen view, while keyboard focus stays on its selector.
     if (wasOpen && model) void showModel(false);
   }
@@ -241,14 +248,19 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   document.addEventListener('inox:configuration-updated', event => {
     const detail = (event as CustomEvent<{ productId: string; variant?: typeof selectedVariant }>).detail;
     if (!product || product.id !== detail.productId) return;
-    const wasOpen = !!viewer || !!modular;
+    const wasOpen = button.getAttribute('aria-pressed') === 'true';
     const oldModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     selectedVariant = detail.variant;
     if (selectedVariant) interaction = null;
+    updatePhotos();
     const nextModel = modelUrl(selectedVariant?.model3d || product.model3d || '');
     button.hidden = !nextModel; toolbar.hidden = !nextModel && sources.length < 2;
     if (oldModel !== nextModel || modular || modularLoading) { resetViewer(); if (wasOpen && nextModel) void showModel(false); }
-    else configureViewer();
+    else {
+      const poster = imageUrl(selectedVariant?.image || product.modelPoster || product.image);
+      if (viewer && poster) viewer.setAttribute('poster', withBase(poster));
+      configureViewer();
+    }
   });
   document.addEventListener('inox:cooktop-updated', event => {
     const detail = (event as CustomEvent<{ productId: string; interactive: boolean }>).detail;

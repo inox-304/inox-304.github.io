@@ -147,11 +147,12 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   setText('[data-product-caption]', category(product).toUpperCase(), detail);
   const stage = detail.querySelector<HTMLElement>('.product-detail-photo');
   const image = detail.querySelector<HTMLImageElement>('.equipment-image');
-  if (stage && image) {
-    const source = withBase(product.image);
+  const showProductPhoto = (photo: string, label: string) => {
+    if (!stage || !image) return;
+    const source = withBase(photo);
     const expectedSource = new URL(source, location.href).href;
     const applyStage = (natural?: { width: number; height: number }) => {
-      const profile = getProductStage(product.image, natural);
+      const profile = getProductStage(photo, natural);
       image.setAttribute('data-product-photo', ''); image.setAttribute('style', profile.photoStyle);
       image.width = profile.width; image.height = profile.height;
     };
@@ -163,9 +164,10 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     };
     image.onload = loaded;
     image.removeAttribute('srcset');
-    image.src = source; image.alt = product.name;
+    image.src = source; image.alt = label;
     if (image.complete) loaded();
-  }
+  };
+  showProductPhoto(product.image, product.name);
   const list = detail.querySelector('[data-product-features]');
   if (list) {
     const featureTemplate = list.firstElementChild?.cloneNode(true) as HTMLElement | undefined;
@@ -230,6 +232,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     variants.closest<HTMLElement>('[data-product-variants]')!.hidden = !product.variants?.length;
     const selectVariant = () => {
       const variant = product.variants?.find(item => item.id === variants.value);
+      showProductPhoto(variant?.image || product.image, variant ? `${product.name} · ${variant.name}` : product.name);
       const selectedPrice = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
       if (priceNode) { priceNode.textContent = selectedPrice; priceNode.hidden = !selectedPrice; }
       styleQuote(selectedPrice);

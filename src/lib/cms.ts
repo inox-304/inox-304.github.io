@@ -3,7 +3,7 @@ import { categories, normalizeCategory } from '../data/categories.ts';
 import type { CooktopConfig } from './cooktop-config.ts';
 
 export type CmsContact = { id: string; name: string; whatsapp: string; phone: string; email: string; message: string; active: boolean };
-export type CmsVariant = { id: string; name: string; price?: number; availability: string; model3d?: string; technicalSheet?: string; materialVariant?: string; doorAnimation?: string };
+export type CmsVariant = { id: string; name: string; price?: number; availability: string; image?: string; model3d?: string; technicalSheet?: string; materialVariant?: string; doorAnimation?: string };
 export type CmsAdditionalCharge = { id: string; name: string; price?: number };
 export type CmsAdditional = { id: string; name: string; description: string; price: number | null; chargeUnit: 'unit' | 'm' | 'm2' | 'custom'; unitLabel: string };
 export type ProductOrigin = { supplyType?: '' | 'manufactured' | 'distributed'; brand?: string; supplierModel?: string; equipmentFamily?: string; capacity?: string; cooktopConfig?: CooktopConfig | null };

@@ -76,7 +76,7 @@ def check_cooktop_selection(request, code):
 def public_media(request, asset_id):
     asset = get_object_or_404(MediaAsset, pk=asset_id)
     referenced = Product.objects.filter(is_active=True, is_published=True).filter(Q(image_asset_id=asset_id) | Q(technical_asset_id=asset_id) | Q(model_asset_id=asset_id) | Q(poster_asset_id=asset_id) | Q(gallery_images__asset_id=asset_id)).exists()
-    variant_reference = ProductVariant.objects.filter(product__is_active=True, product__is_published=True, is_active=True).filter(Q(model_asset_id=asset_id) | Q(technical_asset_id=asset_id)).exists()
+    variant_reference = ProductVariant.objects.filter(product__is_active=True, product__is_published=True, is_active=True).filter(Q(image_asset_id=asset_id) | Q(model_asset_id=asset_id) | Q(technical_asset_id=asset_id)).exists()
     if not referenced and not variant_reference:
         raise Http404
     return media_response(asset)

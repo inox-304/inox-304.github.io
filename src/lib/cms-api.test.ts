@@ -57,6 +57,21 @@ test('validates variant models and PDFs while excluding manufacturing and privat
   assert.throws(() => parsePublicCatalog(input));
 });
 
+test('validates optional variant photographs and protects private preview URLs', () => {
+  const input = catalog();
+  assert.equal(parsePublicCatalog(input).products[0].variants![0].image, '');
+  Object.assign(input.products[0].variants[0], { image: '/media/964ca472-b823-440e-8f09-7c32e08a0e5c/' });
+  assert.equal(parsePublicCatalog(input).products[0].variants![0].image, '/media/964ca472-b823-440e-8f09-7c32e08a0e5c/');
+  for (const image of ['javascript:alert(1)', '//evil.example/image.jpg', '/media/../admin/']) {
+    Object.assign(input.products[0].variants[0], { image });
+    assert.throws(() => parsePublicCatalog(input));
+  }
+  const image = '/admin/catalog/mediaasset/964ca472-b823-440e-8f09-7c32e08a0e5c/file/';
+  Object.assign(input.products[0].variants[0], { image });
+  assert.throws(() => parsePublicCatalog(input));
+  assert.equal(parsePublicCatalog(input, { preview: true }).products[0].variants![0].image, image);
+});
+
 test('accepts opaque UUID media and preserves natural proportions without old crop bounds', () => {
   const asset = '/media/964ca472-b823-440e-8f09-7c32e08a0e5c/';
   const input = catalog();

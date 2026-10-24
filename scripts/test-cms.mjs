@@ -126,7 +126,7 @@ test('project deployment keeps stable and new CMS product links under its base e
   assert.equal(cmsProductRoute({id:'P99'},routes,'/'),'/equipo/?id=P99');
 });
 
-test('bundled publication hides only the retired three SKUs while retaining every record and asset', () => {
+test('bundled publication hides only the seven retired SKUs while retaining every record and asset', () => {
   const directory = mkdtempSync(join(tmpdir(), 'inox-publication-test-'));
   try {
     const result = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
@@ -134,13 +134,13 @@ test('bundled publication hides only the retired three SKUs while retaining ever
       const { visibleProducts, catalogProducts, featuredProducts } = await import(${JSON.stringify(new URL('../src/data/catalog.ts', import.meta.url).href)});
       console.log(JSON.stringify({ products, visible: visibleProducts.map(p => p.id), cards: catalogProducts.map(p => p.id), featured: featuredProducts.map(p => p.id) }));
     `], { cwd: directory, encoding: 'utf8' }));
-    const hidden = ['P19', 'P21', 'P22'];
+    const hidden = ['P19', 'P21', 'P22', 'ILUMI-BIT-270', 'ILUMI-BIT-350', 'ILUMI-BIT-500', 'ILUMI-BIT-750'];
     assert.equal(result.products.length, 61);
     assert.deepEqual(result.products.filter(product => product.visible === false).map(product => product.id), hidden);
     assert.deepEqual(result.visible, result.products.filter(product => !hidden.includes(product.id)).map(product => product.id));
-    assert.equal(result.visible.length, 58); assert.equal(result.cards.length, 39);
+    assert.equal(result.visible.length, 54); assert.equal(result.cards.length, 36);
     assert.ok(result.cards.includes('INOX-COC-EMP'));
-    assert.equal(result.visible.filter(id => id.startsWith('ILUMI-')).length, 28);
+    assert.equal(result.visible.filter(id => id.startsWith('ILUMI-')).length, 24);
     assert.ok(result.visible.includes('P32'));
     for (const id of hidden) {
       assert.ok(!result.cards.includes(id)); assert.ok(!result.featured.includes(id));

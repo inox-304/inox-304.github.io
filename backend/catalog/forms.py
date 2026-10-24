@@ -100,21 +100,23 @@ class ProductAdditionalForm(forms.ModelForm):
 
 
 class ProductVariantForm(forms.ModelForm):
+    image_upload = forms.FileField(label="Subir foto de esta variación", required=False, widget=forms.FileInput(attrs={"accept": ".jpg,.jpeg,.png,.webp,.avif"}), help_text="Imagen · hasta 8 MB. Sin foto propia, usa la imagen principal del equipo.")
     model_upload = forms.FileField(label="Subir 3D de esta variación", required=False, widget=forms.FileInput(attrs={"accept": ".glb"}), help_text="GLB · hasta 8 MB. Opcional: sin archivo propio, usa el modelo principal.")
     technical_upload = forms.FileField(label="Subir ficha de esta variación", required=False, widget=forms.FileInput(attrs={"accept": ".pdf"}), help_text="PDF · hasta 8 MB. Sin ficha propia, usa la del equipo.")
 
     class Meta:
         model = ProductVariant
         fields = "__all__"
-        labels = {"name": "Nombre de la variación"}
-        help_texts = {"name": "En fabricación propia: gas, eléctrica o tamaño. En productos distribuidos: solo modelos, capacidades y opciones confirmados por el fabricante.",
+        labels = {"name": "Capacidad, tamaño o nombre de la variación"}
+        help_texts = {"name": "Escribe una opción completa con su unidad o referencia. Sirve para cualquier equipo. En productos distribuidos, ofrece solo capacidades y modelos confirmados por el fabricante.",
+                      "is_active": "Actívala cuando hayas revisado su foto, modelo, ficha y disponibilidad. Inactiva: se conserva fuera del catálogo.",
                       "material_variant": "Elige un acabado de los que muestra el archivo al subirlo. Si no tiene acabados, déjalo vacío.",
                       "cost": "Referencia manual privada. El costo de fabricación se calcula por su código en la hoja."}
 
     def clean(self):
         data = super().clean()
         self.instance._prepared_uploads = {}
-        for field, target, kind in (("model_upload", "model_asset", "glb"), ("technical_upload", "technical_asset", "pdf")):
+        for field, target, kind in (("image_upload", "image_asset", "image"), ("model_upload", "model_asset", "glb"), ("technical_upload", "technical_asset", "pdf")):
             if data.get(field):
                 try:
                     cleaned, mime = clean_upload(data[field], kind)
@@ -122,6 +124,21 @@ class ProductVariantForm(forms.ModelForm):
                 except ValidationError as exc:
                     self.add_error(field, exc)
         return data
+
+
+class VariantInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        remaining = [form for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")]
+        # Legacy rows remain editable and visible to the owner; do not truncate
+        # them when introducing the limit. Only deletion can reduce that total.
+        limit = max(100, self.get_queryset().count())
+        if len(remaining) > limit:
+            raise ValidationError("Se permiten hasta 100 variaciones por equipo. Revisa las filas antes de añadir más.")
+        if sum(bool(form.cleaned_data.get("is_active")) for form in remaining) > 100:
+            raise ValidationError("Solo puedes activar hasta 100 variaciones por equipo. Las demás se conservan inactivas.")
 
 
 class ProductImageForm(forms.ModelForm):

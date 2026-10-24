@@ -8,7 +8,7 @@
   const steps = [
     { id: 'details', title: 'Datos del equipo', description: 'Ponle un nombre, elige su línea y describe qué lo hace diferente.' },
     { id: 'media', title: 'Fotos y archivos', description: 'Selecciona los archivos que tengas listos. Puedes añadir o reemplazar los demás más adelante.' },
-    { id: 'variants', title: 'Variaciones', description: 'Añade las versiones que ofrecerás de este equipo. Si todavía no las tienes, continúa sin añadir ninguna.' },
+    { id: 'variants', title: 'Variaciones', description: 'Prepara capacidades, tamaños o versiones completas de este equipo. Cada opción puede cambiar su foto, modelo 3D y ficha. Activa solo las opciones revisadas.' },
     { id: 'additionals', title: 'Adicionales', description: 'Añade las opciones que el cliente puede solicitar con este equipo. Cada una puede tener su tarifa por unidad o medida, o quedar a cotizar. Los costos internos son privados; la ubicación en el modelo 3D se definirá con tus diseños.' },
     { id: 'configurator', title: 'Configurador', description: 'Define las posiciones, energías y módulos compatibles de esta cocina. Puedes conservarlo deshabilitado para revisarlo antes de ofrecerlo.' },
     { id: 'pricing', title: 'Precio', description: 'Define cómo se cobra este equipo y si mostrarás su precio al público.' },
@@ -136,6 +136,10 @@
       const prefix = input.name.slice(0, -'upload'.length);
       addUploadCard(input, { input: input.name, asset: `${prefix}asset`, url: `${prefix}url`, image: true });
     });
+    form.querySelectorAll('input[type="file"][name^="variants-"][name$="-image_upload"]').forEach(input => {
+      const prefix = input.name.slice(0, -'image_upload'.length);
+      addUploadCard(input, { input: input.name, asset: `${prefix}image_asset`, url: '', image: true });
+    });
     updateUploadCards();
   }
 
@@ -150,6 +154,9 @@
       if (input.name.endsWith('-upload')) {
         const prefix = input.name.slice(0, -'upload'.length);
         card.field = { ...card.field, input: input.name, asset: `${prefix}asset`, url: `${prefix}url` };
+      } else if (input.name.startsWith('variants-') && input.name.endsWith('-image_upload')) {
+        const prefix = input.name.slice(0, -'image_upload'.length);
+        card.field = { ...card.field, input: input.name, asset: `${prefix}image_asset`, url: '' };
       }
       const status = mediaState(card.field);
       if (card.status.textContent !== status.text) card.status.textContent = status.text;

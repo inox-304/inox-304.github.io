@@ -3,12 +3,13 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'inox/product-editor.css' %}?v=4">
 {% endblock %}
 
 {% block extrahead %}
   {{ block.super }}
-  <script defer src="{% static 'inox/product-editor.js' %}?v=3"></script>
+  <script defer src="{% static 'inox/product-editor.js' %}?v=4"></script>
+  <script defer src="{% static 'inox/variant-batch.js' %}?v=1"></script>
   <script defer src="{% static 'inox/model-inspector.js' %}"></script>
 {% endblock %}
 
@@ -45,7 +46,18 @@
       <p id="inox-step-progress" role="status" aria-live="polite"></p>
     </div>
   </div>
-  <aside class="inox-editor-notice inox-step inox-step-variants">{% if original.supply_type == 'distributed' %}Agrupa solo versiones confirmadas por el fabricante. Cada capacidad o modelo puede tener su propia ficha y GLB; no uses el código de fabricación para una referencia de compra.{% else %}En fabricación propia, una variación cambia el equipo completo: gas / eléctrica, tamaño o refrigeración. Puedes asignarle su propio GLB, PDF y código de fabricación. Su receta reemplaza la principal. En productos distribuidos, registra únicamente versiones oficiales del fabricante.{% endif %}</aside>
+  <section class="inox-editor-notice inox-step inox-step-variants">
+    <p>Las variaciones sirven para cualquier equipo: capacidades, litros, tamaños o versiones completas. Tú decides cuáles ofrecer; cada opción puede tener su propia foto, modelo 3D, ficha, precio y disponibilidad.</p>
+    <p>{% if original.supply_type == 'distributed' %}Agrupa solo versiones confirmadas por el fabricante. No uses el código de fabricación para una referencia de compra.{% else %}En fabricación propia, el código de una variación identifica su receta completa y reemplaza la receta principal. Los módulos que se combinan sobre una cocina se definen en Configurador. Para un carrito, puedes preparar sus versiones completas con sus archivos propios; la combinación visual de piezas requiere su modelo modular.{% endif %}</p>
+    <div class="inox-variant-batch" data-inox-variant-batch hidden>
+      <h3>Preparar varias opciones</h3>
+      <label for="inox-variant-names">Un nombre por línea, con su capacidad o medida cuando corresponda</label>
+      <textarea id="inox-variant-names" data-inox-variant-names rows="4" maxlength="6000" aria-describedby="inox-variant-help" placeholder="Escribe únicamente las opciones que has confirmado"></textarea>
+      <p id="inox-variant-help">Hasta 20 opciones por lote y 100 por equipo. Se preparan inactivas para que revises sus archivos y datos antes de ofrecerlas. Después pulsa Guardar para conservarlas.</p>
+      <button type="button" class="button" data-inox-variant-create>Preparar variaciones</button>
+      <p data-inox-variant-status role="status" aria-live="polite"></p>
+    </div>
+  </section>
   <aside class="inox-editor-notice inox-step inox-step-additionals">{% if original.supply_type == 'distributed' %}Añade únicamente accesorios u opciones compatibles confirmados por el fabricante. No prometas cambios de medidas o componentes del equipo. Los datos existentes se conservan.{% else %}Agrega aquí accesorios comerciales independientes, como una repisa adicional. En las cocinas, los módulos que sustituyen hornillas y las opciones de horno, estructura, patas o ruedas, cubierta y medidas se definen en Configurador. El código de fabricación de cada adicional permite definir sus componentes y trabajo. La geometría combinada del 3D requiere modelos preparados.{% endif %}</aside>
   <noscript><p class="inox-editor-notice">Todos los apartados se muestran a continuación. Los botones de guardar funcionan sin JavaScript.</p></noscript>
 {% endblock %}

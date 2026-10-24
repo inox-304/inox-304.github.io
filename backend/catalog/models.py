@@ -215,6 +215,7 @@ class ProductVariant(ValidatedModel):
     product = models.ForeignKey(Product, related_name="variants", on_delete=models.CASCADE)
     name = models.CharField("variante / tamaño", max_length=180)
     manufacturing_code = models.CharField("código de fabricación", max_length=64, blank=True, validators=[CODE_VALIDATOR], help_text="Código de esta configuración completa en Inventario y Recetas, por ejemplo EQ-001-GAS. Vacío: consumo aún por definir.")
+    image_asset = models.ForeignKey(MediaAsset, related_name="variant_images", null=True, blank=True, on_delete=models.PROTECT, verbose_name="foto de esta variación", limit_choices_to={"kind": "image"})
     model_asset = models.ForeignKey(MediaAsset, related_name="variant_models", null=True, blank=True, on_delete=models.PROTECT, verbose_name="modelo de esta variación", limit_choices_to={"kind": "glb"})
     technical_asset = models.ForeignKey(MediaAsset, related_name="variant_documents", null=True, blank=True, on_delete=models.PROTECT, verbose_name="ficha de esta variación", limit_choices_to={"kind": "pdf"})
     material_variant = models.CharField("acabado en el GLB", max_length=120, blank=True, help_text="Nombre exacto del acabado KHR_materials_variants. No cambia la geometría.")
@@ -238,7 +239,7 @@ class ProductVariant(ValidatedModel):
     def clean(self):
         super().clean()
         errors = {}
-        for field, kind in (("model_asset", "glb"), ("technical_asset", "pdf")):
+        for field, kind in (("image_asset", "image"), ("model_asset", "glb"), ("technical_asset", "pdf")):
             asset = getattr(self, field, None)
             if asset and asset.kind != kind:
                 errors[field] = "El tipo de archivo no corresponde."

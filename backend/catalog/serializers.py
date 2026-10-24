@@ -5,7 +5,7 @@ from .cooktop import CooktopValidationError, validate_product_cooktop_config
 
 
 def catalog_product_queryset():
-    return Product.objects.select_related("contact", "image_asset", "technical_asset", "model_asset", "poster_asset").prefetch_related(Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).select_related("model_asset", "technical_asset")), Prefetch("additionals", queryset=ProductAdditional.objects.filter(is_active=True)), Prefetch("gallery_images", queryset=ProductImage.objects.select_related("asset")))
+    return Product.objects.select_related("contact", "image_asset", "technical_asset", "model_asset", "poster_asset").prefetch_related(Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).select_related("image_asset", "model_asset", "technical_asset")), Prefetch("additionals", queryset=ProductAdditional.objects.filter(is_active=True)), Prefetch("gallery_images", queryset=ProductImage.objects.select_related("asset")))
 
 
 def public_product_queryset():
@@ -45,6 +45,7 @@ def public_product(product, *, preview=False):
         "gallery": [item.public_url for item in product.gallery_images.all()],
         "chargeUnit": product.charge_unit, "unitLabel": product.unit_label, "availability": product.availability,
         "variants": [{"id": str(variant.pk), "name": variant.name, "price": _amount(variant.computed_price) if product.show_price else None, "availability": variant.availability,
+                      "image": variant.image_asset.public_url if variant.image_asset_id else None,
                       "model3d": variant.model_asset.public_url if variant.model_asset_id else "",
                       "technicalSheet": variant.technical_asset.public_url if variant.technical_asset_id else "",
                       "materialVariant": variant.material_variant, "doorAnimation": variant.door_animation} for variant in product.variants.all()],
