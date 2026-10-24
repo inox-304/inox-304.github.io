@@ -56,3 +56,7 @@ Instrucción de edición: conservar estructura, proporciones, vidrio, dos rejill
 dos mandos inferiores, patas y distintivo del horno; retirar elementos externos,
 sin añadir accesorios ni pedestal. El original privado permanece en el respaldo
 de trabajo y no se publica con los datos históricos del anuncio.
+
+Otra referencia revisada es el [baño maría de tres bandejas](https://www.facebook.com/photo/?fbid=673753999822127), publicado el 6 de diciembre de 2019: el anuncio lo identifica como eléctrico, con vidrio curvo. Se conserva como referencia histórica adicional; no cambia las capacidades 4/6/8/10 confirmadas para la távola ni demuestra sus medidas actuales.
+
+Su foto se limpió con la herramienta integrada de imágenes: quitar anuncio y fondo, vaciar exactamente tres bandejas, conservar gabinete, vidrio curvo, apoyos, corredera frontal y ruedas; fondo blanco sin pedestal. La edición y el original quedan en el respaldo de trabajo. Las búsquedas del perfil por «tavola», «convección» e «importado» no aportaron una ficha que confirme las opciones 5/10; esa parte sigue pendiente.

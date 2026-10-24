@@ -17,6 +17,9 @@ export const productImageBounds: Record<string, ProductImageBounds> = {
   '/images/products/horno-multiuso.webp': { width: 980, height: 1605, bounds: { x: 64, y: 17, width: 880, height: 1553 } },
   '/images/products/horno-ecologico-para-pollo-a-la-brasa.webp': { width: 1203, height: 1307, bounds: { x: 190, y: 0, width: 995, height: 1298 } },
   '/images/products/horno-pollero-ecologico.webp': { width: 1059, height: 1485, bounds: { x: 24, y: 19, width: 1017, height: 1447 } },
+  '/images/products/horno-pizza-referencia-facebook.webp': { width: 1254, height: 1254, bounds: { x: 52, y: 71, width: 1150, height: 1139 } },
+  // Keep the pale glass canopy; exclude the detached floor shadow when measuring the equipment.
+  '/images/products/tavola-config-10-gas-glass-v1.webp': { width: 960, height: 960, bounds: { x: 151, y: 173, width: 684, height: 654 } },
   '/images/products/parrilla-premium-plancha-y-parrilla-a-carbon.webp': { width: 1239, height: 1269, bounds: { x: 30, y: 49, width: 1209, height: 1191 } },
   '/images/products/parrilla-grande.webp': { width: 1335, height: 1178, bounds: { x: 39, y: 33, width: 1296, height: 1138 } },
   '/images/products/caja-china-grande.webp': { width: 1324, height: 1188, bounds: { x: 15, y: 24, width: 1309, height: 1164 } },
