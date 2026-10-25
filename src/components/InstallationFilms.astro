@@ -1,0 +1,66 @@
+---
+import { installationFilms } from '../data/installation-films';
+import { withBase } from '../lib/paths';
+import '../styles/installation-films.css';
+---
+
+<div id="trabajos-realizados" class="installation-films" aria-labelledby="installation-films-title" data-installation-films>
+  <div class="installation-films-heading">
+    <div>
+      <span class="eyebrow">HECHO POR INOX 304</span>
+      <h3 id="installation-films-title">Nuestro trabajo,<br/><span>en movimiento.</span></h3>
+    </div>
+    <p>Una mirada al equipamiento, las instalaciones y las pruebas de nuestros equipos. Elige un video para verlo de cerca.<span class="installation-films-note">Clips sin audio.</span></p>
+  </div>
+
+  <div class="installation-films-grid">
+    {installationFilms.map((film, index) => (
+      <article class:list={['installation-film', { 'installation-film-featured': index === 0 }]} data-installation-film data-film-state="idle">
+        <div class="installation-film-media" style={`--film-aspect-ratio: ${film.width} / ${film.height}`}>
+          <img class="installation-film-poster" src={withBase(film.poster)} alt="" width={film.width} height={film.height} loading="lazy" decoding="async"/>
+          <video
+            id={`installation-film-video-${film.id}`}
+            class="installation-film-video"
+            data-installation-video
+            data-video-src={withBase(film.src)}
+            preload="none"
+            playsinline
+            width={film.width}
+            height={film.height}
+            aria-label={film.title}
+            aria-describedby={`installation-film-description-${film.id}`}
+            tabindex="0"
+            hidden
+          ></video>
+          <button
+            class="installation-film-play"
+            type="button"
+            data-film-play
+            aria-controls={`installation-film-video-${film.id}`}
+            aria-label={`Reproducir video: ${film.title}`}
+            aria-describedby={`installation-film-status-${film.id}`}
+          >
+            <span class="installation-film-play-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 4.8a1 1 0 0 1 1.5-.86l11 6.35a1 1 0 0 1 0 1.73l-11 6.35A1 1 0 0 1 8 17.5Z"/></svg>
+              <span class="installation-film-spinner"></span>
+            </span>
+            <span class="installation-film-play-label" data-film-play-label>Ver video</span>
+            <span class="installation-film-duration">{film.duration}<span class="sr-only"> de duración</span></span>
+          </button>
+          <span class="installation-film-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+        </div>
+        <div class="installation-film-copy">
+          <span class="eyebrow">{film.category}</span>
+          <h4>{film.title}</h4>
+          <p id={`installation-film-description-${film.id}`}>{film.description}</p>
+          <p class="installation-film-status" id={`installation-film-status-${film.id}`} data-film-status role="status" aria-live="polite"></p>
+          <noscript><a class="text-link" href={withBase(film.src)}>Abrir video de {film.title}</a></noscript>
+        </div>
+      </article>
+    ))}
+  </div>
+</div>
+
+<script>
+  import '../scripts/installation-films';
+</script>
