@@ -12,6 +12,10 @@ ROLE_CHOICES = (
     ("catalog_inventory", "Catálogo e inventario"),
     ("catalog", "Solo catálogo"),
     ("inventory", "Solo inventario"),
+    ("crm", "Solo ventas · CRM"),
+    ("catalog_crm", "Catálogo y ventas · CRM"),
+    ("inventory_crm", "Inventario y ventas · CRM"),
+    ("catalog_inventory_crm", "Catálogo, inventario y ventas · CRM"),
 )
 
 

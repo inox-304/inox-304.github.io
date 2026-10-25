@@ -2,18 +2,25 @@
 import Layout from '../layouts/Layout.astro';
 import { withBase } from '../lib/paths';
 ---
-<Layout title="Privacidad del acceso administrativo" description="Uso de datos y permisos de Google en el panel administrativo de INOX 304." noindex>
+<Layout title="Privacidad y consultas" description="Uso de los datos de contacto y del acceso administrativo de INOX 304." noindex>
   <section class="privacy-page shell">
     <a class="back-link" href={withBase('/admin/')}>← Volver al acceso administrativo</a>
     <span class="eyebrow">INOX 304 / ACCESO ADMINISTRATIVO</span>
-    <h1>Privacidad de tu acceso.</h1>
-    <p class="intro">Cómo utiliza el panel los datos de sus cuentas autorizadas y las conexiones con Google.</p>
+    <h1>Privacidad de tus datos.</h1>
+    <p class="intro">Cómo atendemos tus consultas y protegemos el acceso administrativo.</p>
     <article class="privacy-card">
-      <p class="updated">Actualizado el 23 de octubre de 2026</p>
+      <p class="updated">Actualizado el 25 de octubre de 2026</p>
+      <section aria-labelledby="consultas-comerciales">
+        <h2 id="consultas-comerciales">Consultas comerciales y seguimiento</h2>
+        <p>Al enviar el formulario de contacto compartes con INOX 304 tu nombre, teléfono o correo, y los detalles de tu consulta. Se guardan en nuestro CRM privado para responderte, preparar una cotización y dar seguimiento a tu proyecto. El equipo autorizado puede registrar notas, responsables, fechas de contacto y el resultado de la consulta. Enviar una consulta no te inscribe automáticamente en campañas publicitarias.</p>
+        <p>Podemos guardar el canal y el nombre de campaña que acompañan tu visita para conocer cómo llegan las consultas. También contamos clics en WhatsApp de forma agregada por día y origen, sin crear perfiles de visitantes ni guardar sus mensajes. Un clic no se considera una venta. La medición del navegador respeta las señales de no seguimiento y de privacidad global cuando están disponibles.</p>
+        <p>Los datos del formulario se conservan en Neon y se procesan mediante el panel alojado en Render. El navegador puede conservar temporalmente el origen y campaña de la visita durante la sesión; no guarda el contenido de tu consulta en ese almacenamiento. Los proveedores pueden conservar registros técnicos para operar sus servicios.</p>
+        <p>Si eliges WhatsApp, continuarás en ese servicio y decidirás allí si envías el mensaje. El panel no lee automáticamente tus conversaciones de WhatsApp. Para consultar, corregir o solicitar la eliminación de tus datos, escribe a <a href="mailto:inoxweb304@gmail.com">inoxweb304@gmail.com</a>.</p>
+      </section>
       <section aria-labelledby="scope-title">
         <h2 id="scope-title">Para qué sirve el panel</h2>
         <p>INOX 304 utiliza este espacio privado para administrar su catálogo, imágenes, fichas técnicas y archivos 3D, y consultar el inventario y los consumos de fabricación. El propietario decide qué cuentas pueden entrar y qué funciones puede utilizar cada una.</p>
-        <p>Este aviso se refiere al acceso administrativo y sus conexiones con Google. La disponibilidad por Internet requiere publicar el panel en un servidor; esta página informativa no activa el servicio.</p>
+        <p>El acceso administrativo y las conexiones con Google se describen a continuación.</p>
       </section>
       <section aria-labelledby="gmail-title">
         <h2 id="gmail-title">Google: envío de códigos de seguridad</h2>
@@ -34,7 +41,7 @@ import { withBase } from '../lib/paths';
       </section>
       <section aria-labelledby="hosting-title">
         <h2 id="hosting-title">Dónde se procesa la información</h2>
-        <p>Google procesa el envío de correo y las consultas a la hoja. Para el alojamiento externo del panel se ha preparado Render para ejecutar la aplicación y Neon para conservar la base de datos y los archivos privados. El traslado a esos servicios se realiza como parte de la publicación del panel; una instalación local sigue utilizando los datos guardados en su equipo.</p>
+        <p>Google procesa el envío de correo y las consultas a la hoja. El panel publicado utiliza Render para ejecutar la aplicación y Neon para conservar la base de datos y los archivos privados.</p>
         <p>El acceso al panel se limita a las cuentas autorizadas. Los archivos de un producto solo se entregan públicamente cuando están vinculados a un producto activo y publicado; los borradores se revisan desde el acceso privado.</p>
       </section>
       <section aria-labelledby="control-title">

@@ -7,8 +7,8 @@
 {% block content_title %}
 <header class="inox-home-heading">
   <p class="inox-home-eyebrow">TU ESPACIO DE TRABAJO</p>
-  <h1>Catálogo y operación</h1>
-  <p>Presenta tus equipos y organiza lo que necesitas para fabricarlos.</p>
+  <h1>Tu negocio, en orden</h1>
+  <p>Atiende consultas, presenta tus equipos y organiza la fabricación.</p>
 </header>
 {% endblock %}
 
@@ -39,6 +39,19 @@
 </section>
 {% endif %}
 <div class="inox-home-grid">
+  {% if perms.crm.view_opportunity %}
+  <section class="inox-home-card" aria-labelledby="crm-title">
+    <div class="inox-home-card-heading"><span class="inox-home-eyebrow">CLIENTES Y SEGUIMIENTO</span></div>
+    <h2 id="crm-title">Ventas · CRM</h2>
+    <p class="inox-home-description">Cada consulta con un responsable y un siguiente paso. Entiende qué canales generan oportunidades y ventas.</p>
+    <ul class="inox-home-features">
+      <li><span>01</span><div><strong>Hoy</strong><small>A quién contactar y qué está pendiente.</small></div></li>
+      <li><span>02</span><div><strong>Oportunidades</strong><small>Del primer contacto a la entrega, con historial.</small></div></li>
+      <li><span>03</span><div><strong>Resultados</strong><small>Origen, conversión y tiempo de respuesta.</small></div></li>
+    </ul>
+    <div class="inox-home-actions"><a class="inox-home-primary" href="{% url 'crm:dashboard' %}">Abrir ventas <span aria-hidden="true">→</span></a>{% if perms.crm.add_opportunity %}<a class="inox-home-secondary" href="{% url 'crm:create' %}">+ Nueva consulta</a>{% endif %}</div>
+  </section>
+  {% endif %}
   {% if overview %}
   <section class="inox-home-card inox-home-catalog" aria-labelledby="catalog-title">
     <div class="inox-home-card-heading">

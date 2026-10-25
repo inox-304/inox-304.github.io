@@ -3,6 +3,7 @@ import { withBase } from '../lib/paths';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import CmsBridge from '../components/CmsBridge.astro';
+import CrmSignals from '../components/CrmSignals.astro';
 import '../styles/global.css';
 import '../styles/motion.css';
 import '../styles/commerce.css';
@@ -29,6 +30,7 @@ const canonical = new URL(withBase(Astro.url.pathname), Astro.site);
     <main id="main" tabindex="-1"><slot/></main>
     <Footer/>
     <CmsBridge/>
+    <CrmSignals/>
     <script>import '../scripts/motion';</script>
   </body>
 </html>

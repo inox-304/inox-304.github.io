@@ -1,0 +1,16 @@
+<article class="crm-lead" data-stage="{{ lead.stage }}">
+  <div class="crm-lead-top"><span class="crm-code">{{ lead.code }}</span><span class="crm-source">{{ lead.get_source_display }}</span></div>
+  <h3><a href="{% url 'crm:detail' lead.pk %}">{{ lead.name }}</a></h3>
+  {% if lead.company %}<p class="crm-company">{{ lead.company }}</p>{% endif %}
+  <p class="crm-interest">{{ lead.interest|truncatechars:115 }}</p>
+  {% if lead.product_code %}<span class="crm-product-code">{{ lead.product_code }}</span>{% endif %}
+  <div class="crm-lead-meta">
+    <span>{% if lead.assignee %}{{ lead.assignee.get_short_name|default:lead.assignee.email|default:lead.assignee.username }}{% else %}<span class="crm-muted">Sin responsable</span>{% endif %}</span>
+    {% if lead.quote_amount is not None %}<strong>{{ lead.currency }} {{ lead.quote_amount|floatformat:2 }}</strong>{% endif %}
+  </div>
+  <div class="crm-followup{% if lead.is_overdue %} crm-followup-overdue{% endif %}">
+    <span class="crm-dot" aria-hidden="true"></span>
+    {% if lead.next_followup %}<span>{% if lead.is_overdue %}Vencido · {% endif %}{{ lead.next_followup|date:"d M · H:i" }}</span>{% else %}<span>Sin próximo contacto</span>{% endif %}
+  </div>
+  <a class="crm-card-link" href="{% url 'crm:detail' lead.pk %}">Abrir ficha <span aria-hidden="true">↗</span></a>
+</article>

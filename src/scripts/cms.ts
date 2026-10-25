@@ -128,7 +128,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     if (unavailable) unavailable.hidden = false;
     if (grid) grid.hidden = true;
     if (related) related.hidden = true;
-    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => { anchor.removeAttribute('href'); anchor.hidden = true; });
+    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote],[data-product-inquiry]').forEach(anchor => { anchor.removeAttribute('href'); anchor.hidden = true; });
     document.title = `Equipo no disponible | ${data.settings.empresa}`;
     detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', 'null');
     document.dispatchEvent(new CustomEvent('inox:product-updated', { detail: { product: null } }));
@@ -254,6 +254,11 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     const variant = product.variants?.find(item => item.id === variants?.value);
     const configuration = family?.selectorLabel ? family.members.find(member => member.product.id === product.id)?.label : '';
     const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}\n${new URL(route(product), location.origin).href}`;
+    detail.querySelectorAll<HTMLAnchorElement>('[data-product-inquiry]').forEach(anchor => {
+      const selected = `${product.name}${variant ? ` · ${variant.name}` : ''}${configuration ? ` · ${configuration}` : ''}${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}`;
+      anchor.href = withBase('/contacto/') + '?' + new URLSearchParams({ product_code: product.id, configuration: selected.slice(0, 4000) });
+      anchor.hidden = false;
+    });
     detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
       anchor.hidden = !contact;
       if (contact) { anchor.href = contactUrl(contact, message); anchor.dataset.contact = contact.id; }
@@ -437,12 +442,16 @@ function updateContacts(data: CmsData) {
   const form = document.querySelector<HTMLFormElement>('#quote-form');
   if (form) {
     const fallback = document.querySelector<HTMLAnchorElement>('#quote-fallback');
-    if (fallback) { fallback.hidden = true; fallback.removeAttribute('href'); }
+    if (fallback && !form.hasAttribute('data-crm-form')) { fallback.hidden = true; fallback.removeAttribute('href'); }
     const contact = resolveContact(data, data.settings.contacto_formulario);
     form.dataset.whatsapp = contact?.whatsapp || ''; form.dataset.contactMessage = contact?.message || `Hola ${data.settings.empresa}`;
     form.dataset.company = data.settings.empresa;
-    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]'); if (submit) submit.disabled = !contact;
-    const status = document.querySelector<HTMLElement>('#form-status'); if (status) status.textContent = contact ? '' : 'Por el momento no hay un contacto disponible para esta consulta.';
+    if (form.hasAttribute('data-crm-form')) {
+      form.dispatchEvent(new CustomEvent('inox:contact-updated'));
+    } else {
+      const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]'); if (submit) submit.disabled = !contact;
+      const status = document.querySelector<HTMLElement>('#form-status'); if (status) status.textContent = contact ? '' : 'Por el momento no hay un contacto disponible para esta consulta.';
+    }
   }
 }
 function apply(data: CmsData) {

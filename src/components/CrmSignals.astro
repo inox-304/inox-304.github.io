@@ -1,0 +1,29 @@
+---
+import { apiMode } from '../data/cms-mode';
+import { crmEndpoint } from '../lib/crm-attribution';
+---
+<span id="crm-signals" data-endpoint={crmEndpoint('events', apiMode)} hidden></span>
+<script>
+  import { currentAttribution, metricsAllowed } from '../lib/crm-attribution';
+  const endpoint = document.querySelector<HTMLElement>('#crm-signals')?.dataset.endpoint;
+  if (endpoint) {
+    const attribution = currentAttribution();
+    let lastClick = 0;
+    document.addEventListener('click', event => {
+      if (!metricsAllowed(navigator) || !(event.target instanceof Element)) return;
+      const anchor = event.target.closest<HTMLAnchorElement>('a[href]');
+      if (!anchor || anchor.hasAttribute('aria-disabled')) return;
+      let url: URL;
+      try { url = new URL(anchor.href); } catch { return; }
+      if (url.protocol !== 'https:' || !['wa.me', 'api.whatsapp.com', 'web.whatsapp.com'].includes(url.hostname)) return;
+      if (Date.now() - lastClick < 2000) return;
+      lastClick = Date.now();
+      // Independent signal: never delay or intercept the actual WhatsApp link.
+      void fetch(endpoint, {
+        method: 'POST', credentials: 'omit', keepalive: true, signal: AbortSignal.timeout(4000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'click_whatsapp', source: attribution.source }),
+      }).catch(() => {});
+    });
+  }
+</script>

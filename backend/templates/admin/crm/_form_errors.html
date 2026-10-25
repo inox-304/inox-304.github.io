@@ -1,0 +1,1 @@
+{% if form.errors %}<div class="crm-alert crm-alert-error" role="alert"><strong>No se pudo guardar.</strong>{% if form.non_field_errors %}{{ form.non_field_errors }}{% else %}<p>Revisa los campos señalados y vuelve a intentarlo.</p>{% endif %}{% for hidden in form.hidden_fields %}{% if hidden.errors %}{{ hidden.errors }}{% endif %}{% endfor %}</div>{% endif %}

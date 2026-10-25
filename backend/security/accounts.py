@@ -23,7 +23,15 @@ def role_permissions():
         content_type__model="product", codename="view_inventory").values_list("pk", flat=True))
     if len(inventory) != 1:
         raise ValidationError("Falta completar la instalación de permisos del inventario.")
-    return {"catalog_inventory": allowed, "catalog": allowed - inventory, "inventory": inventory}
+    crm = set(Permission.objects.filter(content_type__app_label="crm",
+        content_type__model="opportunity", codename__in=(
+            "view_opportunity", "add_opportunity", "change_opportunity",
+        )).values_list("pk", flat=True))
+    roles = {"catalog_inventory": allowed, "catalog": allowed - inventory, "inventory": inventory}
+    if len(crm) == 3:
+        roles.update({"crm": crm, "catalog_crm": (allowed - inventory) | crm,
+            "inventory_crm": inventory | crm, "catalog_inventory_crm": allowed | crm})
+    return roles
 
 
 def effective_permissions(user):
@@ -42,7 +50,7 @@ def assign_role(user, role, roles):
     if protected_account(user) or role not in roles:
         raise ValidationError("No se puede modificar esa cuenta desde esta pantalla.")
     actual = effective_permissions(user)
-    if actual - roles["catalog_inventory"]:
+    if actual - set().union(*roles.values()):
         raise ValidationError("Esta cuenta tiene permisos especiales y requiere revisión del responsable del servidor. No se modificó su acceso.")
     if actual == roles[role] and user.is_staff:
         return False

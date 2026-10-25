@@ -52,7 +52,7 @@ CSRF_TRUSTED_ORIGINS = [PUBLIC_ORIGIN] if ENVIRONMENT == 'production' else []
 INSTALLED_APPS = [
     'config.apps.PrivateAdminConfig', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
-    'django_otp', 'django_otp.plugins.otp_totp', 'security.apps.SecurityConfig', 'catalog',
+    'django_otp', 'django_otp.plugins.otp_totp', 'security.apps.SecurityConfig', 'catalog', 'crm',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware', 'whitenoise.middleware.WhiteNoiseMiddleware',

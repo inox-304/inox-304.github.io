@@ -1,0 +1,52 @@
+{% extends "admin/crm/base.html" %}
+{% block crm_content %}
+<header class="crm-heading">
+  <div><span class="crm-eyebrow">TU EQUIPO COMERCIAL</span><h1>Ventas y seguimiento</h1><p>Cada consulta, un responsable y un siguiente paso.</p></div>
+  <div class="crm-heading-actions"><a class="crm-button crm-button-quiet" href="{% url 'crm:export_csv' %}{% if querystring %}?{{ querystring }}{% endif %}">Exportar CSV <span aria-hidden="true">↓</span></a>{% if can_add %}<a class="crm-button crm-button-primary" href="{% url 'crm:create' %}"><span aria-hidden="true">＋</span> Nueva consulta</a>{% endif %}</div>
+</header>
+<nav class="crm-tabs" aria-label="Vistas de ventas">
+  <a href="{% url 'crm:dashboard' %}?{{ querystring }}&amp;tab=today"{% if tab == 'today' %} aria-current="page"{% endif %}><span aria-hidden="true">◷</span> Hoy</a>
+  <a href="{% url 'crm:dashboard' %}?{{ querystring }}&amp;tab=pipeline"{% if tab == 'pipeline' %} aria-current="page"{% endif %}><span aria-hidden="true">▥</span> Oportunidades</a>
+  <a href="{% url 'crm:dashboard' %}?{{ querystring }}&amp;tab=metrics"{% if tab == 'metrics' %} aria-current="page"{% endif %}><span aria-hidden="true">↗</span> Resultados</a>
+</nav>
+{% if tab == 'metrics' %}
+  {% include "admin/crm/_metrics.html" %}
+{% else %}
+<section class="crm-stats" aria-label="Pendientes del equipo">
+  <a href="{% url 'crm:dashboard' %}?tab=today&amp;focus=all" class="crm-stat{% if filters.focus == 'all' %} is-selected{% endif %}"><span>Oportunidades abiertas</span><strong>{{ counts.open }}</strong><small>En proceso de venta <span aria-hidden="true">↗</span></small></a>
+  <a href="{% url 'crm:dashboard' %}?tab=today&amp;focus=overdue" class="crm-stat crm-stat-alert{% if filters.focus == 'overdue' %} is-selected{% endif %}"><span>Seguimientos vencidos</span><strong>{{ counts.overdue }}</strong><small>Para retomar primero <span aria-hidden="true">↗</span></small></a>
+  <a href="{% url 'crm:dashboard' %}?tab=today&amp;focus=today" class="crm-stat{% if filters.focus == 'today' %} is-selected{% endif %}"><span>Programados para hoy</span><strong>{{ counts.today }}</strong><small>Tu agenda del día <span aria-hidden="true">↗</span></small></a>
+  <a href="{% url 'crm:dashboard' %}?tab=today&amp;focus=unassigned" class="crm-stat{% if filters.focus == 'unassigned' %} is-selected{% endif %}"><span>Sin responsable</span><strong>{{ counts.unassigned }}</strong><small>Asigna a alguien del equipo <span aria-hidden="true">↗</span></small></a>
+</section>
+<form method="get" class="crm-filter-bar" role="search" aria-label="Buscar oportunidades">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  {% if filters.focus %}<input type="hidden" name="focus" value="{{ filters.focus }}">{% endif %}
+  <label class="crm-search"><span>Buscar consulta</span><div><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" name="q" value="{{ filters.q|default:'' }}" placeholder="Nombre, teléfono, equipo o código…" maxlength="200"></div></label>
+  <label>Etapa<select name="stage"><option value="">Todas las etapas</option>{% for value,label in stage_choices %}<option value="{{ value }}"{% if filters.stage == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Origen<select name="source"><option value="">Todos los orígenes</option>{% for value,label in source_choices %}<option value="{{ value }}"{% if filters.source == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Responsable<select name="assignee"><option value="">Todo el equipo</option><option value="me"{% if filters.assignee == 'me' %} selected{% endif %}>Mis consultas</option><option value="unassigned"{% if filters.assignee == 'unassigned' %} selected{% endif %}>Sin responsable</option>{% for person in assignees %}<option value="{{ person.pk }}"{% if filters.assignee == person.pk|stringformat:'s' %} selected{% endif %}>{{ person.get_short_name|default:person.email|default:person.username }}</option>{% endfor %}</select></label>
+  <button class="crm-button crm-button-primary" type="submit">Aplicar</button>
+  <a class="crm-reset" href="{% url 'crm:dashboard' %}?tab={{ tab }}">Limpiar</a>
+</form>
+{% if tab == 'pipeline' %}
+  <div class="crm-section-title"><div><h2>De la consulta a la entrega</h2><p>Abre una ficha para actualizar su etapa y dejar el próximo paso.</p></div><span class="crm-small-note">Desliza para ver todas las etapas →</span></div>
+  <section class="crm-pipeline" aria-label="Oportunidades por etapa" tabindex="0">
+    {% for column in stage_columns %}<section class="crm-column" data-stage="{{ column.value }}"><header><h3>{{ column.label }}</h3><span>{{ column.total }}</span></header><div class="crm-column-body">{% for lead in column.items %}{% include "admin/crm/_lead_card.html" %}{% empty %}<p class="crm-column-empty">Sin consultas en esta etapa.</p>{% endfor %}{% if column.total > 30 %}<a class="crm-button crm-button-quiet" href="{{ column.url }}">Ver las {{ column.total }} consultas</a>{% endif %}</div></section>{% endfor %}
+  </section>
+{% else %}
+  <section class="crm-panel crm-agenda">
+    <div class="crm-panel-heading"><div><span class="crm-eyebrow">SIGUIENTE PASO</span><h2>{% if filters.focus == 'overdue' %}Retoma estas conversaciones{% elif filters.focus == 'today' %}Contactos para hoy{% elif filters.focus == 'unassigned' %}Consultas por asignar{% else %}Tu agenda comercial{% endif %}</h2></div><span class="crm-count">{{ page_obj.paginator.count }} consulta{{ page_obj.paginator.count|pluralize:'s' }}</span></div>
+    {% if page_obj %}<div class="crm-agenda-head" aria-hidden="true"><span>Cliente / equipo</span><span>Responsable</span><span>Próximo contacto</span><span>Etapa</span><span>Acciones</span></div>
+    <div class="crm-agenda-list">{% for lead in page_obj %}<article class="crm-agenda-row">
+      <div class="crm-agenda-client"><a href="{% url 'crm:detail' lead.pk %}">{{ lead.name }}</a><span>{{ lead.interest|truncatechars:90 }}</span><small>{{ lead.code }}{% if lead.company %} · {{ lead.company }}{% endif %}</small></div>
+      <div class="crm-agenda-owner"><span class="crm-mobile-label">Responsable</span>{% if lead.assignee %}{{ lead.assignee.get_short_name|default:lead.assignee.email|default:lead.assignee.username }}{% else %}<span class="crm-badge crm-badge-warn">Por asignar</span>{% endif %}</div>
+      <div class="crm-agenda-date{% if lead.is_overdue %} is-overdue{% endif %}"><span class="crm-mobile-label">Próximo contacto</span>{% if lead.next_followup %}<strong>{{ lead.next_followup|date:'d M' }}</strong><span>{{ lead.next_followup|date:'H:i' }}{% if lead.is_overdue %} · Vencido{% endif %}</span>{% else %}<span class="crm-muted">Por programar</span>{% endif %}</div>
+      <div class="crm-agenda-stage"><span class="crm-badge" data-stage="{{ lead.stage }}">{{ lead.get_stage_display }}</span></div>
+      <div class="crm-row-actions"><a class="crm-button crm-button-quiet crm-button-small" href="{% url 'crm:detail' lead.pk %}">Ver ficha <span aria-hidden="true">↗</span></a>{% if lead.whatsapp_url %}<a class="crm-whatsapp-link" href="{{ lead.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp de {{ lead.name }}">WhatsApp</a>{% endif %}</div>
+    </article>{% endfor %}</div>
+    {% else %}<div class="crm-empty"><div class="crm-empty-icon" aria-hidden="true">↗</div><h3>{% if has_opportunities %}No hay consultas en esta vista{% else %}Registra tu primera consulta{% endif %}</h3><p>{% if has_opportunities %}Prueba otros filtros o abre las oportunidades del equipo.{% else %}Guarda quién te contactó, qué equipo necesita y cuándo volverás a hablarle.{% endif %}</p><div class="crm-actions"><a class="crm-button crm-button-quiet" href="{% url 'crm:dashboard' %}?tab=pipeline">Ver oportunidades</a>{% if can_add %}<a class="crm-button crm-button-primary" href="{% url 'crm:create' %}">Nueva consulta</a>{% endif %}</div></div>{% endif %}
+    {% if page_obj.paginator.num_pages > 1 %}<nav class="crm-pagination" aria-label="Páginas de consultas"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="crm-button crm-button-quiet crm-button-small" href="?{{ querystring }}&amp;page={{ page_obj.previous_page_number }}">← Anterior</a>{% endif %}{% if page_obj.has_next %}<a class="crm-button crm-button-quiet crm-button-small" href="?{{ querystring }}&amp;page={{ page_obj.next_page_number }}">Siguiente →</a>{% endif %}</div></nav>{% endif %}
+  </section>
+{% endif %}
+{% endif %}
+{% endblock %}

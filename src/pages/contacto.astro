@@ -3,29 +3,47 @@ import { withBase } from '../lib/paths';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 import { site, whatsappUrl } from '../data/site';
+import { apiMode } from '../data/cms-mode';
+import { crmEndpoint } from '../lib/crm-attribution';
 ---
 <Layout title="Conversemos sobre tu proyecto" description="Contacta con INOX 304 en Cusco. Solicita asesoría, cotiza equipamiento gastronómico o cuéntanos tu proyecto de fabricación a medida.">
   <section class="page-intro"><div class="shell"><a class="breadcrumb" href={withBase('/')}>Inicio <span>/</span> Contacto</a><span class="eyebrow">EL PRIMER PASO ES CONVERSAR</span><h1>Las grandes ideas<br/><em>empiezan aquí.</em></h1></div></section>
   <section class="section section-light contact-page"><div class="shell contact-layout"><div class="contact-info"><span class="eyebrow">ESTAMOS PARA AYUDARTE</span><h2>Cuéntanos qué<br/>tienes en mente.</h2><p>Un equipo, una cocina completa o un proyecto desde cero. Encontremos la solución para tu negocio.</p><div class="contact-method"><Icon name="whatsapp"/><div><span>ESCRÍBENOS</span><a data-cms-whatsapp href={whatsappUrl()} target="_blank" rel="noopener noreferrer"><span data-cms-phone>{site.phone ? `+51 ${site.phone}` : ''}</span></a></div></div><div class="contact-method"><Icon name="mail"/><div><span>CORREO</span><a data-cms-email href={site.email ? `mailto:${site.email}` : undefined} hidden={!site.email}>{site.email}</a></div></div><div class="contact-method"><Icon name="pin"/><div><span>VISÍTANOS</span><p><span data-business="direccion">{site.address}</span><br/><span data-business="referencia_direccion">{site.addressReference}</span></p><a class="map-link" data-cms-map href={site.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address)}` : undefined} hidden={!site.address} target="_blank" rel="noopener noreferrer">Cómo llegar <Icon name="diagonal" size={14}/></a></div></div><div class="contact-method" hidden={!site.hours} data-business-container="horarios"><div><span>HORARIOS</span><p data-business="horarios">{site.hours}</p></div></div></div>
-    <form id="quote-form" class="quote-form" data-whatsapp={site.whatsapp}><div class="form-top"><span class="eyebrow">TU PROYECTO, A TU MEDIDA</span><Icon name="diagonal" size={25}/></div><label>¿Cómo te llamas?<input name="name" autocomplete="name" placeholder="Tu nombre" required maxlength="100"/></label><label>Tu negocio o proyecto<input name="business" autocomplete="organization" placeholder="Ej. Restaurante, cafetería, hotel…" maxlength="150"/></label><label>¿Qué necesitas?<select name="need"><option>Equipamiento para mi negocio</option><option>Fabricación a medida</option><option>Un proyecto integral</option><option>Instalación o mantenimiento</option><option>Asesoría para elegir equipos</option></select></label><label>Cuéntanos un poco más<textarea name="message" rows="4" placeholder="Tipo de equipo, medidas de tu espacio, ciudad…" required maxlength="1500"></textarea></label><button class="button button-dark" type="submit" disabled={!site.whatsapp}>Continuar en WhatsApp <Icon name="whatsapp"/></button><p class="form-note">Se abrirá WhatsApp con tu consulta lista para enviar. Tú decides cuándo enviarla.</p><p id="form-status" class="form-status" role="status" aria-live="polite"></p><a id="quote-fallback" class="text-link dark-link" href={whatsappUrl()} target="_blank" rel="noopener noreferrer" hidden>Abrir mi consulta en WhatsApp <Icon/></a></form>
+    <form id="quote-form" class="quote-form" method="post" data-crm-form data-endpoint={crmEndpoint('inquiries', apiMode)} data-whatsapp={site.whatsapp}>
+      <div class="form-top"><span class="eyebrow">TU PROYECTO, A TU MEDIDA</span><Icon name="diagonal" size={25}/></div>
+      <div class="selected-project" data-crm-selection hidden><span class="eyebrow">TU SELECCIÓN</span><p data-crm-product></p><details><summary>Ver configuración solicitada</summary><p data-crm-configuration></p></details></div>
+      <input type="hidden" name="product_code"/><input type="hidden" name="configuration"/>
+      <label>¿Cómo te llamas?<input name="name" autocomplete="name" placeholder="Tu nombre" required maxlength="120"/></label>
+      <fieldset class="contact-fields"><legend>¿Dónde podemos responderte?</legend><p>Completa al menos uno: WhatsApp o correo.</p><div class="contact-pair">
+        <label>WhatsApp o teléfono<input name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+51 999 999 999" maxlength="40"/></label>
+        <label>Correo<input name="email" type="email" autocomplete="email" placeholder="tu@correo.com" maxlength="254"/></label>
+      </div></fieldset>
+      <div class="contact-pair"><label>Tu negocio <span class="optional">(opcional)</span><input name="business" autocomplete="organization" placeholder="Restaurante, cafetería, hotel…" maxlength="150"/></label><label>Ciudad <span class="optional">(opcional)</span><input name="city" autocomplete="address-level2" placeholder="¿Dónde está tu proyecto?" maxlength="100"/></label></div>
+      <label>¿Qué necesitas?<select name="need"><option>Equipamiento para mi negocio</option><option>Fabricación a medida</option><option>Un proyecto integral</option><option>Instalación o mantenimiento</option><option>Asesoría para elegir equipos</option></select></label>
+      <label>Cuéntanos un poco más<textarea name="message" rows="4" placeholder="Equipo, capacidad, medidas o ideas para tu negocio…" required maxlength="1500"></textarea></label>
+      <div class="form-honey" aria-hidden="true"><label>Deja este campo vacío<input name="website" tabindex="-1" autocomplete="off" maxlength="100"/></label></div>
+      <p class="form-note">Enviaremos estos datos a INOX 304 para atender tu consulta. <a href={withBase('/privacidad-acceso/#consultas-comerciales')}>Cómo cuidamos tus datos</a>.</p>
+      <button class="button button-dark" type="submit" disabled>Enviar solicitud <Icon name="diagonal"/></button>
+      <p id="form-status" class="form-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      <div class="contact-alternative"><span>¿Prefieres conversar ahora?</span><a id="quote-fallback" class="text-link dark-link" href={whatsappUrl()} target="_blank" rel="noopener noreferrer" hidden={!site.whatsapp}>Continuar por WhatsApp <Icon name="whatsapp"/></a></div>
+      <noscript><p>Para guardar tu solicitud activa JavaScript o escríbenos mediante los datos de contacto.</p></noscript>
+    </form>
   </div></section>
   <section class="location-strip"><div class="shell"><span class="eyebrow">CERCA DE TU PROYECTO</span><p>Cusco <span>↔</span> Lima <span>↗</span> Todo el Perú</p></div></section>
 </Layout>
-<script>
-  const form = document.querySelector<HTMLFormElement>('#quote-form');
-  form?.addEventListener('submit', event => {
-    event.preventDefault(); if (!form.reportValidity()) return;
-    const data = new FormData(form);
-    const name = String(data.get('name') || '').trim(); const message = String(data.get('message') || '').trim();
-    const status = document.querySelector<HTMLElement>('#form-status');
-    if (!name || !message) { if (status) status.textContent = 'Completa tu nombre y cuéntanos qué necesitas.'; return; }
-    const business = String(data.get('business') || '').trim();
-    const intro = form.dataset.contactMessage || `Hola ${form.dataset.company || 'INOX 304'}.`;
-    if (!form.dataset.whatsapp) { if (status) status.textContent = 'Por el momento no hay un contacto disponible para esta consulta.'; return; }
-    const text = `${intro}\nSoy ${name}.${business ? `\nMi negocio/proyecto: ${business}.` : ''}\nNecesito: ${data.get('need')}.\n\n${message}`;
-    const url = `https://wa.me/${form.dataset.whatsapp}?text=${encodeURIComponent(text)}`;
-    const fallback = document.querySelector<HTMLAnchorElement>('#quote-fallback'); if (fallback) { fallback.href = url; fallback.hidden = false; }
-    window.open(url, '_blank', 'noopener,noreferrer');
-    if (status) status.textContent = 'Tu consulta está preparada. Si WhatsApp no se abrió, usa el enlace de abajo.';
-  });
-</script>
+<script>import '../scripts/crm-contact';</script>
+<style>
+  .contact-fields{border:1px solid #d8e1e9;border-radius:8px;padding:16px;margin:0}
+  .selected-project{background:#edf3f7;border:1px solid #d7e2eb;border-radius:8px;padding:18px;font-size:13px;line-height:1.6}.selected-project p{white-space:pre-line;margin:8px 0}.selected-project summary{cursor:pointer;color:#285370}
+  .contact-fields legend{font-size:13px;font-weight:600;padding-inline:5px;color:#16344e}
+  .contact-fields p{font-size:12px;color:#617387;margin:0 0 14px}
+  .contact-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-width:0}
+  .contact-pair label{min-width:0}.optional{font-size:11px;font-weight:400;color:#718092}
+  .form-honey{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+  .form-note a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+  .contact-alternative{border-top:1px solid #d9e1eb;padding-top:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:#596e82}
+  .form-status:empty{display:none}.form-status[data-state]{padding:14px 16px;border-radius:6px;font-size:13px;line-height:1.6;margin:0}
+  .form-status[data-state="pending"]{background:#eef3f7;color:#385068}.form-status[data-state="success"]{background:#eaf6ee;color:#205c3d}.form-status[data-state="error"]{background:#fff4e7;color:#7a4b1c}
+  button:disabled{cursor:wait;opacity:.7}.quote-form:not([aria-busy]) button:disabled{cursor:default}
+  @media(max-width:620px){.contact-pair{grid-template-columns:1fr}.contact-fields{padding:12px}.contact-alternative{align-items:flex-start;flex-direction:column}}
+</style>

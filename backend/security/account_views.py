@@ -144,7 +144,7 @@ def update(request, user_id):
                 active = action == "reactivate"
                 if active and not target.is_staff:
                     raise ValidationError("Primero asigna un acceso autorizado a esta cuenta.")
-                if active and effective_permissions(target) - role_permissions()["catalog_inventory"]:
+                if active and effective_permissions(target) - set().union(*role_permissions().values()):
                     raise ValidationError("Esta cuenta tiene permisos especiales y requiere revisión del responsable del servidor antes de reactivarla.")
                 changed = target.is_active != active
                 target.is_active = active

@@ -1,0 +1,6 @@
+{% if field %}<div class="crm-field{% if wide %} crm-field-wide{% endif %}{% if field.errors %} crm-field-invalid{% endif %}"{% if field.name == 'loss_reason' or field.name == 'loss_detail' %} data-loss-field{% endif %}>
+  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="crm-required" aria-hidden="true"> *</span>{% else %}<span class="crm-optional">Opcional</span>{% endif %}</label>
+  {{ field }}
+  {% if field.help_text %}<p class="crm-field-help" id="{{ field.id_for_label }}_helptext">{{ field.help_text }}</p>{% endif %}
+  {% if field.errors %}<div class="crm-field-error" role="alert">{{ field.errors }}</div>{% endif %}
+</div>{% endif %}
