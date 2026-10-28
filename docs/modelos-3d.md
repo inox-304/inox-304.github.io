@@ -2,7 +2,7 @@
 
 El sitio ya contiene más de 20 productos. Puede almacenar muchos modelos, pero abre **solo el modelo del producto que el visitante elige**. No descarga 20 escenas al abrir el catálogo. La fotografía aparece primero y el visor y el archivo 3D se descargan al pulsar **Ver 360°**. Sin modelo asignado, ese botón no aparece.
 
-Todavía hacen falta los modelos originales de INOX: no se ha publicado ningún objeto de demostración como si fuera un equipo real. El 360° será una vista interactiva del diseño 3D, no una secuencia de fotos ni un video.
+El catálogo ya contiene modelos interactivos aproximados preparados a partir de fotografías. Los diseños originales de SketchUp se incorporan después de comprobar su fidelidad, escala y piezas móviles. El 360° utiliza geometría real, no una secuencia de fotos ni un video.
 
 ## Preparar cada equipo
 
@@ -15,7 +15,9 @@ Todavía hacen falta los modelos originales de INOX: no se ha publicado ningún 
 
 ## Asignar desde el panel
 
-Abre el producto en `/admin/` y despliega **Ficha y modelo 3D**. Sube el GLB y, opcionalmente, una portada. En la sección de galería puedes añadir hasta ocho fotos. Guarda y usa **Abrir vista previa privada**; marca **Publicado en la web** cuando esté listo.
+Abre **Catálogo → Productos → Añadir** en el panel. Completa nombre y línea; en **Fotos y archivos**, sube la imagen principal y el GLB. En **Variaciones** puedes asignar otra foto y otro GLB a cada capacidad o versión. Pulsa **Guardar y revisar**, comprueba la vista previa privada y después **Publicar en catálogo**. Un equipo nuevo queda como borrador al guardar y revisar.
+
+La web oficial consulta las publicaciones del panel, sin modificar código ni ejecutar un despliegue por cada equipo. Las fichas nuevas usan un enlace como `/equipo/?id=CODIGO`; las fichas existentes conservan sus enlaces. Abre **Ver en catálogo oficial** desde la vista previa para comprobar el resultado. Consulta [el flujo de publicación](PUBLICAR-CATALOGO.md) para los tiempos de actualización y el comportamiento ante fallos.
 
 | Campo | Uso |
 | --- | --- |

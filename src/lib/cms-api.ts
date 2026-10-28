@@ -44,11 +44,25 @@ function unique(values: string[]) {
 }
 
 /** Validate the entire public projection before changing visible content or links. */
-export function parsePublicCatalog(input: unknown, options: { preview?: boolean } = {}): CmsData {
+export function parsePublicCatalog(input: unknown, options: { preview?: boolean; mediaOrigin?: string } = {}): CmsData {
   const preview = options.preview === true;
-  const imageUrl = (value: string) => safePreviewAsset(value, safeImage, preview);
-  const modelUrl = (value: string) => safePreviewAsset(value, safeModel, preview);
-  const documentUrl = (value: string) => safePreviewAsset(value, safeTechnicalSheet, preview);
+  let mediaOrigin = '';
+  if (options.mediaOrigin && !preview) {
+    const safe = safeHttps(options.mediaOrigin);
+    if (!safe) throw new Error('Invalid catalog media origin');
+    const url = new URL(safe);
+    if (url.pathname !== '/' || url.search || url.hash) throw new Error('Invalid catalog media origin');
+    mediaOrigin = url.origin;
+  }
+  // Database files belong to the hosted panel. Bundled /images, /models and
+  // /documents remain on the static CDN so existing equipment stays fast.
+  const mediaUrl = (value: string, validate: (value: string) => string) => {
+    const safe = safePreviewAsset(value, validate, preview);
+    return safe && mediaOrigin && safe.startsWith('/media/') ? new URL(safe, mediaOrigin).href : safe;
+  };
+  const imageUrl = (value: string) => mediaUrl(value, safeImage);
+  const modelUrl = (value: string) => mediaUrl(value, safeModel);
+  const documentUrl = (value: string) => mediaUrl(value, safeTechnicalSheet);
   const data = record(input);
   const products: CmsProduct[] = list(data.products, 2000).map(value => {
     const item = record(value);

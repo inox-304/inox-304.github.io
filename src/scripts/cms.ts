@@ -14,13 +14,18 @@ import { parseCartConfig, type CartConfig } from '../lib/cart-config';
 import { cartAssetFor } from '../lib/cart-assets';
 import { startCartSync, type CartSyncStatus } from '../lib/cart-sync';
 import { renderCart } from './cart-ui';
+import { catalogEndpoint, readCatalogCache, startCatalogSync, type CatalogSyncStatus } from '../lib/catalog-sync';
 
 type Bootstrap = { mode?: 'api' | 'static'; apiUrl?: string; cooktopOrigin?: string; preview?: boolean; previewProductId?: string; routes: Record<string, string>; data: CmsData };
 const node = document.querySelector<HTMLScriptElement>('#inox-cms-bootstrap');
 let payload: Bootstrap | null = null;
 try { payload = node ? JSON.parse(node.textContent || 'null') : null; } catch { /* An invalid bootstrap is replaced by a fresh public request. */ }
 const apiMode = payload?.mode === 'api' || import.meta.env?.PUBLIC_CMS_MODE === 'api';
+const publicEndpoint = payload?.preview ? '' : catalogEndpoint(payload?.apiUrl || (apiMode ? '/api/catalog/' : ''), location.origin);
 let lastApplied = '';
+let lastDetailApplied = '';
+let confirmedThisVisit = false;
+let syncStatus: CatalogSyncStatus | undefined;
 let currentData: CmsData | undefined;
 let cooktopSync: ReturnType<typeof startCooktopSync> | undefined;
 let cartSync: ReturnType<typeof startCartSync> | undefined;
@@ -108,21 +113,39 @@ function fillCards(container: Element, products: CmsProduct[], data: CmsData) {
   container.replaceChildren(fragment);
 }
 
+function updateRelatedProducts(detail: HTMLElement, data: CmsData, product: CmsProduct) {
+  const related = detail.querySelector<HTMLElement>('.related-products');
+  if (!related) return;
+  const family = getProductFamily(product.id, data.products);
+  const familyIds = new Set(family?.members.map(member => member.product.id) || [product.id]);
+  const items = catalogFamilyProducts(visibleCmsProducts(data)).filter(item => item.category === product.category && !familyIds.has(item.id)).slice(0, 3);
+  related.hidden = items.length === 0;
+  const container = related.querySelector('.product-grid'); if (container) fillCards(container, items, data);
+}
+
 function updateDetail(data: CmsData, selectedProductId?: string) {
   const detail = document.querySelector<HTMLElement>('[data-product-detail]'); if (!detail) return;
+  const productId = selectedProductId ?? (payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '');
+  const slug = catalogSlug(location.pathname);
+  const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
+  // Updating another catalogue item must not reset the active 3D camera, doors,
+  // keyboard focus, variant or a customer's in-progress configuration.
+  const signature = JSON.stringify({ identity: product?.id || productId || slug, product: product || null, contacts: data.contacts, settings: data.settings, family: product ? getProductFamily(product.id, data.products) : null });
+  if (lastDetailApplied === signature) { if (product) updateRelatedProducts(detail, data, product); updateAvailabilityNotice(); return; }
+  lastDetailApplied = signature;
   cooktopSync?.dispose(); cooktopSync = undefined;
   cartSync?.dispose(); cartSync = undefined;
   const cartConnection = detail.querySelector<HTMLElement>('[data-cart-connection]');
   if (cartConnection) { cartConnection.hidden = true; cartConnection.replaceChildren(); }
   const connection = detail.querySelector<HTMLElement>('[data-cooktop-connection]');
   if (connection) { connection.hidden = true; connection.replaceChildren(); }
-  const productId = selectedProductId || payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '';
-  const slug = apiMode ? catalogSlug(location.pathname) : '';
-  const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
   const unavailable = detail.querySelector<HTMLElement>('[data-product-unavailable]');
   const grid = detail.querySelector<HTMLElement>('.product-detail-grid');
   const related = detail.querySelector<HTMLElement>('.related-products');
   if (!product) {
+    // Keep the requested identity after history navigation, so later polling
+    // cannot repopulate this URL with the previously displayed product.
+    detail.dataset.productDetail = productId;
     additionalSelection = { productId: '', ids: [] };
     const image = detail.querySelector<HTMLImageElement>('.equipment-image'); if (image) image.onload = null;
     if (unavailable) unavailable.hidden = false;
@@ -132,6 +155,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     document.title = `Equipo no disponible | ${data.settings.empresa}`;
     detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', 'null');
     document.dispatchEvent(new CustomEvent('inox:product-updated', { detail: { product: null } }));
+    updateAvailabilityNotice();
     return;
   }
   if (unavailable) unavailable.hidden = true;
@@ -200,7 +224,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   let cartRules: CartConfig | null = null;
   const cartRoot = detail.querySelector<HTMLElement>('[data-cart-root]');
   try { if (product.supplyType === 'manufactured' && product.category === 'linea-caliente' && product.equipmentFamily === 'carritos-comida') cartRules = parseCartConfig(product.cartConfig); } catch { /* Only validated product-specific cart options are shown. */ }
-  const syncCartAllowed = !apiMode && !!payload?.cooktopOrigin && !payload.preview && !!cartAssetFor(product.id, product.model3d);
+  const syncCartAllowed = !apiMode && !publicEndpoint && !!payload?.cooktopOrigin && !payload.preview && !!cartAssetFor(product.id, product.model3d);
   if (syncCartAllowed && verifiedCarts.has(product.id)) cartRules = verifiedCarts.get(product.id)!;
   let cartStatus: CartSyncStatus | undefined;
   let retryCart: (() => void) | undefined;
@@ -222,7 +246,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   try { if (product.supplyType === 'manufactured' && product.category === 'linea-caliente' && product.equipmentFamily === 'cocinas') cooktopRules = parseCooktopConfig(product.cooktopConfig); } catch { /* Invalid rules must never create options. */ }
   const cooktopRoot = detail.querySelector<HTMLElement>('[data-cooktop-root]');
   const cooktopCandidate = product.category === 'linea-caliente' && product.supplyType !== 'distributed' && product.equipmentFamily !== 'carritos-comida';
-  const syncAllowed = !apiMode && !!payload?.cooktopOrigin && !payload.preview && cooktopCandidate;
+  const syncAllowed = !apiMode && !publicEndpoint && !!payload?.cooktopOrigin && !payload.preview && cooktopCandidate;
   if (syncAllowed && verifiedCooktops.has(product.id)) cooktopRules = verifiedCooktops.get(product.id)!;
   let connectionState: CooktopSyncStatus | undefined;
   let retryRules: (() => void) | undefined;
@@ -395,9 +419,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     else technicalSheet.removeAttribute('href');
   }
   const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !configuredSurface && !configuredCart && !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;
-  const familyIds = new Set(family?.members.map(member => member.product.id) || [product.id]);
-  const relatedProducts = catalogFamilyProducts(visibleCmsProducts(data)).filter(item => item.category === product.category && !familyIds.has(item.id)).slice(0, 3);
-  if (related) { related.hidden = relatedProducts.length === 0; const container = related.querySelector('.product-grid'); if (container) fillCards(container, relatedProducts, data); }
+  updateRelatedProducts(detail, data, product);
   document.title = `${product.name} | ${data.settings.empresa}`;
   const description = document.querySelector<HTMLMetaElement>('meta[name="description"]'); if (description) description.content = product.summary;
   const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]'); if (canonical && !payload?.preview) canonical.href = new URL(route(product), location.origin).href;
@@ -470,50 +492,82 @@ window.addEventListener('popstate', () => {
   const id = new URLSearchParams(location.search).get('id');
   const slug = catalogSlug(location.pathname);
   const selected = currentData.products.find(product => product.visible && (id ? product.id === id : product.slug === slug));
-  if (selected) updateDetail(currentData, selected.id);
+  updateDetail(currentData, id ?? selected?.id ?? '');
 });
 
-let inFlight: AbortController | undefined;
-let revision = 0;
 let successful = false;
-function showStatus(message = '') {
+let catalogSync: ReturnType<typeof startCatalogSync<CmsData>> | undefined;
+function showStatus(message = '', retry = false) {
   const status = document.querySelector<HTMLElement>('[data-cms-status]');
-  if (status) { status.textContent = message; status.hidden = !message; }
+  if (!status) return;
+  const text = status.querySelector<HTMLElement>('[data-cms-status-message]');
+  const button = status.querySelector<HTMLButtonElement>('[data-cms-retry]');
+  if (text) text.textContent = message;
+  else status.textContent = message;
+  status.hidden = !message;
+  if (button) { button.hidden = !retry; button.onclick = () => { void catalogSync?.refresh(); }; }
 }
-async function refresh() {
-  if (document.hidden || inFlight || payload?.preview) return;
-  if (!successful) document.documentElement.dataset.cmsState = 'loading';
-  const controller = new AbortController(); inFlight = controller;
-  const request = ++revision;
-  const timeout = window.setTimeout(() => controller.abort(), 12000);
-  try {
-    // The public feed is same-origin and cannot redirect a visitor to another service.
-    const response = await fetch('/api/catalog/', { signal: controller.signal, cache: 'no-store', credentials: 'same-origin', redirect: 'error', headers: { Accept: 'application/json' } });
-    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Catalog unavailable');
-    const body = await response.text();
-    if (body.length > 5_000_000) throw new Error('Catalog too large');
-    const data = parsePublicCatalog(JSON.parse(body));
-    if (request !== revision || controller.signal.aborted) return;
-    apply(data); successful = true; showStatus(); document.documentElement.dataset.cmsState = 'live';
-  } catch {
-    if (request !== revision) return;
+function updateAvailabilityNotice() {
+  const detail = document.querySelector<HTMLElement>('[data-product-detail]');
+  const notice = detail?.querySelector<HTMLElement>('[data-product-unavailable]');
+  if (!notice || notice.hidden) return;
+  const pending = !!publicEndpoint && !confirmedThisVisit;
+  const failed = syncStatus === 'error';
+  const title = pending ? (failed ? 'Aún no pudimos cargar este equipo.' : 'Estamos buscando este equipo en el catálogo.') : 'Este equipo ya no está disponible en el catálogo.';
+  const description = pending ? (failed ? 'El servidor tarda en responder. Puedes reintentar sin perder la dirección de este equipo.' : 'La primera conexión puede tardar un momento. La ficha aparecerá aquí en cuanto responda el servidor.') : 'Explora los equipos actuales o consulta con nuestro equipo.';
+  setText('h2', title, notice); setText('p', description, notice);
+  document.title = `${pending ? 'Cargando equipo' : 'Equipo no disponible'} | ${currentData?.settings.empresa || 'INOX 304'}`;
+}
+function transportStatus(status: CatalogSyncStatus) {
+  syncStatus = status;
+  if (status === 'ready') { document.documentElement.dataset.cmsState = 'live'; showStatus(); }
+  else if (status === 'error') {
     document.documentElement.dataset.cmsState = successful ? 'stale' : 'unavailable';
-    showStatus(successful ? 'No se pudo actualizar. Mostramos la última información disponible.' : 'El catálogo no está disponible en este momento. Volveremos a intentar en unos segundos.');
-  } finally { window.clearTimeout(timeout); if (inFlight === controller) inFlight = undefined; }
+    showStatus(successful ? 'No pudimos actualizar. Puedes seguir usando el catálogo disponible; confirmaremos disponibilidad al cotizar.' : 'El servidor no respondió. Puedes volver a intentar cargar el catálogo.', true);
+  } else {
+    document.documentElement.dataset.cmsState = successful ? 'refreshing' : 'loading';
+    showStatus(status === 'slow' ? (successful ? 'Actualizando el catálogo. Puedes seguir explorando y personalizando mientras responde el servidor.' : 'Estamos cargando el catálogo. La primera conexión puede tardar un momento.') : '');
+  }
+  updateAvailabilityNotice();
 }
 function start() {
-  if (!apiMode) { if (payload?.data) { apply(payload.data); document.documentElement.dataset.cmsState = 'static'; } return; }
-  try { if (payload?.data) { const data = parsePublicCatalog(payload.data, { preview: payload.preview === true }); apply(data); successful = Boolean(data.products.length || data.contacts.length); } else apply(emptyCmsData()); }
+  let serverBootstrapValid = false;
+  try {
+    if (payload?.data) {
+      const data = apiMode ? parsePublicCatalog(payload.data, { preview: payload.preview === true }) : payload.data;
+      if (apiMode) { serverBootstrapValid = true; confirmedThisVisit = true; }
+      apply(data); successful = apiMode || Boolean(data.products.length || data.contacts.length);
+    } else apply(emptyCmsData());
+  }
   catch { apply(emptyCmsData()); }
   if (payload?.preview) { document.documentElement.dataset.cmsState = 'preview'; showStatus('Vista previa privada. Los cambios sin publicar solo son visibles aquí.'); return; }
-  void refresh();
+  if (!publicEndpoint) { document.documentElement.dataset.cmsState = 'static'; return; }
+  let storage: Storage | undefined;
+  try { storage = window.localStorage; } catch { /* Local storage is optional. */ }
+  const feedOrigin = new URL(publicEndpoint).origin;
+  const parse = (value: unknown) => parsePublicCatalog(value, feedOrigin === location.origin ? {} : { mediaOrigin: feedOrigin });
+  // Django has just rendered an authoritative projection. An older cache must
+  // never restore a retired product over that response, including an empty one.
+  const cached = serverBootstrapValid ? null : readCatalogCache(publicEndpoint, parse, storage);
+  if (cached) { apply(cached); successful = true; }
+  catalogSync = startCatalogSync({ endpoint: publicEndpoint, parse, storage, onStatus: transportStatus, onData: data => {
+    confirmedThisVisit = true;
+    verifiedCooktops.clear(); verifiedCarts.clear();
+    apply(data); successful = true; updateAvailabilityNotice();
+  } });
+  const refresh = () => { if (!document.hidden) void catalogSync?.refresh(); };
+  refresh();
   document.addEventListener('inox:catalog-refresh', () => { void refresh(); });
-  window.setInterval(() => { void refresh(); }, 30000);
+  const interval = window.setInterval(refresh, 60000);
   window.addEventListener('focus', () => { void refresh(); });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { revision++; inFlight?.abort(); inFlight = undefined; }
+    if (document.hidden) catalogSync?.pause();
     else void refresh();
   });
-  window.addEventListener('pagehide', () => { revision++; inFlight?.abort(); inFlight = undefined; });
+  window.addEventListener('pagehide', event => {
+    catalogSync?.pause();
+    if (!event.persisted) { window.clearInterval(interval); catalogSync?.dispose(); }
+  });
+  window.addEventListener('pageshow', event => { if (event.persisted) refresh(); });
 }
 start();

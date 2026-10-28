@@ -18,7 +18,7 @@ import { renderVariantOptions } from '../src/scripts/variant-options-ui.ts';
 
 const rules = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const script = path => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
-const browserSource = ts.transpileModule(`${script('../src/lib/cooktop-sync.ts')}\n${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const browserSource = ts.transpileModule(`${script('../src/lib/cooktop-sync.ts')}\n${script('../src/lib/catalog-sync.ts')}\n${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function catalog() {
   const base = { id: 'COOK-A', slug: 'cocina-a', name: 'Cocina de prueba A', category: 'linea-caliente',
@@ -37,7 +37,7 @@ function catalog() {
     settings: { empresa: 'INOX 304', contacto_principal: 'ventas' } };
 }
 
-function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl } = {}) {
+function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl, apiUrl = '', selectedId = '', cached, mode = 'static' } = {}) {
   let document;
   class Element {
     constructor(tag = 'div') {
@@ -81,20 +81,26 @@ function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl } =
     '[data-product-variant-label]', '[data-product-commerce]', '[data-product-technical-sheet]', '[data-product-media]', '[data-cooktop-root]', '[data-cooktop-connection]'];
   const nodes = Object.fromEntries(selectors.map(selector => [selector, new Element()]));
   const root = nodes['[data-cooktop-root]']; root.hidden = true;
-  const detail = new Element(); detail.dataset.productDetail = data.products[0].id;
+  const detail = new Element(); detail.dataset.productDetail = selectedId || data.products[0]?.id || '';
   detail.querySelector = selector => nodes[selector] || null;
-  detail.querySelectorAll = selector => nodes[selector] ? [nodes[selector]] : [];
+  detail.querySelectorAll = selector => selector.split(',').flatMap(part => nodes[part] ? [nodes[part]] : []);
   const routes = Object.fromEntries(data.products.map(product => [product.id, `/catalogo/${product.slug}/`]));
-  const bootstrap = new Element('script'); bootstrap.textContent = JSON.stringify({ mode: 'static', preview, routes, data, ...(remoteRules !== undefined || fetchImpl ? { cooktopOrigin: 'https://panel.example.test' } : {}) });
+  const bootstrap = new Element('script'); bootstrap.textContent = JSON.stringify({ mode, preview, routes, data, apiUrl, ...(remoteRules !== undefined || fetchImpl ? { cooktopOrigin: 'https://panel.example.test' } : {}) });
   const events = [], requests = [];
-  document = { activeElement: null, documentElement: new Element(), title: '',
-    querySelector: selector => selector === '#inox-cms-bootstrap' ? bootstrap : selector === '[data-product-detail]' ? detail : null,
-    querySelectorAll: () => [], createElement: tag => new Element(tag), dispatchEvent: event => events.push(event) };
-  const location = new URL(`https://example.test${routes[data.products[0].id]}`);
+  const status = new Element(), statusText = new Element('span'), retry = new Element('button');
+  statusText.dataset.cmsStatusMessage = ''; retry.dataset.cmsRetry = ''; status.append(statusText, retry);
+  nodes['[data-product-unavailable]'].append(new Element('h2'), new Element('p'));
+  const documentEvents = {};
+  document = { activeElement: null, documentElement: new Element(), title: '', hidden: false,
+    querySelector: selector => selector === '#inox-cms-bootstrap' ? bootstrap : selector === '[data-product-detail]' ? detail : selector === '[data-cms-status]' ? status : null,
+    querySelectorAll: () => [], createElement: tag => new Element(tag), addEventListener: (name, action) => { documentEvents[name] = action; }, dispatchEvent: event => { events.push(event); documentEvents[event.type]?.(event); } };
+  const location = new URL(`https://example.test${selectedId ? `/equipo/?id=${selectedId}` : routes[data.products[0].id]}`);
   const timers = new Map(); let timerId = 0;
   const setTimer = (callback, delay) => { timers.set(++timerId, { callback, delay }); return timerId; };
   const clearTimer = id => timers.delete(id);
-  const window = { events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: setTimer, clearTimeout: clearTimer };
+  const saved = new Map(); if (cached) saved.set(`inox:public-catalog:1:${apiUrl}`, JSON.stringify({ version: 1, endpoint: apiUrl, savedAt: Date.now(), data: cached }));
+  const storageCalls = [];
+  const window = { localStorage: { getItem(key) { storageCalls.push('read'); return saved.get(key) ?? null; }, setItem(key, value) { storageCalls.push('write'); saved.set(key, value); }, removeItem(key) { storageCalls.push('remove'); saved.delete(key); } }, events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: setTimer, clearTimeout: clearTimer, setInterval: setTimer, clearInterval: clearTimer };
   const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; } };
   runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...cooktop, ...cooktopAssets, ...cart, ...cartAssets,
     catalogSearchText, getProductStage, withBase, renderVariantOptions, document, location, window, history, URL, URLSearchParams, CustomEvent, AbortController, Error,
@@ -112,7 +118,8 @@ function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl } =
   const variant = value => { nodes['[data-product-variant]'].value = value; nodes['[data-product-variant]'].onchange(); };
   const product = id => { location.href = `https://example.test${routes[id]}`; window.events.popstate(); };
   const quote = () => new URL(nodes['[data-product-quote]'].href).searchParams.get('text');
-  return { data, root, nodes, detail, document, events, requests, select, selectCell, chooseModule, armModule, moduleButton, pick3d, selection, variant, product, quote,
+  return { data, root, nodes, detail, document, events, requests, select, selectCell, chooseModule, armModule, moduleButton, pick3d, selection, variant, product, quote, status, statusText, retry, storageCalls,
+    refresh: () => document.dispatchEvent(new CustomEvent('inox:catalog-refresh')),
     connection: nodes['[data-cooktop-connection]'],
     fireTimers: delay => { for (const [id, timer] of [...timers]) if (timer.delay === delay) { timers.delete(id); timer.callback(); } },
     summary: () => root.querySelector('.cooktop-summary')?.textContent || '', flush: () => new Promise(resolve => setImmediate(resolve)) };
@@ -461,4 +468,111 @@ test('switching SKU or independent variant cannot inherit an oven, dimensions or
   f.select('[data-kitchen-field="oven"]', 'gas'); f.product('COOK-B');
   assert.equal(f.selection().kitchen, undefined); assert.doesNotMatch(f.quote(), /Horno:|Cubierta:|Medidas solicitadas/);
   f.product('ILUMI-DJ-181'); assert.equal(f.root.hidden, true); assert.doesNotMatch(f.quote(), /Horno:|Cubierta:|Medidas solicitadas/);
+});
+
+function hybridFixture(options = {}) {
+  const pending = [];
+  const f = fixture({ apiUrl: 'https://panel.example.test/api/catalog/', fetchImpl: () => new Promise((resolve, reject) => pending.push({ resolve, reject })), ...options });
+  return { ...f, pending, respond: async (index, data, status = 200) => { pending[index].resolve(new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })); await f.flush(); } };
+}
+
+test('hybrid catalog keeps a chosen plate, focus and scene when full-feed connection fails', async () => {
+  const f = hybridFixture();
+  assert.equal(f.requests.length, 1); assert.equal(f.requests[0].url, 'https://panel.example.test/api/catalog/');
+  f.chooseModule('Plancha'); const choice = JSON.stringify(f.selection()), control = f.root.firstElementChild, focused = f.document.activeElement;
+  const sceneEvents = f.events.filter(event => event.type === 'inox:product-updated').length;
+  f.fireTimers(5000); assert.match(f.statusText.textContent, /seguir explorando/);
+  f.pending[0].reject(new Error('Offline')); await f.flush();
+  assert.equal(JSON.stringify(f.selection()), choice); assert.equal(f.root.firstElementChild, control); assert.equal(f.document.activeElement, focused);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').length, sceneEvents);
+  assert.equal(f.retry.hidden, false); assert.equal(f.document.documentElement.dataset.cmsState, 'stale');
+});
+
+test('a valid update of another product leaves the active variant, configuration and scene untouched', async () => {
+  const data = catalog(), f = hybridFixture({ data }); await f.respond(0, data);
+  f.chooseModule('Wok'); const before = JSON.stringify(f.selection()), quote = f.quote(), control = f.root.firstElementChild;
+  const sceneEvents = f.events.filter(event => event.type === 'inox:product-updated').length;
+  const changed = structuredClone(data); changed.products[2].name = 'Dispensador actualizado por el panel';
+  f.refresh(); await f.respond(1, changed);
+  assert.equal(JSON.stringify(f.selection()), before); assert.equal(f.quote(), quote); assert.equal(f.root.firstElementChild, control);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').length, sceneEvents);
+  f.variant('independent'); const afterVariant = f.events.filter(event => event.type === 'inox:product-updated').length;
+  f.refresh(); await f.respond(2, changed);
+  assert.equal(f.nodes['[data-product-variant]'].value, 'independent'); assert.equal(f.root.hidden, true);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').length, afterVariant);
+});
+
+test('a new product query URL waits for the feed, then exposes its independent photo and GLB variation', async () => {
+  const data = catalog(), product = { ...structuredClone(data.products[0]), id: 'NEW-2023', slug: 'nuevo-modelo-sketchup', name: 'Nuevo modelo del taller', cooktopConfig: null,
+    model3d: '/media/11111111-1111-1111-1111-111111111111/',
+    variants: [{ id: 'large', name: 'Mayor capacidad', availability: 'made_to_order', image: '/media/22222222-2222-2222-2222-222222222222/', model3d: '/media/33333333-3333-3333-3333-333333333333/' }] };
+  const f = hybridFixture({ selectedId: product.id });
+  assert.match(f.nodes['[data-product-unavailable]'].querySelector('h2').textContent, /Estamos buscando/);
+  assert.doesNotMatch(f.nodes['[data-product-unavailable]'].textContent, /ya no está disponible/);
+  f.pending[0].reject(new Error('Cold start')); await f.flush();
+  assert.match(f.nodes['[data-product-unavailable]'].textContent, /reintentar/); assert.equal(f.retry.hidden, false);
+  f.retry.click(); data.products.push(product); await f.respond(1, data);
+  assert.equal(f.nodes['[data-product-unavailable]'].hidden, true); assert.equal(f.nodes['.product-detail-grid'].hidden, false);
+  assert.equal(f.nodes['[data-product-name]'].textContent, product.name);
+  assert.match(f.quote(), /\/equipo\/\?id=NEW-2023/);
+  f.variant('large');
+  assert.equal(f.nodes['.equipment-image'].src, 'https://panel.example.test/media/22222222-2222-2222-2222-222222222222/');
+  assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant.model3d, 'https://panel.example.test/media/33333333-3333-3333-3333-333333333333/');
+});
+
+test('authoritative removal hides a known product and failed refresh never resurrects the bundled version', async () => {
+  const f = hybridFixture(); await f.respond(0, api.emptyCmsData());
+  assert.equal(f.nodes['.product-detail-grid'].hidden, true); assert.equal(f.nodes['[data-product-quote]'].hidden, true);
+  assert.match(f.nodes['[data-product-unavailable]'].textContent, /ya no está disponible/);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').at(-1).detail.product, null);
+  f.refresh(); f.pending[1].reject(new Error('Offline')); await f.flush();
+  assert.equal(f.nodes['.product-detail-grid'].hidden, true); assert.match(f.nodes['[data-product-unavailable]'].textContent, /ya no está disponible/);
+});
+
+test('validated public cache serves a recently added product while the panel is unavailable', async () => {
+  const data = catalog(); data.products[0].id = 'CACHED-NEW';
+  const f = hybridFixture({ selectedId: 'CACHED-NEW', cached: data });
+  assert.equal(f.nodes['.product-detail-grid'].hidden, false); assert.equal(f.nodes['[data-product-name]'].textContent, data.products[0].name);
+  f.pending[0].reject(new Error('Offline')); await f.flush();
+  assert.equal(f.nodes['.product-detail-grid'].hidden, false); assert.match(f.quote(), /CACHED-NEW/);
+});
+
+test('private preview never reads public local storage, persists drafts or starts a public feed request', () => {
+  const f = hybridFixture({ preview: true, cached: catalog() });
+  assert.equal(f.requests.length, 0); assert.deepEqual(f.storageCalls, []);
+  assert.equal(f.document.documentElement.dataset.cmsState, 'preview');
+  assert.match(f.statusText.textContent, /Vista previa privada/);
+});
+
+test('fresh Django bootstrap outranks older browser cache even when every product was withdrawn', async () => {
+  const f = hybridFixture({ mode: 'api', apiUrl: 'https://example.test/api/catalog/', data: api.emptyCmsData(), cached: catalog(), selectedId: 'COOK-A' });
+  assert.equal(f.nodes['.product-detail-grid'].hidden, true);
+  assert.match(f.nodes['[data-product-unavailable]'].textContent, /ya no está disponible/);
+  assert.deepEqual(f.storageCalls, [], 'do not consult a stale cache after a fresh server projection');
+  f.pending[0].reject(new Error('Refresh offline')); await f.flush();
+  assert.equal(f.nodes['.product-detail-grid'].hidden, true); assert.equal(f.nodes['[data-product-quote]'].hidden, true);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').at(-1).detail.product, null);
+});
+
+test('fresh Django edits remain visible if its later API request fails while older cache exists', async () => {
+  const data = catalog(), cached = structuredClone(data); data.products[0].name = 'Actualizado hoy en el panel';
+  const f = hybridFixture({ mode: 'api', apiUrl: 'https://example.test/api/catalog/', data, cached });
+  assert.equal(f.nodes['[data-product-name]'].textContent, 'Actualizado hoy en el panel'); assert.deepEqual(f.storageCalls, []);
+  f.pending[0].reject(new Error('Refresh offline')); await f.flush();
+  assert.equal(f.nodes['[data-product-name]'].textContent, 'Actualizado hoy en el panel');
+});
+
+test('back navigation to a withdrawn product clears the previous scene and polling keeps the requested route', async () => {
+  const data = catalog(), f = hybridFixture({ data }); await f.respond(0, data);
+  f.product('COOK-B'); assert.equal(f.detail.dataset.productDetail, 'COOK-B');
+  const withdrawn = structuredClone(data); withdrawn.products = withdrawn.products.filter(product => product.id !== 'COOK-A');
+  f.refresh(); await f.respond(1, withdrawn);
+  f.product('COOK-A');
+  assert.equal(f.nodes['.product-detail-grid'].hidden, true); assert.equal(f.nodes['[data-product-quote]'].hidden, true);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').at(-1).detail.product, null);
+  withdrawn.products[0].name = 'Otro producto actualizado'; f.refresh(); await f.respond(2, withdrawn);
+  assert.equal(f.nodes['.product-detail-grid'].hidden, true, 'polling cannot restore COOK-B beneath the COOK-A URL');
+  f.refresh(); await f.respond(3, data);
+  assert.equal(f.nodes['.product-detail-grid'].hidden, false); assert.equal(f.detail.dataset.productDetail, 'COOK-A');
+  assert.match(f.quote(), /código COOK-A/);
 });

@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import json
 
 from django.core.exceptions import SuspiciousFileOperation
+from django.conf import settings
 from django.db.models import Q
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -20,7 +21,16 @@ from .variant_options import VariantOptionsError, validate_option_values
 @never_cache
 @require_GET
 def catalog_api(request):
-    return JsonResponse(public_catalog_data(), json_dumps_params={"ensure_ascii": False})
+    return public_catalog_cors(request, JsonResponse(public_catalog_data(), json_dumps_params={"ensure_ascii": False}))
+
+
+def public_catalog_cors(request, response):
+    """Expose public data to the storefront, never admin sessions or cookies."""
+    patch_vary_headers(response, ("Origin",))
+    origin = request.headers.get("Origin")
+    if origin in settings.PUBLIC_CATALOG_ORIGINS:
+        response["Access-Control-Allow-Origin"] = origin
+    return response
 
 
 def _cooktop_response(request, data, *, status=200):
@@ -122,7 +132,7 @@ def public_media(request, asset_id):
         break
     if not referenced and not variant_reference:
         raise Http404
-    return media_response(asset)
+    return public_catalog_cors(request, media_response(asset))
 
 
 def media_response(asset):

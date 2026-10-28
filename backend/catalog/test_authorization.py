@@ -117,6 +117,8 @@ class CatalogActionPermissionTests(TestCase):
                     getattr(self.model_admin, action)(request, Product.objects.all())
 
     def test_editor_can_change_visibility_but_cannot_create_copies(self):
+        self.product.image = "/images/equipo.webp"
+        self.product.save()
         self.set_permissions("view_product", "change_product")
         request = self.request("publish_products")
         actions = self.model_admin.get_actions(request)

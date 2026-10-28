@@ -1,15 +1,19 @@
 from uuid import uuid4
 from copy import deepcopy
+from urllib.parse import urlencode
+import re
 
 from django.contrib import admin, messages
+from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
+from django.template.loader import render_to_string
 from django.urls import path, reverse
 from django.utils.html import format_html
-from django.views.decorators.http import require_safe
+from django.views.decorators.http import require_POST, require_safe
 from security.passkeys import is_owner
 
 from .audit import TRACKED_MODELS, audit_context
@@ -136,7 +140,7 @@ class ProductAdmin(AuditedAdmin):
         ("Reutilizar archivos o enlaces existentes", {"description": "Opcional. Para añadir un archivo nuevo usa los botones de arriba. Un archivo subido tiene prioridad sobre su enlace.", "fields": ("image_asset", "image", "technical_asset", "technical_sheet", "model_asset", "model_3d", "poster_asset", "model_poster"), "classes": ("collapse", "inox-step", "inox-step-media")}),
         ("Precio público", {"description": "Puedes dejar el precio vacío para cotizar por consulta. La tarifa final se calcula en el servidor.", "fields": ("price", "currency", "show_price", "charge_unit", "custom_unit", "discount_percent", "additional_flat", "public_price"), "classes": ("inox-step", "inox-step-pricing")}),
         ("Información privada", {"fields": ("cost", "internal_notes"), "classes": ("collapse", "inox-step", "inox-step-pricing")}),
-        ("Revisar y guardar", {"description": "Guardar conserva tus cambios. Solo se muestra en la web del servidor cuando está activo y publicado. Los archivos pendientes no impiden guardar un borrador.", "fields": ("is_published", "is_active", "featured", "order", "availability", "contact", "preview_link"), "classes": ("inox-step", "inox-step-review")}),
+        ("Revisar y guardar", {"description": "Guarda y revisa el equipo en privado antes de publicarlo en el catálogo oficial. Si ya está publicado, guardar actualiza su información pública. Los archivos pendientes no impiden guardar un borrador.", "fields": ("is_published", "is_active", "featured", "order", "availability", "contact", "preview_link"), "classes": ("inox-step", "inox-step-review")}),
         ("Fechas", {"fields": ("created_at", "updated_at"), "classes": ("collapse", "inox-step", "inox-step-review")}),
     )
 
@@ -162,6 +166,10 @@ class ProductAdmin(AuditedAdmin):
         return RequestProductForm
 
     def save_model(self, request, obj, form, change):
+        if "_review" in request.POST:
+            # Review does not accidentally publish a new/draft product. For an
+            # existing live product, ordinary saves still update the live data.
+            obj.is_published = Product.objects.filter(pk=obj.pk, is_published=True).exists() if change else False
         if not is_owner(request.user):
             previous = Product.objects.only("cooktop_config", "cart_config", "variant_axes").get(pk=obj.pk) if change else None
             if obj.cooktop_config != (previous.cooktop_config if previous else {}):
@@ -183,6 +191,16 @@ class ProductAdmin(AuditedAdmin):
     def render_change_form(self, request, context, *args, **kwargs):
         context["is_nav_sidebar_enabled"] = False
         return super().render_change_form(request, context, *args, **kwargs)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_review" in request.POST:
+            return HttpResponseRedirect(reverse("admin:catalog_product_preview", args=(obj.pk,)))
+        return super().response_add(request, obj, post_url_continue)
+
+    def response_change(self, request, obj):
+        if "_review" in request.POST:
+            return HttpResponseRedirect(reverse("admin:catalog_product_preview", args=(obj.pk,)))
+        return super().response_change(request, obj)
 
     def _current_file(self, obj, asset_field, url_field, kind):
         asset = getattr(obj, asset_field, None)
@@ -224,7 +242,40 @@ class ProductAdmin(AuditedAdmin):
         return format_html('<a href="{}" target="_blank" rel="noopener">Abrir vista previa privada</a>', reverse("admin:catalog_product_preview", args=(obj.pk,)))
 
     def get_urls(self):
-        return [path("<int:product_id>/preview/", self.admin_site.admin_view(require_safe(self.preview_view)), name="catalog_product_preview")] + super().get_urls()
+        return [
+            path("<int:product_id>/preview/", self.admin_site.admin_view(require_safe(self.preview_view)), name="catalog_product_preview"),
+            path("<int:product_id>/publish/", self.admin_site.admin_view(require_POST(self.publish_view)), name="catalog_product_publish"),
+        ] + super().get_urls()
+
+    @staticmethod
+    def publication_errors(product):
+        errors = []
+        if not product.is_active:
+            errors.append("Activa el equipo antes de publicarlo.")
+        if not product.image_asset_id and not product.image:
+            errors.append("Añade una foto principal antes de publicar. El modelo 3D, la ficha y el precio son opcionales.")
+        try:
+            product.full_clean()
+        except ValidationError as exc:
+            errors.extend(exc.messages)
+        return errors
+
+    def publish_view(self, request, product_id):
+        with transaction.atomic(), audit_context(request.user):
+            product = get_object_or_404(Product.objects.select_for_update(), pk=product_id)
+            if not self.has_change_permission(request, product):
+                raise PermissionDenied
+            errors = self.publication_errors(product)
+            if request.POST.get("reviewed_version") != product.updated_at.isoformat():
+                errors.append("El equipo cambió desde la revisión. Comprueba la vista previa actual antes de publicar.")
+            if errors:
+                for error in errors:
+                    self.message_user(request, error, level=messages.ERROR)
+            else:
+                product.is_published = True
+                product.save()
+                self.message_user(request, "Equipo publicado en el catálogo oficial. La web lo incorporará al actualizar sus datos.")
+        return HttpResponseRedirect(reverse("admin:catalog_product_preview", args=(product.pk,)))
 
     def preview_view(self, request, product_id):
         from config.views import _render_shell
@@ -244,7 +295,18 @@ class ProductAdmin(AuditedAdmin):
         item["gallery"] = [reverse("admin:catalog_media_download", args=(image.asset_id,)) if image.asset_id else image.url for image in product.gallery_images.all()]
         data = public_catalog_data()
         data["products"] = [existing for existing in data["products"] if existing["id"] != product.code] + [item]
-        return _render_shell("equipo/index.html", data, title=f"Vista previa · {product.name}", description=product.description, canonical=f"/catalogo/{product.slug}/", preview=True, preview_product_id=product.code)
+        response = _render_shell("equipo/index.html", data, title=f"Vista previa · {product.name}", description=product.description, canonical=f"/catalogo/{product.slug}/", preview=True, preview_product_id=product.code)
+        if response.status_code == 200:
+            toolbar = render_to_string("admin/catalog/product/preview_controls.html", {
+                "product": product,
+                "reviewed_version": product.updated_at.isoformat(),
+                "can_publish": self.has_change_permission(request, product),
+                "publication_errors": self.publication_errors(product),
+                "public_url": settings.PUBLIC_CATALOG_ORIGIN + "/equipo/?" + urlencode({"id": product.code}),
+            }, request=request)
+            source = response.content.decode(response.charset)
+            response.content = re.sub(r"(<body\b[^>]*>)", lambda match: match[1] + toolbar, source, count=1, flags=re.IGNORECASE)
+        return response
 
     def has_duplicate_permission(self, request):
         # A duplicate includes variants, additionals and gallery rows. Granting
@@ -287,12 +349,19 @@ class ProductAdmin(AuditedAdmin):
             raise PermissionDenied
         if request.POST.get("confirm") == "yes":
             with transaction.atomic(), audit_context(request.user):
-                for product in queryset:
+                products = list(queryset.select_for_update())
+                errors = []
+                for product in products:
                     if not self.has_change_permission(request, product):
                         raise PermissionDenied
-                    product.is_published = published
                     if published:
-                        product.is_active = True
+                        errors.extend(f"{product.code}: {error}" for error in self.publication_errors(product))
+                if errors:
+                    for error in errors:
+                        self.message_user(request, error, level=messages.ERROR)
+                    return None
+                for product in products:
+                    product.is_published = published
                     product.save()
             self.message_user(request, "Visibilidad actualizada.")
             return None

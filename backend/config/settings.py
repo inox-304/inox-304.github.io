@@ -49,6 +49,19 @@ if ENVIRONMENT == 'production' and not PUBLIC_ORIGIN.startswith('https://'):
     raise ImproperlyConfigured('Production PUBLIC_SITE_URL must use HTTPS.')
 CSRF_TRUSTED_ORIGINS = [PUBLIC_ORIGIN] if ENVIRONMENT == 'production' else []
 
+# The storefront reads only public catalog data. This is not an admin or
+# credentialed CORS policy. INOX's storefront is deployed at the origin root.
+PUBLIC_CATALOG_ORIGIN = os.getenv('PUBLIC_CATALOG_ORIGIN', 'https://inox-304.github.io').rstrip('/')
+PUBLIC_CATALOG_ORIGINS = tuple(origin.strip().rstrip('/') for origin in os.getenv('PUBLIC_CATALOG_ORIGINS', 'https://inox-304.github.io').split(',') if origin.strip())
+for candidate in (*PUBLIC_CATALOG_ORIGINS, PUBLIC_CATALOG_ORIGIN):
+    parsed = urlparse(candidate)
+    local_test = ENVIRONMENT == 'test' and parsed.scheme == 'http' and parsed.hostname in ('localhost', '127.0.0.1')
+    if ((parsed.scheme != 'https' and not local_test) or not parsed.hostname
+            or parsed.username or parsed.password or parsed.query or parsed.fragment
+            or '\\' in candidate or '*' in candidate or any(char.isspace() for char in candidate)
+            or parsed.path not in ('', '/') or parsed.netloc.endswith(':')):
+        raise ImproperlyConfigured('Public catalog origins must be exact HTTPS origins without paths or credentials.')
+
 INSTALLED_APPS = [
     'config.apps.PrivateAdminConfig', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',

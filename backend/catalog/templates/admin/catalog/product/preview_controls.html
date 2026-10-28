@@ -1,0 +1,17 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'inox/catalog-preview.css' %}">
+<aside class="inox-preview-controls" aria-label="Revisión privada del catálogo">
+  <div><strong>{% if product.is_published %}Equipo publicado{% else %}Borrador privado{% endif %}</strong>
+    <p>{% if product.is_published %}Los cambios guardados ya forman parte de la información pública.{% else %}Revisa las fotos, el modelo 3D y sus variaciones antes de publicar.{% endif %}</p>
+    {% for message in messages %}<p class="inox-preview-feedback" role="status">{{ message }}</p>{% endfor %}
+    {% for error in publication_errors %}<p class="inox-preview-feedback">{{ error }}</p>{% endfor %}
+  </div>
+  <div class="inox-preview-actions">
+    <a href="{% url 'admin:catalog_product_change' product.pk %}">Volver a editar</a>
+    {% if product.is_published and product.is_active %}<a href="{{ public_url }}" target="_blank" rel="noopener">Ver en catálogo oficial ↗</a>{% endif %}
+    {% if can_publish and not product.is_published %}<form method="post" action="{% url 'admin:catalog_product_publish' product.pk %}">
+      {% csrf_token %}<input type="hidden" name="reviewed_version" value="{{ reviewed_version }}">
+      <button type="submit" {% if publication_errors %}disabled{% endif %}>Publicar en catálogo</button>
+    </form>{% endif %}
+  </div>
+</aside>

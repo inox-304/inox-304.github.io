@@ -19,7 +19,7 @@ jobs:
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || format('https://{0}.github.io', github.repository_owner) }}
       PUBLIC_SITE_BASE_PATH: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}/', github.event.repository.name) }}
       PUBLIC_CMS_MODE: static
-      PUBLIC_ADMIN_URL: ${{ vars.PUBLIC_ADMIN_URL }}
+      PUBLIC_ADMIN_URL: ${{ vars.PUBLIC_ADMIN_URL || 'https://inox304-panel.onrender.com/admin/' }}
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 24
           package-manager: npm
-          build-cmd: node scripts/configure-domain.mjs && npm run build && npm test && npm run check:models && node scripts/test-cms.mjs && node scripts/test-paths.mjs && node scripts/test-admin-entry.mjs && node scripts/test-product-stage.mjs && node scripts/test-model-budget.mjs && node scripts/test-catalog-controls.mjs && node scripts/test-installation-films.mjs && node --test src/lib/crm-attribution.test.ts scripts/test-product-families.mjs scripts/test-product-family-ui.mjs scripts/test-cooktop.mjs scripts/test-cooktop-editor.mjs scripts/test-variant-batch.mjs scripts/test-variant-options-editor.mjs scripts/3d/test-multiuso-config.mjs scripts/3d/test-pollero-config.mjs scripts/test-oven-option-models.mjs scripts/test-variant-options.mjs scripts/test-cooktop-ui.mjs scripts/test-cooktop-sync.mjs scripts/test-cooktop-snapshot.mjs scripts/test-cooktop-models.mjs scripts/test-cooktop-scene.mjs scripts/test-cooktop-media.mjs scripts/test-cart-config.mjs scripts/test-cart-ui.mjs scripts/test-cart-sync.mjs scripts/test-cart-asset.mjs scripts/test-cart-scene.mjs
+          build-cmd: node scripts/configure-domain.mjs && npm run build && npm test && npm run check:models && node scripts/test-cms.mjs && node scripts/test-paths.mjs && node scripts/test-admin-entry.mjs && node scripts/test-product-stage.mjs && node scripts/test-model-budget.mjs && node scripts/test-catalog-controls.mjs && node scripts/test-installation-films.mjs && node --test scripts/test-catalog-sync.mjs src/lib/crm-attribution.test.ts scripts/test-product-families.mjs scripts/test-product-family-ui.mjs scripts/test-cooktop.mjs scripts/test-cooktop-editor.mjs scripts/test-variant-batch.mjs scripts/test-variant-options-editor.mjs scripts/3d/test-multiuso-config.mjs scripts/3d/test-pollero-config.mjs scripts/test-oven-option-models.mjs scripts/test-variant-options.mjs scripts/test-cooktop-ui.mjs scripts/test-cooktop-sync.mjs scripts/test-cooktop-snapshot.mjs scripts/test-cooktop-models.mjs scripts/test-cooktop-scene.mjs scripts/test-cooktop-media.mjs scripts/test-cart-config.mjs scripts/test-cart-ui.mjs scripts/test-cart-sync.mjs scripts/test-cart-asset.mjs scripts/test-cart-scene.mjs
 
   deploy:
     needs: build

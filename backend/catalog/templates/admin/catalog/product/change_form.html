@@ -18,7 +18,8 @@
   <section class="inox-editor-intro" aria-labelledby="inox-editor-title">
     <p class="inox-editor-eyebrow">Catálogo INOX 304</p>
     <h2 id="inox-editor-title">{% if add %}Nuevo equipo, paso a paso{% else %}Edita tu equipo{% endif %}</h2>
-    <p>Empieza por sus datos. Puedes guardar un borrador y añadir las fotos, la ficha técnica y el modelo 3D cuando estén listos.</p>
+    <p>Empieza por sus datos. Puedes guardar un borrador y añadir las fotos, la ficha técnica y el modelo 3D cuando estén listos. Pulsa Guardar y revisar para ver cómo quedará; desde esa vista podrás publicarlo.</p>
+    {% if original.is_published %}<p class="inox-editor-notice">Este equipo ya está publicado. Guardar actualiza la información pública; la vista previa no crea una copia separada.</p>{% endif %}
     {% if original and perms.catalog.view_inventory and original.supply_type != 'distributed' %}<p><a href="{% url 'inventory-dashboard' %}?equipo={{ original.code|urlencode }}&amp;cantidad=1&amp;almacen=Taller#planificar">Analizar materiales y fabricación de {{ original.code }} →</a></p>{% endif %}
     {% if original.supply_type == 'distributed' %}<p class="inox-editor-notice">Producto distribuido: vendemos el modelo del fabricante. Su capacidad y opciones son oficiales; no se ofrece fabricación a medida ni se calculan materiales de taller para este equipo.</p>{% endif %}
   </section>

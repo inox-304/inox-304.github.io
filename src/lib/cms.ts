@@ -88,7 +88,8 @@ function safePublicAsset(value: string): string {
   const safe = safeHttps(value);
   if (!safe) return '';
   // Sharing pages need an import step; they are not image/PDF/model files.
-  return ['drive.google.com', 'docs.google.com'].includes(new URL(safe).hostname.toLowerCase()) ? '' : safe;
+  const url = new URL(safe);
+  return ['drive.google.com', 'docs.google.com'].includes(url.hostname.toLowerCase()) || url.pathname.startsWith('/admin/') ? '' : safe;
 }
 function safeFile(value: string, directory: string, extension: string): string {
   if (!value) return '';
@@ -96,7 +97,10 @@ function safeFile(value: string, directory: string, extension: string): string {
   if (/^\/media\/(?:\d+|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/$/i.test(value)) return value;
   if (new RegExp(`^/(?:${directory}|media)/[a-zA-Z0-9_./-]+\\.${extension}$`, 'i').test(value) && !value.includes('..') && !value.includes('//')) return value;
   const safe = safePublicAsset(value);
-  return safe && new RegExp(`\\.${extension}$`, 'i').test(new URL(safe).pathname) ? safe : '';
+  if (!safe) return '';
+  const url = new URL(safe);
+  const opaqueMedia = /^\/media\/(?:\d+|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/$/i.test(url.pathname);
+  return opaqueMedia || new RegExp(`\\.${extension}$`, 'i').test(url.pathname) ? safe : '';
 }
 export function safeTechnicalSheet(value: string): string { return safeFile(value, 'documents', 'pdf'); }
 export function safeModel(value: string): string { return safeFile(value, 'models', 'glb'); }

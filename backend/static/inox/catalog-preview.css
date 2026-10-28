@@ -1,0 +1,10 @@
+.inox-preview-controls { position: relative; z-index: 60; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem clamp(1rem, 4vw, 4rem); background: #102c44; color: #fff; font: 14px/1.5 system-ui, sans-serif; }
+.inox-preview-controls p { margin: .25rem 0 0; max-width: 75ch; }
+.inox-preview-controls strong { font-size: 16px; }
+.inox-preview-actions { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+.inox-preview-actions a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.inox-preview-actions button { border: 1px solid #fff; padding: .7rem 1rem; border-radius: 8px; color: #102c44; background: #fff; cursor: pointer; font: inherit; font-weight: 600; }
+.inox-preview-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.inox-preview-actions :focus-visible { outline: 3px solid #8ad4ff; outline-offset: 3px; }
+.inox-preview-feedback { color: #ffdc9a; }
+@media (max-width: 700px) { .inox-preview-controls { flex-direction: column; align-items: flex-start; } }

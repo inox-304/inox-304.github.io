@@ -28,6 +28,48 @@ test('allows an empty catalog without reviving contacts or products', () => {
   assert.deepEqual(parsePublicCatalog(emptyCmsData()), emptyCmsData());
 });
 
+test('static site resolves uploaded product and variant files to the panel, keeping bundled assets local', () => {
+  const input = catalog();
+  const mediaOrigin = 'https://inox304-panel.onrender.com';
+  Object.assign(input.products[0].variants[0], { image: '/media/16/', model3d: '/media/17/', technicalSheet: '/documents/manual.pdf' });
+  const before = JSON.stringify(input);
+  const product = parsePublicCatalog(input, { mediaOrigin }).products[0];
+  assert.equal(product.image, `${mediaOrigin}/media/12/`);
+  assert.equal(product.model3d, `${mediaOrigin}/media/14/`);
+  assert.equal(product.technicalSheet, `${mediaOrigin}/media/13/`);
+  assert.equal(product.modelPoster, `${mediaOrigin}/media/12/`);
+  assert.deepEqual(product.gallery, [`${mediaOrigin}/media/15/`]);
+  assert.equal(product.variants![0].image, `${mediaOrigin}/media/16/`);
+  assert.equal(product.variants![0].model3d, `${mediaOrigin}/media/17/`);
+  assert.equal(product.variants![0].technicalSheet, '/documents/manual.pdf');
+  assert.equal(safeModel(product.model3d), product.model3d);
+  assert.equal(safeTechnicalSheet(product.technicalSheet), product.technicalSheet);
+  assert.equal(JSON.stringify(input), before);
+  Object.assign(input.products[0], { image: '/images/product.webp', model3d: '/models/product.glb' });
+  const local = parsePublicCatalog(input, { mediaOrigin }).products[0];
+  assert.equal(local.image, '/images/product.webp');
+  assert.equal(local.model3d, '/models/product.glb');
+});
+
+test('hosted media validation rejects credential URLs and private admin routes', () => {
+  const origin = 'https://inox304-panel.onrender.com';
+  for (const validate of [safeModel, safeTechnicalSheet]) {
+    const url = `${origin}/media/964ca472-b823-440e-8f09-7c32e08a0e5c/`;
+    assert.equal(validate(url), url);
+    assert.equal(validate(`${origin}/media/not-an-id/`), '');
+  }
+  for (const validate of [safeImage, safeModel, safeTechnicalSheet]) {
+    assert.equal(validate(`${origin}/admin/catalog/mediaasset/964ca472-b823-440e-8f09-7c32e08a0e5c/file/`), '');
+    assert.equal(validate('https://user:secret@inox304-panel.onrender.com/media/12/'), '');
+  }
+  for (const mediaOrigin of ['http://panel.example', 'https://user:secret@panel.example', '//panel.example', 'https://panel.example/path', 'https://panel.example/?token=x']) {
+    assert.throws(() => parsePublicCatalog(catalog(), { mediaOrigin }));
+  }
+  const preview = catalog();
+  preview.products[0].model3d = '/admin/catalog/mediaasset/964ca472-b823-440e-8f09-7c32e08a0e5c/file/';
+  assert.equal(parsePublicCatalog(preview, { preview: true, mediaOrigin: origin }).products[0].model3d, preview.products[0].model3d);
+});
+
 test('keeps distributor identity without exposing internal source or inventing a 3D model', () => {
   const input = catalog();
   Object.assign(input.products[0], { supplyType: 'distributed', brand: 'ILUMI', supplierModel: 'B-20L', equipmentFamily: 'batidoras', capacity: 'Bowl 20 L', model3d: '', source_url: 'https://ilumiperu.com/products/example', internal_notes: 'Privado' });

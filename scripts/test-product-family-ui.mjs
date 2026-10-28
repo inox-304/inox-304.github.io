@@ -7,6 +7,7 @@ import * as cms from '../src/lib/cms.ts';
 import * as api from '../src/lib/cms-api.ts';
 import * as additionals from '../src/lib/product-additionals.ts';
 import * as families from '../src/lib/product-families.ts';
+import * as catalogSync from '../src/lib/catalog-sync.ts';
 import { catalogSearchText } from '../src/lib/catalog-controls.ts';
 import { getProductStage } from '../src/lib/product-stage.ts';
 import { withBase } from '../src/lib/paths.ts';
@@ -62,7 +63,7 @@ function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs) {
   const source = readFileSync(new URL('../src/scripts/cms.ts', import.meta.url), 'utf8')
     .replace(/^import .*;\r?\n/gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
   runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
-    ...cms, ...api, ...additionals, ...families, catalogSearchText, getProductStage, withBase,
+    ...cms, ...api, ...additionals, ...families, ...catalogSync, catalogSearchText, getProductStage, withBase,
     parseCooktopConfig, renderVariantOptions,
     renderCooktop(_root, config, productId, onChange) { cooktopCalls.push({ productId, config }); onChange(''); },
     document, location, window, history, URL, URLSearchParams, CustomEvent,
