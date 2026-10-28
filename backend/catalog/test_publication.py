@@ -45,6 +45,14 @@ class CatalogPublicationTests(TestCase):
     def publish(self, version=None, client=None):
         return (client or self.client).post(self.publish_url, {"reviewed_version": version or self.product.updated_at.isoformat()})
 
+    @staticmethod
+    def consume(response):
+        # Django's test client wraps streaming iterators to close files while
+        # temporarily disconnecting close_old_connections. Calling close()
+        # directly fires request_finished inside TestCase's outer transaction
+        # and closes the PostgreSQL connection for the remaining tests.
+        return b"".join(response.streaming_content) if response.streaming else response.content
+
     def prepare_assets(self):
         self.product.image_asset = MediaAsset.objects.create(name="Foto", kind="image", file=photo_upload())
         self.product.model_asset = MediaAsset.objects.create(name="Modelo", kind="glb", file=model_upload())
@@ -79,7 +87,7 @@ class CatalogPublicationTests(TestCase):
         self.assertEqual(media.status_code, 200)
         self.assertEqual(media["Access-Control-Allow-Origin"], ORIGIN)
         self.assertNotIn("Access-Control-Allow-Credentials", media)
-        media.close()
+        self.assertTrue(self.consume(media).startswith(b"glTF"))
         self.assertContains(self.client.get(self.preview_url), ORIGIN + "/equipo/?id=NEW-3D")
         self.product.is_published = False
         self.product.save()
@@ -94,10 +102,10 @@ class CatalogPublicationTests(TestCase):
             for url in ("/api/catalog/", self.product.model_asset.public_url):
                 response = self.client.get(url, HTTP_ORIGIN=origin)
                 self.assertNotIn("Access-Control-Allow-Origin", response)
-                response.close()
+                self.consume(response)
         response = self.client.get(reverse("admin:catalog_media_download", args=(self.product.model_asset_id,)), HTTP_ORIGIN=ORIGIN)
         self.assertNotIn("Access-Control-Allow-Origin", response)
-        response.close()
+        self.consume(response)
 
     def test_publication_requires_post_mfa_change_permission_and_csrf(self):
         self.prepare_assets()
@@ -152,7 +160,7 @@ class CatalogPublicationTests(TestCase):
         response = Client().get(variant_asset.public_url, HTTP_ORIGIN=ORIGIN)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Access-Control-Allow-Origin"], ORIGIN)
-        response.close()
+        self.consume(response)
 
     def test_save_and_review_keeps_new_draft_and_returns_to_preview(self):
         response = self.client.post(reverse("admin:catalog_product_add"), admin_data(name="Nuevo revisable", _review="1", is_published="on", image_upload=photo_upload(), model_upload=model_upload()))
