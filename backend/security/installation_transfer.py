@@ -37,6 +37,8 @@ MAX_ARCHIVE = 1024 ** 3
 MAX_FILES = 10000
 MAX_RECORDS = 100000
 INVENTORY_FILES = {"inventory/snapshot.json", "inventory/sync-status.json"}
+WORKER_LEASE_MODEL = "model_imports.workerlease"
+MODEL_IMPORT_JOB = "model_imports.modelimportjob"
 
 
 class TransferError(Exception):
@@ -152,11 +154,17 @@ def state_payload():
         raise TransferError("La instalación supera el límite de registros del traslado portable.")
     records = []
     for model in ordinary:
+        if model._meta.label_lower == WORKER_LEASE_MODEL:
+            # The singleton belongs to this runtime, not to a portable snapshot.
+            counts[model._meta.label_lower] = 0
+            continue
         rows = json.loads(serializers.serialize("json", model.objects.order_by("pk"), ensure_ascii=False, cls=TransferJSONEncoder))
         automatic = [field.name for field in model._meta.local_many_to_many if field.remote_field.through._meta.auto_created]
         for row in rows:
             for name in automatic:
                 row["fields"].pop(name, None)
+            if model._meta.label_lower == MODEL_IMPORT_JOB:
+                row["fields"]["lease_token"] = None
         records.extend(rows)
     joins = [{"model": model._meta.label_lower, "rows": list(model.objects.order_by("pk").values())} for model in relations]
     return {"database.json": canonical(records), "relations.json": canonical(joins)}, counts
@@ -223,7 +231,24 @@ def source_files():
     known = {name for name, _ in result}
     if any(safe_name("media/" + str(name)) not in known for name in MediaAsset.objects.values_list("file", flat=True)):
         raise TransferError("Faltan archivos referenciados por el catálogo. El traslado se detuvo.")
+    from model_imports.models import ModelImportJob
+    for job in ModelImportJob.objects.only("id", "source"):
+        if job.source.name != f"model-imports/{job.pk}/source.skp" or safe_name("media/" + job.source.name) not in known:
+            raise TransferError("Falta un original SketchUp o su ruta no corresponde a la importación. El traslado se detuvo.")
     return result
+
+
+def validate_model_originals(database, files):
+    for row in database:
+        if row.get("model") != MODEL_IMPORT_JOB:
+            continue
+        fields = row["fields"]
+        expected_name = f"model-imports/{row['pk']}/source.skp"
+        if fields.get("source") != expected_name:
+            raise TransferError("El original SketchUp no corresponde a su importación.")
+        expected = {"size": fields.get("source_size"), "sha256": fields.get("source_sha256")}
+        if files.get(safe_name("media/" + expected_name)) != expected:
+            raise TransferError("Falta un original SketchUp o no coincide con su registro.")
 
 
 def export_installation(destination):
@@ -270,6 +295,7 @@ def export_installation(destination):
                             digest.update(chunk)
                             target.write(chunk)
                     manifest["files"][name] = {"size": size, "sha256": digest.hexdigest()}
+                validate_model_originals(json.loads(payloads["database.json"]), manifest["files"])
                 manifest["signature"] = signature(manifest)
                 archive.writestr("manifest.json", canonical(manifest))
         if destination.stat().st_size > MAX_ARCHIVE:
@@ -343,7 +369,7 @@ def validate_records(database, relations, manifest):
     for record in database:
         model = allowed.get(record.get("model"))
         identity = (record.get("model"), str(record.get("pk")))
-        if model is None or record.get("pk") is None or identity in identities or not isinstance(record.get("fields"), dict):
+        if model is None or record.get("model") == WORKER_LEASE_MODEL or record.get("pk") is None or identity in identities or not isinstance(record.get("fields"), dict):
             raise TransferError("El paquete contiene modelos, identidades o registros no permitidos.")
         automatic_names = {field.name for field in model._meta.local_many_to_many if field.remote_field.through._meta.auto_created}
         if automatic_names.intersection(record["fields"]):
@@ -366,11 +392,16 @@ def validate_records(database, relations, manifest):
     for row in database:
         if row["model"] == MediaAsset._meta.label_lower and safe_name("media/" + row["fields"]["file"]) not in manifest["files"]:
             raise TransferError("Faltan medios referenciados por los registros.")
+    validate_model_originals(database, manifest["files"])
 
 
 def empty_destination():
     ordinary, automatic = model_sets()
     for model in ordinary + automatic:
+        if model._meta.label_lower == WORKER_LEASE_MODEL:
+            if model.objects.exclude(pk=1, token=None, expires_at=None).exists():
+                raise TransferError("El destino tiene un trabajador de conversión activo. Detén el trabajador antes de importar.")
+            continue
         if model not in {ContentType, Permission} and model.objects.exists():
             raise TransferError("El destino contiene cuentas o datos. La importación solo admite una instalación vacía.")
     types = {(model._meta.app_label, model._meta.model_name): model for model in ordinary}
@@ -544,6 +575,15 @@ def import_installation(source, check_only=False):
                 sequences_attempted = True
                 restore_sequences(manifest["sequences"])
                 restore_inventory_backend(snapshot, manifest, database, installed, created_dirs)
+                from model_imports.models import ModelImportJob, WorkerLease
+                # Verify the exact snapshot first, then clear process-local claims.
+                # Imported running work is retried; it never publishes itself.
+                ModelImportJob.objects.update(lease_token=None)
+                ModelImportJob.objects.filter(status=ModelImportJob.Status.RUNNING).update(
+                    status=ModelImportJob.Status.QUEUED, started_at=None, finished_at=None,
+                    progress="Pendiente tras restaurar instalación",
+                )
+                WorkerLease.objects.update_or_create(pk=1, defaults={"token": None, "expires_at": None})
             committed = True
         return manifest
     except Exception:

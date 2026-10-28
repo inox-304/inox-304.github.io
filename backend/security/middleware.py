@@ -32,12 +32,17 @@ class SecuritySessionMiddleware(MiddlewareMixin):
             if "application/json" in request.headers.get("Accept", "") or request.path.startswith("/admin/api/"):
                 return JsonResponse({"error": "Se requiere una sesión con verificación en dos pasos."}, status=401)
             return redirect(reverse("security:login") + "?" + urlencode({"next": request.path}))
-        # Background inventory refreshes must not keep an unattended session alive.
+        # Background refreshes must not keep an unattended session alive.
         automatic_inventory = (
             request.headers.get("X-Inox-Automatic") == "1"
             and request.path in ("/admin/inventario/", "/admin/inventario/actualizar/", "/admin/inventario/estado/")
         )
-        if not automatic_inventory:
+        automatic_import = (
+            request.method == "GET"
+            and request.headers.get("X-Inox-Automatic") == "1"
+            and match and match.namespace == "model_imports" and match.url_name == "status"
+        )
+        if not (automatic_inventory or automatic_import):
             request.session[LAST_SEEN] = time.time()
         return None
 

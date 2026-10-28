@@ -5,6 +5,7 @@ from catalog import inventory_views
 from crm import public_views as crm_public
 
 urlpatterns = [
+    path('admin/modelos/', include('model_imports.urls')),
     path('admin/auth/', include('security.urls')),
     path('admin/crm/', include('crm.urls')),
     path('admin/inventario/', admin.site.admin_view(inventory_views.inventory_dashboard), name='inventory-dashboard'),

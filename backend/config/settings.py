@@ -63,6 +63,7 @@ for candidate in (*PUBLIC_CATALOG_ORIGINS, PUBLIC_CATALOG_ORIGIN):
         raise ImproperlyConfigured('Public catalog origins must be exact HTTPS origins without paths or credentials.')
 
 INSTALLED_APPS = [
+    'model_imports.apps.ModelImportsConfig',
     'config.apps.PrivateAdminConfig', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
     'django_otp', 'django_otp.plugins.otp_totp', 'security.apps.SecurityConfig', 'catalog', 'crm',
@@ -171,6 +172,14 @@ FRONTEND_DIST = Path(os.getenv('FRONTEND_DIST', PROJECT_DIR / 'dist-server')).re
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000
+
+# Conversion is isolated from HTTP workers and never publishes a result itself.
+MODEL_IMPORT_MAX_SOURCE_BYTES = 20 * 1024 * 1024
+MODEL_IMPORT_MAX_PENDING = 10
+MODEL_IMPORT_TIMEOUT_SECONDS = 180
+MODEL_IMPORT_MAX_RSS_MB = 256
+MODEL_IMPORT_LEASE_SECONDS = 90
+MODEL_IMPORT_MAX_ATTEMPTS = 2
 # Email MFA is disabled until an operator configures a real mail transport.
 SECURITY_EMAIL_ENABLED = os.getenv('SECURITY_EMAIL_ENABLED') == '1'
 SECURITY_EMAIL_RESEND_SECONDS = 60

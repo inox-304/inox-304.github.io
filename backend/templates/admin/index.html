@@ -73,6 +73,7 @@
     <div class="inox-home-actions">
       <a class="inox-home-primary" href="{% url 'admin:catalog_product_changelist' %}">Abrir catálogo <span aria-hidden="true">→</span></a>
       {% if perms.catalog.add_product %}<a class="inox-home-secondary" href="{% url 'admin:catalog_product_add' %}">+ Nuevo equipo</a>{% endif %}
+      <a class="inox-home-secondary" href="{% url 'model_imports:index' %}">Modelos de SketchUp <span aria-hidden="true">→</span></a>
     </div>
   </section>
   {% endif %}

@@ -4,7 +4,16 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { parseCsv, parseCms, normalizeWhatsapp, safeImage, safeHttps, safeTechnicalSheet, safeModel, formatProductPrice, validatePublishedUrl, resolveContact, visibleCmsProducts, cmsProductRoute } from '../src/lib/cms.ts';
+import { parseCsv, parseCms, normalizeWhatsapp, safeImage, safeHttps, safeTechnicalSheet, safeModel, safePreviewAsset, formatProductPrice, validatePublishedUrl, resolveContact, visibleCmsProducts, cmsProductRoute } from '../src/lib/cms.ts';
+
+test('SketchUp candidate URLs are allowed only in private preview with exact route', () => {
+  const candidate = '/admin/modelos/11111111-1111-4111-8111-111111111111/resultado/';
+  assert.equal(safePreviewAsset(candidate, safeModel, true), candidate);
+  assert.equal(safePreviewAsset(candidate, safeModel, false), '');
+  for (const bad of [candidate + '?token=x', candidate.replace('resultado', 'original'), candidate.replace('/admin/', 'https://example.com/admin/'), candidate.replace('11111111-', '../')]) {
+    assert.equal(safePreviewAsset(bad, safeModel, true), '');
+  }
+});
 
 const header = 'id,slug,nombre,categoria,descripcion,caracteristicas,imagen,visible,destacado,orden,contacto_id\n';
 const catalog = header + 'P01,equipo-prueba,Equipo de prueba,coccion,Descripción,Acero|Dos puertas,/images/products/example.webp,SI,SI,1,ventas\n';

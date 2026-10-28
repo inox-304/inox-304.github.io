@@ -13,7 +13,7 @@
     "build:published": "node --env-file-if-exists=.env scripts/configure-domain.mjs && npm run build && npm test && npm run check:models",
     "build:server": "node scripts/build-server.mjs",
     "server:check": "uv run --project backend python backend/manage.py check",
-    "server:test": "uv run --project backend python backend/manage.py test security catalog config crm"
+    "server:test": "uv run --project backend python backend/manage.py test security catalog config crm model_imports"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",

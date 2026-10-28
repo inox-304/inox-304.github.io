@@ -1,0 +1,13 @@
+{% extends "model_imports/base.html" %}
+{% block imports_content %}
+<header class="imports-header"><div><p class="imports-eyebrow">PASO 1 · ARCHIVO ORIGINAL</p><h1>Subir modelo de SketchUp</h1><p>Elige dónde lo usarás. La revisión será privada.</p></div><a href="{% url 'model_imports:index' %}">Ver importaciones</a></header>
+<div class="imports-two-column"><section class="imports-card imports-form">
+{% if product %}<div class="imports-target"><small>EQUIPO ELEGIDO</small><h2>{{ product.name }}</h2><p>{{ product.code }} · {% if product.is_published and product.is_active %}Publicado{% else %}Borrador o equipo oculto{% endif %}</p><a href="{% url 'model_imports:upload' %}">Cambiar equipo</a></div>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.product }}{{ form.non_field_errors }}{{ form.product.errors }}
+<div class="imports-field">{{ form.variant.label_tag }}{{ form.variant }}{{ form.variant.errors }}<p class="imports-help">{{ form.variant.help_text }}</p></div>
+<div class="imports-field imports-file">{{ form.upload.label_tag }}{{ form.upload }}{{ form.upload.errors }}<p class="imports-help">{{ form.upload.help_text }}</p></div>
+<button class="imports-button" type="submit">Preparar modelo para revisar <span aria-hidden="true">→</span></button>
+</form>
+{% else %}<h2>¿A qué equipo pertenece?</h2><form method="get">{{ target_form.non_field_errors }}<div class="imports-field">{{ target_form.product.label_tag }}{{ target_form.product }}{{ target_form.product.errors }}</div><button class="imports-button" type="submit">Continuar <span aria-hidden="true">→</span></button></form><p class="imports-help">¿Es un equipo nuevo? <a href="{% url 'admin:catalog_product_add' %}">Créalo como borrador</a> y después añade su modelo aquí.</p>{% endif %}
+</section><aside class="imports-card imports-guide"><h2>Qué pasará con tu archivo</h2><ol><li><strong>Conservamos el original.</strong> El .skp queda en el almacenamiento privado.</li><li><strong>Preparamos la vista web.</strong> La conversión se realiza en segundo plano; puedes volver más tarde.</li><li><strong>Tú revisas y decides.</strong> Comprueba los materiales y la geometría antes de aplicarlo.</li></ol><div class="imports-callout"><strong>El modelo actual se conserva.</strong><p>Subir un archivo no reemplaza lo que ven tus clientes. Aplicar a un equipo publicado sí actualiza su modelo; en un borrador, después tendrás el botón Publicar.</p></div><p class="imports-help">La conversión prepara la geometría y los materiales. Las puertas animadas y los módulos configurables necesitan una estructura compatible y una preparación adicional.</p></aside></div>
+{% endblock %}

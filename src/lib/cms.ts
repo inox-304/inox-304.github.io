@@ -81,6 +81,7 @@ export function safeImage(value: string): string {
   return safePublicAsset(value);
 }
 export function safePreviewAsset(value: string, validate: (value: string) => string, preview = false): string {
+  if (preview && /^\/admin\/modelos\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/resultado\/$/i.test(value)) return value;
   if (preview && /^\/admin\/catalog\/mediaasset\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/file\/$/i.test(value)) return value;
   return validate(value);
 }
