@@ -58,11 +58,20 @@ proxy pueden compartir el limite de IP.
 Arranque
 
 El CMD de Docker ejecuta deploy/start-web.py. Este valida PORT,
-WEB_CONCURRENCY y GUNICORN_TIMEOUT, genera los estaticos y reemplaza su proceso
-por Gunicorn. No ejecuta migraciones, seed, restauraciones ni preparadores de
+WEB_CONCURRENCY y GUNICORN_TIMEOUT y genera los estaticos. En produccion supervisa
+Gunicorn y un consumidor de la cola SketchUp en el mismo servicio gratuito.
+MODEL_IMPORT_WORKER acepta solo 0 o 1: por defecto 1 en produccion y 0 fuera de
+ella. Con 0 arranca unicamente Gunicorn. La cola y los archivos deben estar en
+PostgreSQL y almacenamiento privado; migrar model_imports explicitamente antes
+del primer despliegue de esta funcion. El supervisor reinicia el consumidor con
+esperas progresivas y termina ambos procesos cuando se cierra el servicio.
+No ejecuta migraciones, seed, restauraciones ni preparadores de
 cuentas. Usa un worker por defecto para la memoria del plan Free; PORT lo
 asigna Render (el Blueprint declara 10000). /health/ comprueba conexion a la
-base; no demuestra que correo, medios o Sheets funcionen.
+base; no demuestra que correo, medios, Sheets o la conversion funcionen. Render
+puede suspender el servicio gratuito por inactividad; mientras duerme no procesa
+la cola. Al despertar recupera trabajos interrumpidos mediante una reserva con
+vencimiento. No se activa un segundo servicio ni una suscripcion de conversion.
 
 Verificacion antes del cambio publico
 
