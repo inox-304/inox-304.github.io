@@ -5,8 +5,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CART_MODULE_NODES, createCartSceneGraph, disposeCartResources, type CartModuleId } from '../lib/cart-scene-graph.ts';
 
 export type CartView = 'top' | 'front' | 'perspective';
-export type CartScene = { update(included: readonly string[], order?: readonly string[]): void; setActivePosition(position: number | null): void; setView(view: CartView): void; setCanopyVisible(visible: boolean): void; focus(): void; dispose(): void };
-type CartSceneOptions = { onError?: (error: Error) => void; onPickPosition?: (position: number) => void; onMoveModule?: (moduleId: CartModuleId, position: number) => void };
+export type CartScene = { update(included: readonly string[], order?: readonly string[]): void; setEditingEnabled(enabled: boolean): void; setActivePosition(position: number | null): void; setView(view: CartView): void; setCanopyVisible(visible: boolean): void; focus(): void; dispose(): void };
+type CartSceneOptions = { editingEnabled?: boolean; onError?: (error: Error) => void; onPickPosition?: (position: number) => void; onMoveModule?: (moduleId: CartModuleId, position: number) => void };
 // A retry may finish before an older GLTF request. Only the newest instance may
 // render into this host, publish state, or remove its shared state on cleanup.
 const hostOwners = new WeakMap<HTMLElement, object>();
@@ -116,6 +116,7 @@ export async function createCartScene(host: HTMLElement, assetUrl: string, optio
     });
     type Drag = { id: number; moduleId: CartModuleId; module: THREE.Object3D; source: number; x: number; y: number; plane: THREE.Plane; anchor: THREE.Vector3; origin: THREE.Vector3; target: number | null; moved: boolean; orbitEnabled: boolean; ghost?: THREE.Object3D; materials: THREE.Material[] };
     let activePosition: number | null = null, drag: Drag | null = null;
+    let editingEnabled = options.editingEnabled !== false;
     const dragHint = host.ownerDocument.createElement('p'); dragHint.className = 'cart-drag-status'; dragHint.hidden = true;
     dragHint.setAttribute('role', 'status'); dragHint.setAttribute('aria-live', 'polite');
     dragHint.style.cssText = 'position:absolute;z-index:2;bottom:12px;left:12px;right:12px;margin:0;padding:9px 12px;border:1px solid #bed6e3;border-radius:9px;background:#ffffffed;color:#123f56;font-size:12px;line-height:1.4;text-align:center;pointer-events:none;';
@@ -129,12 +130,12 @@ export async function createCartScene(host: HTMLElement, assetUrl: string, optio
         const highlighted = drag?.moved ? index === drag.target : index === activePosition;
         line.material.color.set(highlighted ? (drag?.moved ? 0x147d5c : 0x006ba0) : 0x5d879e); line.material.opacity = highlighted ? 1 : .4;
       });
-      guides!.visible = (activePosition !== null || !!drag?.moved) && graph.canReorder;
+      guides!.visible = editingEnabled && (activePosition !== null || !!drag?.moved) && graph.canReorder;
     };
     updateGuides();
     const raycaster = new THREE.Raycaster();
     let down: { x: number; y: number; id: number } | null = null;
-    const interactive = () => !disposed && ownsHost() && !failed && !contextLost && graph.canReorder;
+    const interactive = () => editingEnabled && !disposed && ownsHost() && !failed && !contextLost && graph.canReorder;
     const rayAt = (pointer: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height || pointer.clientX < rect.left || pointer.clientX > rect.left + rect.width || pointer.clientY < rect.top || pointer.clientY > rect.top + rect.height) return false;
@@ -306,6 +307,12 @@ export async function createCartScene(host: HTMLElement, assetUrl: string, optio
           failed = false; message.hidden = true; canvas.hidden = false; canvas.style.display = 'block';
           host.dataset.cartSceneState = 'ready'; host.dataset.cartIncluded = selected.join(','); host.dataset.cartOrder = graph.order.join(','); invalidate();
         } catch (error) { report(error); }
+      },
+      setEditingEnabled(enabled) {
+        if (disposed || !ownsHost() || typeof enabled !== 'boolean') return;
+        editingEnabled = enabled;
+        if (!enabled) cancelDrag();
+        updateGuides(); invalidate();
       },
       setActivePosition(position) {
         if (disposed || !ownsHost() || contextLost || (position !== null && (!Number.isInteger(position) || position < 0 || position > 3))) return;

@@ -21,7 +21,7 @@ const source = ts.transpileModule(readFileSync(new URL('../src/scripts/product-m
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText
   .replace("import('./cooktop-scene')", 'loadSceneModule()').replace("import('./cart-scene')", 'loadCartModule()').replace("import('@google/model-viewer')", 'loadNativeModule()');
 
-function fixture(base = product('P04'), deferNative = false, { failInitialCartUpdate = false } = {}) {
+function fixture(base = product('P04'), deferNative = false, { failInitialCartUpdate = false, closedCustomization = false } = {}) {
   const calls = [], cartCalls = [], timers = new Map(), documents = new Map(), windowEvents = new Map(), picks = [], cartPicks = [], cartMoves = [], frames = new Map();
   let currentState = initial(), stateProduct = base.id, timerId = 0;
   let currentCart = base.id === 'P15' ? cartInitial() : null, cartProductId = base.id;
@@ -55,13 +55,14 @@ function fixture(base = product('P04'), deferNative = false, { failInitialCartUp
     querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
     set src(value) { this.source = value; if (this.tagName === 'model-viewer') queueMicrotask(() => this.emit('load')); }
   }
-  const root = new Element(), cooktopRoot = new Element(), cartRoot = new Element(), variant = new Element('select');
+  const root = new Element(), cooktopRoot = new Element(), cartRoot = new Element(), variant = new Element('select'), customization = new Element('button');
+  customization.setAttribute('aria-expanded', closedCustomization ? 'false' : 'true');
   const names = ['media-toolbar', 'photo-options', 'gallery-photo', 'gallery-image', 'model-host', 'show-model', 'model-help', 'media-status'];
   const nodes = Object.fromEntries(names.map(name => [name, new Element(name === 'show-model' ? 'button' : 'div')]));
   root.querySelector = selector => nodes[selector.slice(6, -1)];
   root.dataset.initialProduct = JSON.stringify(base);
   const document = {
-    querySelector: selector => selector === '[data-cooktop-root]' ? cooktopRoot : selector === '[data-cart-root]' ? cartRoot : selector === '[data-product-variant]' ? variant : null,
+    querySelector: selector => selector === '[data-cooktop-root]' ? cooktopRoot : selector === '[data-cart-root]' ? cartRoot : selector === '[data-product-variant]' ? variant : selector === '[data-customization-toggle]' ? customization : null,
     querySelectorAll: selector => selector === '[data-product-media]' ? [root] : [], createElement: tag => new Element(tag),
     addEventListener(type, callback) { if (!documents.has(type)) documents.set(type, []); documents.get(type).push(callback); },
   };
@@ -70,23 +71,24 @@ function fixture(base = product('P04'), deferNative = false, { failInitialCartUp
   const loadSceneModule = async () => ({ createCooktopScene(host, url, options) {
     let resolve;
     const promise = new Promise(done => { resolve = done; });
-    const call = { url, options, updates: [], interactions: [], views: [], disposed: 0, doorStates: [], hasDoors: true, complete() {
+    const call = { url, options, updates: [], interactions: [], editing: [], views: [], disposed: 0, doorStates: [], hasDoors: true, complete() {
       this.canvas = new Element('canvas'); host.append(this.canvas);
       const self = this;
-      resolve({ get hasDoors() { return self.hasDoors; }, update(c, s) { self.updates.push({ config: structuredClone(c), selection: structuredClone(s) }); if (s.kitchen) self.hasDoors = s.kitchen.oven === 'gas' || s.kitchen.oven === 'electric' || s.kitchen.structure === 'cabinet'; }, setInteraction(value) { self.interactions.push(structuredClone(value)); }, setView(view) { self.views.push(view); }, setDoors(open) { self.doorStates.push(open); }, dispose() { self.disposed++; self.canvas.remove(); } });
+      resolve({ get hasDoors() { return self.hasDoors; }, update(c, s) { self.updates.push({ config: structuredClone(c), selection: structuredClone(s) }); if (s.kitchen) self.hasDoors = s.kitchen.oven === 'gas' || s.kitchen.oven === 'electric' || s.kitchen.structure === 'cabinet'; }, setInteraction(value) { self.interactions.push(structuredClone(value)); }, setEditingEnabled(value) { self.editing.push(value); }, setView(view) { self.views.push(view); }, setDoors(open) { self.doorStates.push(open); }, dispose() { self.disposed++; self.canvas.remove(); } });
     } };
     calls.push(call); return promise;
   } });
   const loadCartModule = async () => ({ createCartScene(host, url, options) {
     let resolve, reject;
     const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
-    const call = { url, options, updates: [], orders: [], activePositions: [], views: [], roofs: [], disposed: 0,
+    const call = { url, options, updates: [], orders: [], activePositions: [], editing: [], views: [], roofs: [], disposed: 0,
       reject() { reject(new Error('Missing cart asset')); },
       complete() {
         this.canvas = new Element('canvas'); host.append(this.canvas); const self = this;
         resolve({
           update(included, order) { self.updates.push(structuredClone(included)); self.orders.push(structuredClone(order)); if (failInitialCartUpdate && self.updates.length === 1) options.onError(new Error('Incompatible selection')); },
           setActivePosition(position) { self.activePositions.push(position); },
+          setEditingEnabled(value) { self.editing.push(value); },
           setView(view) { self.views.push(view); }, setCanopyVisible(visible) { self.roofs.push(visible); },
           focus() { self.canvas.focus(); }, dispose() { self.disposed++; self.canvas.remove(); },
         });
@@ -106,6 +108,7 @@ function fixture(base = product('P04'), deferNative = false, { failInitialCartUp
   });
   const changed = (interactive = true, id = stateProduct) => dispatch('inox:cooktop-updated', { productId: id, interactive });
   return { nodes, calls, cartCalls, timers, picks, cartPicks, cartMoves, changed, dispatch, finishNativeLoad,
+    setCustomization(open, id = base.id) { customization.setAttribute('aria-expanded', String(open)); dispatch('inox:customization-visibility', { productId:id, open }); },
     cartChanged(interactive = true, id = cartProductId) { dispatch('inox:cart-updated', { productId: id, interactive }); },
     setCartState(state, id = cartProductId) { currentCart = state; cartProductId = id; },
     frame() { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(500)); },
@@ -458,4 +461,26 @@ test('variant photo isolates the gallery and changing GLB keeps 360 open with th
   assert.equal(f.nodes['model-host'].querySelector('model-viewer').source, base.model3d);
   assert.equal(f.nodes['photo-options'].children.length, 2);
   f.pagehide();
+});
+
+
+test('closed customization keeps cart and kitchen views inspectable but prevents direct module edits', async () => {
+  for (const base of [product('P04'), cartProduct()]) {
+    const f = fixture(base, false, {closedCustomization:true});
+    f.nodes['show-model'].click(); await f.flush();
+    const call = base.id === 'P15' ? f.cartCalls[0] : f.calls[0];
+    assert.equal(call.options.editingEnabled,false);
+    call.complete(); await f.flush(); assert.equal(call.editing.at(-1),false);
+    const pick = () => base.id === 'P15' ? call.options.onMoveModule('plancha',1) : call.options.onPick(1);
+    pick(); assert.equal(f.picks.length+f.cartMoves.length,0);
+    f.setCustomization(true); assert.equal(call.editing.at(-1),true); pick();
+    assert.equal(f.picks.length+f.cartMoves.length,1);
+    const updates = call.updates.length;
+    f.setCustomization(false); assert.equal(call.editing.at(-1),false); pick();
+    assert.equal(f.picks.length+f.cartMoves.length,1);
+    assert.equal(call.updates.length,updates,'closing must not reset the configuration');
+    assert.equal(call.disposed,0,'closing must not discard the active scene or camera');
+    assert.match(f.nodes['model-help'].textContent,/Abre «Personalizar»/);
+    f.pagehide();
+  }
 });

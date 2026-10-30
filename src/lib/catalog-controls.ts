@@ -1,7 +1,8 @@
 import { normalizeCategory, type ProductCategory } from '../data/categories.ts';
+import { catalogTypeById } from './catalog-taxonomy.ts';
 
 export type CatalogOrder = 'catalogo' | 'nombre';
-export type CatalogState = { category: ProductCategory | 'todos'; query: string; order: CatalogOrder };
+export type CatalogState = { category: ProductCategory | 'todos'; query: string; order: CatalogOrder; type?: string };
 
 export function catalogSearchText(product: { id: string; name: string; summary: string; features?: readonly string[]; brand?: string; supplierModel?: string; equipmentFamily?: string; capacity?: string }, category: string) {
   return [product.id, product.name, product.summary, category, product.brand, product.supplierModel, product.equipmentFamily, product.capacity, ...(product.features || [])].filter(Boolean).join(' ');
@@ -57,10 +58,13 @@ export function matchesCatalogSearch(text: string, query: string) {
 export function sameCatalogQuery(a: string, b: string) { return searchTokens(a).map(canonicalToken).join(' ') === searchTokens(b).map(canonicalToken).join(' '); }
 
 export function readCatalogState(params: URLSearchParams): CatalogState {
+  const requestedCategory = normalizeCategory(params.get('categoria'));
+  const requestedType = catalogTypeById(params.get('tipo') || '', requestedCategory);
   return {
-    category: normalizeCategory(params.get('categoria')) || 'todos',
+    category: requestedCategory || requestedType?.category || 'todos',
     query: (params.get('buscar') || '').slice(0, 160),
     order: params.get('orden') === 'nombre' ? 'nombre' : 'catalogo',
+    ...(requestedType ? { type: requestedType.id } : {}),
   };
 }
 
@@ -69,6 +73,8 @@ export function catalogStateUrl(current: string, state: CatalogState) {
   state.category === 'todos' ? url.searchParams.delete('categoria') : url.searchParams.set('categoria', state.category);
   state.query.trim() ? url.searchParams.set('buscar', state.query.trim()) : url.searchParams.delete('buscar');
   state.order === 'catalogo' ? url.searchParams.delete('orden') : url.searchParams.set('orden', state.order);
+  const type = catalogTypeById(state.type || '', state.category);
+  type ? url.searchParams.set('tipo', type.id) : url.searchParams.delete('tipo');
   return url;
 }
 

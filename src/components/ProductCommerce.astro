@@ -1,6 +1,8 @@
 ---
 import { formatProductPrice, productOriginLabel, safeTechnicalSheet, type ProductOrigin } from '../lib/cms';
 import { withBase } from '../lib/paths';
+import ProductCustomization from './ProductCustomization.astro';
+import CooktopConfigurator from './CooktopConfigurator.astro';
 interface Props {
   product?: ProductOrigin & { price?: number; currency?: string; showPrice?: boolean; technicalSheet?: string };
 }
@@ -14,20 +16,24 @@ const origin = productOriginLabel(product);
   <p class="product-price" data-product-price hidden={!price}>{price}</p>
   <span data-product-unit hidden></span>
   <p class="product-availability" data-product-availability hidden></p>
+  <div class="product-additional" data-product-additional hidden><p>Cargos ya incluidos en el precio</p><ul data-product-charges></ul></div>
+  <a class="technical-sheet-link" data-product-technical-sheet href={technicalSheet ? withBase(technicalSheet) : undefined} target="_blank" rel="noopener noreferrer" hidden={!technicalSheet}>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v5h4M9 13h6M9 17h6"/></svg>
+    Ver ficha técnica PDF <span aria-hidden="true">↗</span>
+  </a>
+</div>
+<ProductCustomization>
+  <slot/>
   <label class="product-variants" data-product-variants hidden><span data-product-variant-label>Variación</span><select data-product-variant aria-label="Variación del equipo"></select></label>
   <fieldset class="variant-options" data-variant-options hidden></fieldset>
-  <div class="product-additional" data-product-additional hidden><p>Cargos ya incluidos en el precio</p><ul data-product-charges></ul></div>
+  <CooktopConfigurator/>
   <fieldset class="product-extras" data-product-extras hidden aria-describedby="product-extras-hint">
     <legend>Adicionales <span>Opcionales</span></legend>
     <p id="product-extras-hint">Elige lo que necesitas para tu equipo. Confirmaremos cantidades y medidas al cotizar.</p>
     <div class="product-extra-options" data-product-extra-options></div>
     <p class="product-extra-summary" data-product-extra-summary aria-live="polite"></p>
   </fieldset>
-  <a class="technical-sheet-link" data-product-technical-sheet href={technicalSheet ? withBase(technicalSheet) : undefined} target="_blank" rel="noopener noreferrer" hidden={!technicalSheet}>
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v5h4M9 13h6M9 17h6"/></svg>
-    Ver ficha técnica PDF <span aria-hidden="true">↗</span>
-  </a>
-</div>
+</ProductCustomization>
 <style>
   .product-origin { color: #385674; font-size: .85rem; line-height: 1.6; border-left: 3px solid #a9bdd0; padding-left: 12px; }
   .product-commerce { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding-block: 10px 22px; }

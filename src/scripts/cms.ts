@@ -5,6 +5,10 @@ import { getProductStage } from '../lib/product-stage';
 import { additionalsQuoteSummary, createAdditionalOption, reconcileAdditionalSelection, type AdditionalSelection } from '../lib/product-additionals';
 import { catalogSearchText } from '../lib/catalog-controls';
 import { catalogFamilyProducts, getProductFamily } from '../lib/product-families';
+import { selectHomeFeatured } from '../lib/home-featured';
+import { expandedCatalogListings, catalogListingHref, catalogListingSearchText, type CatalogListing } from '../lib/catalog-listings';
+import { getCatalogType } from '../lib/catalog-taxonomy';
+import { syncCustomization } from './product-customization';
 import { parseCooktopConfig, type CooktopConfig } from '../lib/cooktop-config';
 import { hasCooktopAsset } from '../lib/cooktop-assets';
 import { startCooktopSync, type CooktopSyncStatus } from '../lib/cooktop-sync';
@@ -41,9 +45,12 @@ const defaultHero = [...document.querySelectorAll<HTMLElement>('[data-business="
 function route(product: CmsProduct) { return apiMode ? apiProductRoute(product) : cmsProductRoute(product, payload?.routes || {}); }
 function category(product: CmsProduct) { return categoryNames[product.category] || product.category; }
 function setText(selector: string, value: string, root: ParentNode = document) { root.querySelectorAll(selector).forEach(element => { element.textContent = value; }); }
-function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElement {
-  const family = getProductFamily(product.id, data.products);
-  const title = family?.name || product.name;
+function createCard(product: CmsProduct, index: number, data: CmsData, listing?: CatalogListing<CmsProduct>): HTMLElement {
+  const family = listing ? null : getProductFamily(product.id, data.products);
+  const title = listing?.title || family?.name || product.name;
+  const photoSource = listing?.image || product.image;
+  const label = listing?.label || '';
+  const target = listing ? catalogListingHref(listing, route(product)) : route(product);
   const card = cardTemplate?.cloneNode(true) as HTMLElement || document.createElement('article');
   if (!cardTemplate) {
     card.className = 'product-card';
@@ -60,15 +67,18 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
     const main = document.createElement('a'); main.className = 'product-card-main'; main.append(photo, copy);
     const commerce = document.createElement('div'); commerce.className = 'product-card-commerce';
     const price = document.createElement('p'); price.className = 'product-card-price'; price.dataset.cardPrice = '';
-    const quote = document.createElement('a'); quote.className = 'button button-chrome product-card-quote'; quote.dataset.cardQuote = ''; quote.textContent = 'Cotizar ↗'; quote.target = '_blank'; quote.rel = 'noopener noreferrer';
+    const quote = document.createElement('a'); quote.className = 'button button-chrome button-quote product-card-quote'; quote.dataset.cardQuote = ''; quote.textContent = 'Cotizar ↗'; quote.target = '_blank'; quote.rel = 'noopener noreferrer';
     commerce.append(price, quote); card.append(main, commerce);
   }
   card.hidden = false;
-  const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) main.href = route(product);
+  const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) main.href = target;
   card.dataset.productId = product.id;
+  card.dataset.productType = getCatalogType(product)?.id || '';
+  card.dataset.listingKey = listing?.key || product.id;
+  card.dataset.variantId = listing?.variant?.id || '';
   card.dataset.category = product.category;
-  card.dataset.name = family ? [family.name, ...family.members.map(member => `${member.label} ${catalogSearchText(member.product, category(member.product))}`)].join(' ') : catalogSearchText(product, category(product));
-  card.dataset.title = title; card.dataset.catalogOrder = String(index);
+  card.dataset.name = listing ? catalogListingSearchText(listing, category(product)) : family ? [family.name, ...family.members.map(member => `${member.label} ${catalogSearchText(member.product, category(member.product))}`)].join(' ') : catalogSearchText(product, category(product));
+  card.dataset.title = [title, label].filter(Boolean).join(' · '); card.dataset.catalogOrder = String(index);
   card.classList.add('product-photo-white');
   card.removeAttribute('data-reveal'); card.removeAttribute('style');
   setText('.product-index', String(index + 1).padStart(2, '0'), card);
@@ -76,15 +86,15 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
   setText('.product-card-info h3', title, card);
   let familyNote = card.querySelector<HTMLElement>('[data-card-family]');
   if (!familyNote) { familyNote = document.createElement('p'); familyNote.className = 'product-card-family'; familyNote.dataset.cardFamily = ''; card.querySelector('.product-card-info h3')?.after(familyNote); }
-  familyNote.hidden = !family;
-  familyNote.textContent = family ? family.cardSummary || `${family.members.length} ${family.members.length === 1 ? 'modelo disponible' : 'modelos disponibles'}` : '';
-  setText('[data-card-link-label]', family ? family.cardAction || 'Elegir capacidad / modelo' : 'Explorar equipo', card);
+  familyNote.hidden = !family && !label;
+  familyNote.textContent = label || (family ? family.cardSummary || `${family.members.length} ${family.members.length === 1 ? 'modelo disponible' : 'modelos disponibles'}` : '');
+  setText('[data-card-link-label]', listing?.variant ? 'Ver esta versión' : family ? family.cardAction || 'Elegir capacidad / modelo' : 'Explorar equipo', card);
   setText('[data-card-code]', product.id, card);
   const image = card.querySelector('img');
   if (image) {
-    const source = withBase(product.image), expectedSource = new URL(source, location.href).href;
+    const source = withBase(photoSource), expectedSource = new URL(source, location.href).href;
     const applyPhoto = (natural?: { width: number; height: number }) => {
-      const profile = getProductStage(product.image, natural);
+      const profile = getProductStage(photoSource, natural);
       image.setAttribute('data-product-photo', ''); image.setAttribute('style', profile.photoStyle);
       image.width = profile.width; image.height = profile.height;
     };
@@ -93,23 +103,26 @@ function createCard(product: CmsProduct, index: number, data: CmsData): HTMLElem
       if (image.onload !== loaded || image.currentSrc !== expectedSource || !image.naturalWidth || !image.naturalHeight) return;
       applyPhoto({ width: image.naturalWidth, height: image.naturalHeight });
     };
-    image.onload = loaded; image.src = source; image.alt = product.name; image.removeAttribute('srcset');
+    image.onload = loaded; image.src = source; image.alt = [title, label].filter(Boolean).join(' · '); image.removeAttribute('srcset');
     if (image.complete) loaded();
   }
-  const price = formatProductPrice(product);
+  const price = formatProductPrice(listing ? { ...product, price: listing.price } : product);
   const priceNode = card.querySelector<HTMLElement>('[data-card-price]'); if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
   const quote = card.querySelector<HTMLAnchorElement>('[data-card-quote]');
   if (quote) {
     const contact = resolveContact(data, product.contactId);
     quote.hidden = !!price;
-    quote.setAttribute('aria-label', `Cotizar ${product.name}`);
-    quote.href = contact ? contactUrl(contact, `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name}. Me gustaría recibir una cotización. ${new URL(route(product), location.origin).href}`) : withBase('/contacto/');
+    const selectedName = [product.name, label].filter(Boolean).join(' · ');
+    quote.setAttribute('aria-label', `Cotizar ${selectedName}`);
+    quote.href = contact ? contactUrl(contact, `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${selectedName}. Me gustaría recibir una cotización. ${new URL(target, location.origin).href}`) : withBase('/contacto/');
     if (contact) quote.target = '_blank'; else quote.removeAttribute('target');
   }
   return card;
 }
-function fillCards(container: Element, products: CmsProduct[], data: CmsData) {
-  const fragment = document.createDocumentFragment(); products.forEach((product, index) => fragment.append(createCard(product, index, data)));
+function fillCards(container: Element, products: CmsProduct[], data: CmsData, expanded = false) {
+  const fragment = document.createDocumentFragment();
+  if (expanded) expandedCatalogListings(products).forEach((listing, index) => fragment.append(createCard(listing.product, index, data, listing)));
+  else products.forEach((product, index) => fragment.append(createCard(product, index, data)));
   container.replaceChildren(fragment);
 }
 
@@ -128,11 +141,14 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   const productId = selectedProductId ?? (payload?.previewProductId || detail.dataset.productDetail || new URLSearchParams(location.search).get('id') || '');
   const slug = catalogSlug(location.pathname);
   const product = data.products.find(item => item.visible && (productId ? item.id === productId : item.slug === slug));
+  const requestedVariant = new URLSearchParams(location.search).get('variant') || '';
+  const previousVariantRequest = detail.dataset.variantRequest;
   // Updating another catalogue item must not reset the active 3D camera, doors,
   // keyboard focus, variant or a customer's in-progress configuration.
   const signature = JSON.stringify({ identity: product?.id || productId || slug, product: product || null, contacts: data.contacts, settings: data.settings, family: product ? getProductFamily(product.id, data.products) : null });
-  if (lastDetailApplied === signature) { if (product) updateRelatedProducts(detail, data, product); updateAvailabilityNotice(); return; }
+  if (lastDetailApplied === signature && previousVariantRequest === requestedVariant) { if (product) updateRelatedProducts(detail, data, product); updateAvailabilityNotice(); return; }
   lastDetailApplied = signature;
+  detail.dataset.variantRequest = requestedVariant;
   cooktopSync?.dispose(); cooktopSync = undefined;
   cartSync?.dispose(); cartSync = undefined;
   const cartConnection = detail.querySelector<HTMLElement>('[data-cart-connection]');
@@ -143,6 +159,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   const grid = detail.querySelector<HTMLElement>('.product-detail-grid');
   const related = detail.querySelector<HTMLElement>('.related-products');
   if (!product) {
+    syncCustomization(detail, '');
     // Keep the requested identity after history navigation, so later polling
     // cannot repopulate this URL with the previously displayed product.
     detail.dataset.productDetail = productId;
@@ -277,7 +294,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   const updateQuote = () => {
     const variant = product.variants?.find(item => item.id === variants?.value);
     const configuration = family?.selectorLabel ? family.members.find(member => member.product.id === product.id)?.label : '';
-    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}\n${new URL(route(product), location.origin).href}`;
+    const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}\n${new URL(catalogListingHref({ variant }, route(product)), location.origin).href}`;
     detail.querySelectorAll<HTMLAnchorElement>('[data-product-inquiry]').forEach(anchor => {
       const selected = `${product.name}${variant ? ` · ${variant.name}` : ''}${configuration ? ` · ${configuration}` : ''}${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}`;
       anchor.href = withBase('/contacto/') + '?' + new URLSearchParams({ product_code: product.id, configuration: selected.slice(0, 4000) });
@@ -294,11 +311,13 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     // A different SKU/variant has not inherited approval for this base's modules.
     renderCooktop(cooktopRoot, variants?.value ? null : cooktopRules, product.id, text => { configuredSurface = text; updateConfiguredPrice(); updateQuote(); }, payload?.preview === true, product.model3d);
     updateConnection();
+    syncCustomization(detail, product.id, product.supplyType);
   };
   const updateCart = () => {
     if (!cartRoot) return;
     renderCart(cartRoot, variants?.value ? null : cartRules, product.id, text => { configuredCart = text; updateConfiguredPrice(); updateQuote(); }, product.model3d, payload?.preview === true);
     updateCartConnection();
+    syncCustomization(detail, product.id, product.supplyType);
   };
   const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? productQuoteNote(product) : 'Por el momento no hay un contacto de cotización disponible.';
   const price = formatProductPrice(product);
@@ -311,6 +330,16 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
   if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
   const unit = detail.querySelector<HTMLElement>('[data-product-unit]');
   if (unit) { unit.textContent = product.unitLabel || product.chargeUnit || ''; unit.hidden = !price || !unit.textContent; }
+  const syncCommerce = () => {
+    const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]');
+    if (!commerce) return;
+    const variant = product.variants?.find(item => item.id === variants?.value);
+    const amount = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
+    commerce.hidden = !configuredSurface && !configuredCart && !amount
+      && !(variant?.technicalSheet || product.technicalSheet)
+      && !formatAvailability(variant?.availability || product.availability)
+      && !product.additionalCharges?.length;
+  };
   const updateConfiguredPrice = () => {
     const configured = !!(configuredSurface || configuredCart);
     const variant = product.variants?.find(item => item.id === variants?.value);
@@ -319,8 +348,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     if (unit) unit.hidden = configured || !amount || !unit.textContent;
     if (quoteNote) quoteNote.textContent = !contact ? 'Por el momento no hay un contacto de cotización disponible.' : configured ? 'Configuración a cotizar. Confirmaremos el precio y las medidas de las opciones elegidas.' : productQuoteNote(product);
     styleQuote(configured ? '' : amount);
-    const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]');
-    if (commerce && configured) commerce.hidden = false;
+    syncCommerce();
   };
   const availability = detail.querySelector<HTMLElement>('[data-product-availability]');
   if (availability) { availability.textContent = formatAvailability(product.availability); availability.hidden = !availability.textContent; }
@@ -328,15 +356,23 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     const variantLabel = product.supplyType === 'distributed' ? 'Opción del fabricante' : 'Variación';
     setText('[data-product-variant-label]', variantLabel, detail);
     variants.setAttribute('aria-label', variantLabel);
-    const selected = variants.dataset.productId === product.id ? variants.value : '';
+    // A card deep link/history entry selects its exact published variant. Polling
+    // the same URL preserves the customer's current selection.
+    const selected = variants.dataset.productId === product.id && previousVariantRequest === requestedVariant ? variants.value : requestedVariant;
     variants.dataset.productId = product.id;
     const structured = !!product.variantAxes?.length;
     const options = [...(structured ? [] : [new Option('Configuración principal', '')]), ...(product.variants || []).map(variant => new Option(variant.name, variant.id))];
     variants.replaceChildren(...options);
     variants.value = (product.variants || []).some(item => item.id === selected) ? selected : structured ? product.variants?.[0]?.id || '' : '';
     variants.closest<HTMLElement>('[data-product-variants]')!.hidden = structured || !product.variants?.length;
-    const selectVariant = () => {
+    const selectVariant = (persistUrl = false) => {
       const variant = product.variants?.find(item => item.id === variants.value);
+      if (persistUrl && !payload?.preview) {
+        const url = new URL(location.href);
+        if (variant) url.searchParams.set('variant', variant.id); else url.searchParams.delete('variant');
+        history.replaceState({}, '', url);
+        detail.dataset.variantRequest = variant?.id || '';
+      }
       showProductPhoto(variant?.image || product.image, variant ? `${product.name} · ${variant.name}` : product.name);
       const selectedPrice = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
       if (priceNode) { priceNode.textContent = selectedPrice; priceNode.hidden = !selectedPrice; }
@@ -350,10 +386,12 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
       updateCooktop();
       updateCart();
       updateQuote();
+      syncCommerce();
+      syncCustomization(detail, product.id, product.supplyType);
     };
-    variants.onchange = selectVariant; selectVariant();
+    variants.onchange = () => selectVariant(true); selectVariant();
     renderVariantOptions(detail.querySelector<HTMLElement>('[data-variant-options]'), product, variants.value, id => {
-      variants.value = id; selectVariant();
+      variants.value = id; selectVariant(true);
       document.dispatchEvent(new CustomEvent('inox:variant-interaction', { detail: { productId: product.id } }));
     });
   }
@@ -418,7 +456,8 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     if (sheet) technicalSheet.href = withBase(sheet);
     else technicalSheet.removeAttribute('href');
   }
-  const commerce = detail.querySelector<HTMLElement>('[data-product-commerce]'); if (commerce) commerce.hidden = !configuredSurface && !configuredCart && !price && !product.technicalSheet && !product.availability && !product.variants?.length && !product.additionalCharges?.length && !product.additionals?.length;
+  syncCommerce();
+  syncCustomization(detail, product.id, product.supplyType);
   updateRelatedProducts(detail, data, product);
   document.title = `${product.name} | ${data.settings.empresa}`;
   const description = document.querySelector<HTMLMetaElement>('meta[name="description"]'); if (description) description.content = product.summary;
@@ -481,7 +520,12 @@ function apply(data: CmsData) {
   const serialized = JSON.stringify(data);
   if (serialized === lastApplied) return;
   const visible = catalogFamilyProducts(visibleCmsProducts(data));
-  document.querySelectorAll('[data-cms-products]').forEach(container => { const kind = container.getAttribute('data-cms-products'); fillCards(container, kind === 'featured' ? visible.filter(product => product.featured || getProductFamily(product.id, data.products)?.members.some(member => member.product.featured)) : visible, data); });
+  document.querySelectorAll('[data-cms-products]').forEach(container => {
+    const kind = container.getAttribute('data-cms-products');
+    const items = kind === 'all' ? visibleCmsProducts(data) : kind === 'home-featured' ? selectHomeFeatured(visibleCmsProducts(data))
+      : kind === 'featured' ? visible.filter(product => product.featured || getProductFamily(product.id, data.products)?.members.some(member => member.product.featured)) : visible;
+    fillCards(container, items, data, kind === 'all');
+  });
   updateContacts(data); updateDetail(data);
   lastApplied = serialized;
   document.dispatchEvent(new CustomEvent('inox:catalog-updated', { detail: { count: visible.length } }));

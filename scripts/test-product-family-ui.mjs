@@ -8,6 +8,9 @@ import * as api from '../src/lib/cms-api.ts';
 import * as additionals from '../src/lib/product-additionals.ts';
 import * as families from '../src/lib/product-families.ts';
 import * as catalogSync from '../src/lib/catalog-sync.ts';
+import * as listings from '../src/lib/catalog-listings.ts';
+import { getCatalogType } from '../src/lib/catalog-taxonomy.ts';
+import { syncCustomization } from '../src/scripts/product-customization.ts';
 import { catalogSearchText } from '../src/lib/catalog-controls.ts';
 import { getProductStage } from '../src/lib/product-stage.ts';
 import { withBase } from '../src/lib/paths.ts';
@@ -16,7 +19,7 @@ import { parseCooktopConfig } from '../src/lib/cooktop-config.ts';
 import { renderVariantOptions } from '../src/scripts/variant-options-ui.ts';
 const plain = value => JSON.parse(JSON.stringify(value));
 
-function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs) {
+function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs, query = '') {
   function element() {
     return { dataset: {}, hidden: false, textContent: '', value: '', attributes: {}, children: [],
       classList: { toggle() {} }, setAttribute(key, value) { this.attributes[key] = value; }, removeAttribute(key) { delete this.attributes[key]; },
@@ -30,7 +33,7 @@ function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs) {
       ...products.find(product => product.id === id), visible: true, order: index,
       ...(cooktopConfigs ? { supplyType: 'manufactured', equipmentFamily: 'cocinas', cooktopConfig: cooktopConfigs[id] } : {}),
       contactId: 'ventas', currency: 'PEN', price: index ? 950 : 1250, showPrice: index === 0,
-      availability: index ? 'made_to_order' : 'available', variants, additionals: [], additionalCharges: [],
+      availability: index ? 'made_to_order' : 'available', variants: typeof variants === 'function' ? variants(id) : variants, additionals: [], additionalCharges: [],
       technicalSheet: `/documents/${id}.pdf`,
     })),
     contacts: [{ id: 'ventas', name: 'Ventas', whatsapp: '51964270406', active: true }],
@@ -57,13 +60,13 @@ function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs) {
     querySelectorAll: () => [], createElement: element,
     dispatchEvent: event => events.push(event),
   };
-  const location = new URL(`https://example.test${routes[productIds[0]]}`);
+  const location = new URL(`https://example.test${routes[productIds[0]]}${query}`);
   const window = { events: {}, addEventListener(name, callback) { this.events[name] = callback; } };
-  const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; } };
+  const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; }, replaceState(_state, _unused, url) { location.href = new URL(url, location).href; } };
   const source = readFileSync(new URL('../src/scripts/cms.ts', import.meta.url), 'utf8')
     .replace(/^import .*;\r?\n/gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
   runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
-    ...cms, ...api, ...additionals, ...families, ...catalogSync, catalogSearchText, getProductStage, withBase,
+    ...cms, ...api, ...additionals, ...families, ...catalogSync, ...listings, getCatalogType, syncCustomization, catalogSearchText, getProductStage, withBase,
     parseCooktopConfig, renderVariantOptions,
     renderCooktop(_root, config, productId, onChange) { cooktopCalls.push({ productId, config }); onChange(''); },
     document, location, window, history, URL, URLSearchParams, CustomEvent,
@@ -92,6 +95,65 @@ test('a capacity variant changes its own photograph and restores the main photo 
   select.value = ''; select.onchange();
   assert.equal(image.src, withBase(f.data.products[0].image));
   assert.equal(image.alt, f.data.products[0].name);
+});
+
+test('a catalog variant deep link selects its exact photo, GLB, technical sheet and quotation on entry', () => {
+  const variant = { id: 'large', name: '25 L confirmados', image: '/images/products/large.webp', model3d: '/models/large.glb', technicalSheet: '/documents/large.pdf', availability: 'made_to_order', price: 1700 };
+  const f = fixture(['P30'], [variant], undefined, '?variant=large');
+  assert.equal(f.nodes['[data-product-variant]'].value, 'large');
+  assert.equal(f.nodes['.equipment-image'].src, variant.image);
+  assert.equal(f.nodes['[data-product-technical-sheet]'].href, variant.technicalSheet);
+  assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant.model3d, variant.model3d);
+  assert.match(f.nodes['[data-product-price]'].textContent, /1[,.]700/);
+  const quote = new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text');
+  assert.match(quote, /25 L confirmados/);
+  assert.match(quote, /\?variant=large/);
+});
+
+test('manual variant changes update the shareable URL and selecting the principal configuration removes the query', () => {
+  const f = fixture(['P30'], [{ id: 'large', name: 'Mayor capacidad', availability: 'available' }]);
+  const select = f.nodes['[data-product-variant]'];
+  select.value = 'large'; select.onchange();
+  assert.equal(f.location.searchParams.get('variant'), 'large');
+  assert.equal(f.detail.dataset.variantRequest, 'large');
+  select.value = ''; select.onchange();
+  assert.equal(f.location.searchParams.has('variant'), false);
+  assert.equal(f.detail.dataset.variantRequest, '');
+  assert.doesNotMatch(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /variant=large|variación Mayor capacidad/);
+});
+
+test('back and forward within one product restore the requested variant instead of preserving a stale selection', () => {
+  const variants = [
+    { id: 'small', name: '10 L', image: '/images/products/small.webp', model3d: '/models/small.glb', availability: 'available' },
+    { id: 'large', name: '25 L', image: '/images/products/large.webp', model3d: '/models/large.glb', availability: 'made_to_order' },
+  ];
+  const f = fixture(['P30'], variants, undefined, '?variant=large');
+  for (const variant of [variants[0], variants[1]]) {
+    f.location.href = `https://example.test${f.routes.P30}?variant=${variant.id}`; f.window.events.popstate();
+    assert.equal(f.nodes['[data-product-variant]'].value, variant.id);
+    assert.equal(f.nodes['.equipment-image'].src, variant.image);
+    assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant.model3d, variant.model3d);
+    assert.ok(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text').includes(`variación ${variant.name}`));
+  }
+  f.location.href = `https://example.test${f.routes.P30}`; f.window.events.popstate();
+  assert.equal(f.nodes['[data-product-variant]'].value, '');
+  assert.equal(f.nodes['.equipment-image'].src, withBase(f.data.products[0].image));
+});
+
+test('unknown or other-SKU variant IDs fall back to the current base and cannot borrow the previous model', () => {
+  const variant = { id: 'large', name: 'Mayor capacidad', image: '/images/products/large.webp', model3d: '/models/large.glb', availability: 'available' };
+  const f = fixture(['P30', 'P31'], id => id === 'P30' ? [variant] : [], undefined, '?variant=unknown');
+  assert.equal(f.nodes['[data-product-variant]'].value, '');
+  assert.equal(f.nodes['.equipment-image'].src, withBase(f.data.products[0].image));
+  f.nodes['[data-product-variant]'].value = 'large'; f.nodes['[data-product-variant]'].onchange();
+  f.select('P31');
+  assert.equal(f.location.searchParams.has('variant'), false);
+  f.location.href = `https://example.test${f.routes.P31}?variant=large`; f.window.events.popstate();
+  assert.equal(f.nodes['[data-product-variant]'].value, '');
+  assert.equal(f.nodes['.equipment-image'].src, withBase(f.data.products[1].image));
+  assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant, undefined);
+  assert.equal(f.events.filter(event => event.type === 'inox:product-updated').at(-1).detail.product.model3d, f.data.products[1].model3d);
+  assert.doesNotMatch(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /Mayor capacidad|variant=large|código P30/);
 });
 
 test('escurridor selection switches the complete SKU, photograph, PDF, quote and media event without combining prices', () => {

@@ -1,0 +1,21 @@
+.product-customization { margin: 10px 0 24px; }
+.customization-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 13px 18px; }
+.customization-selection { flex: 1 1 210px; margin: 0; color: #385674; font-size: .8rem; line-height: 1.6; overflow-wrap: anywhere; }
+.customization-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; padding: 11px 18px; border: 1px solid #9cb5ca; border-radius: 10px; background: #edf4fa; color: #123b5c; font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
+.customization-toggle:hover { border-color: #4b799c; background: #deedf8; }
+.customization-toggle[aria-expanded="true"] { background: #102e49; border-color: #102e49; color: #f5faff; }
+.customization-toggle[aria-expanded="true"] svg { transform: rotate(45deg); }
+.customization-toggle:focus-visible, .customization-close:focus-visible { outline: 3px solid #3887bd; outline-offset: 4px; }
+.customization-panel { margin-top: 18px; padding: 20px; border: 1px solid #b9ccdc; border-radius: 10px; background: #f8fbfd; }
+.customization-panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.customization-panel-heading p { margin: 0; max-width: 340px; font-size: .8rem; line-height: 1.6; color: #46627a; }
+.customization-close { flex-shrink: 0; min-height: 44px; margin-top: -10px; padding: 10px 0 10px 12px; border: 0; background: transparent; color: #244f72; font: inherit; font-size: .78rem; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.customization-panel > [data-product-family] { margin-top: 0; }
+.customization-panel > [data-product-variants], .customization-panel > [data-variant-options] { display: block; margin-bottom: 20px; }
+.product-customization[hidden], .product-customization [hidden] { display: none !important; }
+@media (max-width: 600px) {
+  .customization-entry { align-items: flex-start; gap: 10px; }
+  .customization-selection { flex-basis: 100%; }
+  .customization-panel { padding: 16px 13px; }
+}
+@media (forced-colors: active) { .customization-toggle, .customization-panel { border-color: ButtonText; } }

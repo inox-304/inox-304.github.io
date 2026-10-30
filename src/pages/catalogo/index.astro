@@ -4,11 +4,13 @@ import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
 import CategoryIcon from '../../components/CategoryIcon.astro';
 import ProductCard from '../../components/ProductCard.astro';
-import { visibleProducts, catalogProducts } from '../../data/catalog';
+import { visibleProducts } from '../../data/catalog';
+import { expandedCatalogListings } from '../../lib/catalog-listings';
 import { categories } from '../../data/products';
 import { whatsappUrl } from '../../data/site';
 import { apiMode } from '../../data/cms-mode';
 import '../../styles/catalog.css';
+const catalogProducts = expandedCatalogListings(visibleProducts);
 ---
 <Layout title="Catálogo de equipos" description="Explora nuestros equipos de línea fría, línea caliente, línea neutra y mobiliario. Encuentra tu equipo y solicita una cotización personalizada.">
   <section class="page-intro catalog-intro"><div class="shell"><nav class="breadcrumbs" aria-label="Ruta de navegación"><a href={withBase('/')}>Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Catálogo</span></nav><div class="section-heading"><div><span class="eyebrow">CATÁLOGO / INOX 304</span><h1>Encuentra tu<br/><em>próximo equipo.</em></h1></div><p>Para la cocina que imaginas.<br/>Equipos, capacidades y soluciones a tu medida.</p></div>
@@ -23,21 +25,25 @@ import '../../styles/catalog.css';
         </div>
         <button class="catalog-search-submit" type="submit">Buscar <Icon name="arrow" size={20}/></button>
       </form>
-      <div class="catalog-search-meta"><p id="catalog-search-hint">Por nombre, código o capacidad. Prueba «P15» o «20 litros».</p><p id="catalog-search-feedback" role="status" aria-live="polite" aria-atomic="true">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} equipos para explorar`}</p></div>
+      <div class="catalog-search-meta"><p id="catalog-search-hint">Por nombre, código o capacidad. Prueba «P15» o «20 litros».</p><p id="catalog-search-feedback" role="status" aria-live="polite" aria-atomic="true">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} opciones para explorar`}</p></div>
     </div>
     <div class="catalog-quick-search" role="group" aria-label="Búsquedas rápidas"><span>Explora</span>{[{ label: 'Cocinas', query: 'cocina' }, { label: 'Carritos', query: 'carrito' }, { label: 'Hornos', query: 'horno' }, { label: 'Lavaderos', query: 'lavadero' }, { label: 'ILUMI', query: 'ilumi' }].map(item => <button type="button" data-search-query={item.query} aria-pressed="false" aria-controls="catalog-results">{item.label}<Icon name="diagonal" size={13}/></button>)}</div>
   </div></section>
   <section class="section-light catalog-section"><div class="shell">
     <div class="catalog-controls">
       <div class="catalog-filter-heading"><span class="eyebrow">EXPLORA POR LÍNEA</span><label class="catalog-sort">Ordenar por<select id="catalog-order" name="orden" aria-controls="catalog-results"><option value="catalogo">Orden del catálogo</option><option value="nombre">Nombre: A a Z</option></select></label></div>
-      <div class="filter-pills category-strip" role="group" aria-label="Filtrar por línea de equipos"><button type="button" class="active filter-all" data-filter="todos" aria-pressed="true" aria-controls="catalog-results"><Icon name="plus" size={18}/><span>Todos</span><span class="filter-count" data-filter-count aria-hidden="true">{catalogProducts.length}</span></button>{categories.map(category => <button type="button" data-filter={category.id} aria-pressed="false" aria-controls="catalog-results"><CategoryIcon category={category.id}/><span>{category.shortName}</span><span class="filter-count" data-filter-count aria-hidden="true">{catalogProducts.filter(product => product.category === category.id).length}</span></button>)}</div>
+      <div class="filter-pills category-strip" role="group" aria-label="Filtrar por línea de equipos"><button type="button" class="active filter-all" data-filter="todos" aria-pressed="true" aria-controls="catalog-results"><Icon name="plus" size={18}/><span>Todos</span><span class="filter-count" data-filter-count aria-hidden="true">{catalogProducts.length}</span></button>{categories.map(category => <button type="button" data-filter={category.id} aria-pressed="false" aria-expanded="false" aria-controls="catalog-line-panel catalog-results"><CategoryIcon category={category.id}/><span>{category.shortName}</span><span class="filter-count" data-filter-count aria-hidden="true">{catalogProducts.filter(product => product.product.category === category.id).length}</span><Icon name="arrow" size={15} class="catalog-line-chevron"/></button>)}</div>
+      <section id="catalog-line-panel" class="catalog-line-panel" aria-labelledby="catalog-line-title" hidden>
+        <div class="catalog-line-panel-heading"><div><span class="eyebrow">ENCUENTRA TU EQUIPO</span><h2 id="catalog-line-title"></h2></div><button type="button" class="catalog-line-close" data-line-close aria-label="Cerrar tipos de equipos"><Icon name="plus" size={17}/></button></div>
+        <div class="catalog-line-panel-body"><div class="catalog-types-grid" data-catalog-types role="group" aria-label="Filtrar por tipo de equipo"></div><button type="button" class="catalog-line-feature" data-line-all aria-controls="catalog-results"><img data-line-cover alt="" width="220" height="180" decoding="async"/><span class="catalog-line-feature-title" data-line-name></span><span class="catalog-line-feature-count" data-line-count></span><span class="catalog-line-feature-action">Ver toda la línea <Icon name="arrow" size={16}/></span></button></div>
+      </section>
     </div>
-    <div class="catalog-results-heading"><div><h2 id="catalog-heading" tabindex="-1">Todos los equipos</h2><p id="result-count" class="results-count">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} equipos`}</p></div><button type="button" class="catalog-reset" id="clear-catalog" data-catalog-reset hidden>Limpiar filtros <span aria-hidden="true">×</span></button></div>
+    <div class="catalog-results-heading"><div><h2 id="catalog-heading" tabindex="-1">Todos los equipos</h2><p id="result-count" class="results-count">{apiMode ? 'Cargando catálogo…' : `${catalogProducts.length} opciones`}</p></div><button type="button" class="catalog-reset" id="clear-catalog" data-catalog-reset hidden>Limpiar filtros <span aria-hidden="true">×</span></button></div>
     <p id="catalog-loading" class="catalog-loading" hidden={!apiMode}>Estamos preparando los equipos del catálogo.</p>
     <div id="catalog-unavailable" class="empty-state" hidden><Icon name="search" size={34}/><h2>No pudimos cargar los equipos.</h2><p>Revisa tu conexión y vuelve a intentarlo. También puedes consultarnos directamente.</p><div class="catalog-empty-actions"><button type="button" class="button button-dark" id="retry-catalog">Volver a intentar <Icon/></button><a class="text-link dark-link" href={withBase('/contacto/')}>Contactar con INOX 304 <Icon name="diagonal"/></a></div></div>
-    <div class="product-grid catalog-grid" id="catalog-results" data-cms-products="all" data-catalog-mode={apiMode ? 'api' : 'static'} aria-labelledby="catalog-heading" aria-busy={apiMode ? 'true' : 'false'}>{catalogProducts.map((product, index) => <ProductCard product={product} products={visibleProducts} index={index}/>)}</div>
+    <div class="product-grid catalog-grid" id="catalog-results" data-cms-products="all" data-catalog-mode={apiMode ? 'api' : 'static'} aria-labelledby="catalog-heading" aria-busy={apiMode ? 'true' : 'false'}>{catalogProducts.map((listing, index) => <ProductCard product={listing.product} listing={listing} products={visibleProducts} index={index}/>)}</div>
     <div id="catalog-empty" class="empty-state" hidden><Icon name="search" size={34}/><h2>Probemos con otra búsqueda.</h2><p>Busca por nombre o código, o quita los filtros para explorar todos los equipos.</p><div class="catalog-empty-actions"><button type="button" class="button button-dark" id="reset-search" data-catalog-reset>Ver todos los equipos <Icon/></button><a class="text-link dark-link" href={withBase('/contacto/')}>Necesito asesoría <Icon name="diagonal"/></a></div></div>
-    <div class="catalog-help"><div><h2>¿Tu proyecto necesita algo diferente?</h2><p>También fabricamos equipos y mobiliario a medida.</p></div><a class="button button-dark" data-contact-setting="contacto_medida" href={whatsappUrl('Hola INOX 304, estoy buscando un equipo a medida. ¿Me pueden asesorar?')} target="_blank" rel="noopener noreferrer">Solicita asesoría <Icon name="diagonal"/></a></div>
+    <div class="catalog-help"><div><h2>¿Tu proyecto necesita algo diferente?</h2><p>También fabricamos equipos y mobiliario a medida.</p></div><a class="button button-dark button-quote" data-contact-setting="contacto_medida" href={whatsappUrl('Hola INOX 304, estoy buscando un equipo a medida. ¿Me pueden asesorar?')} target="_blank" rel="noopener noreferrer">Solicita asesoría <Icon name="diagonal"/></a></div>
   </div></section>
 </Layout>
 <script>import '../../scripts/catalog-controls';</script>

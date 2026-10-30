@@ -1,0 +1,56 @@
+---
+import Icon from './Icon.astro';
+import { withBase } from '../lib/paths';
+
+// Campaign covers reference existing catalog equipment; destinations remain category listings.
+const lines = [
+  { id: 'linea-fria', name: 'Línea fría', description: 'Refrigeración que acompaña tu operación.', alt: 'Armario refrigerado de dos puertas en acero inoxidable' },
+  { id: 'linea-caliente', name: 'Línea caliente', description: 'El centro de una cocina que no se detiene.', alt: 'Cocina central de cuatro hornillas, plancha y horno' },
+  { id: 'linea-neutra', name: 'Línea neutra', description: 'Preparación y lavado, con todo en su lugar.', alt: 'Lavadero de dos pozas con descanso lateral' },
+  { id: 'mobiliario', name: 'Mobiliario', description: 'Orden y espacio para trabajar mejor.', alt: 'Estante de cinco niveles en acero inoxidable' },
+];
+---
+<section id="coleccion" class="home-lines" aria-labelledby="home-lines-title">
+  <div class="shell">
+    <div class="home-lines-heading">
+      <div><span class="eyebrow">NUESTRAS LÍNEAS</span><h2 id="home-lines-title">Soluciones en acero<br class="lines-title-break"/> para cada necesidad.</h2></div>
+      <a class="home-lines-all" href={withBase('/catalogo/')}>Ver catálogo completo <Icon name="arrow" size={18}/></a>
+    </div>
+    <nav class="home-lines-grid" aria-label="Explora nuestras líneas de equipos">
+      {lines.map(line => (
+        <a class="home-line" href={withBase(`/catalogo/?categoria=${line.id}`)} aria-label={`Explorar ${line.name}`}>
+          <img src={withBase(`/images/categories/home-${line.id}.webp`)} alt={line.alt} loading="lazy" decoding="async" width="640" height="800"/>
+          <div class="home-line-copy">
+            <div><h3>{line.name}</h3><p>{line.description}</p></div>
+            <span class="home-line-arrow" aria-hidden="true"><Icon name="arrow" size={20}/></span>
+          </div>
+        </a>
+      ))}
+    </nav>
+  </div>
+</section>
+<style>
+  .home-lines{padding:64px 0 42px;background:#f1f4f8;color:#102237;scroll-margin-top:24px}
+  .home-lines-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:32px;margin-bottom:25px}
+  .home-lines-heading .eyebrow{display:block;color:#4c637c;font-size:9px;letter-spacing:2.2px;margin-bottom:12px}
+  .home-lines-heading h2{font-size:clamp(27px,2.9vw,40px);font-weight:500;letter-spacing:-1.3px;line-height:1.15;margin:0}
+  .lines-title-break{display:none}
+  .home-lines-all{display:inline-flex;align-items:center;gap:15px;min-height:44px;flex-shrink:0;color:#194a70;font-size:12px;font-weight:600}
+  .home-lines-all:hover{color:#0872ad}
+  .home-lines-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+  .home-line{position:relative;display:block;overflow:hidden;isolation:isolate;aspect-ratio:4/5;border:1px solid #203e55;border-radius:9px;background:#041a2d;color:#f5f9ff;box-shadow:0 4px 10px #17334d0a}
+  .home-line::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(0deg,#031729 0%,rgba(3,23,41,.91) 13%,rgba(3,23,41,.3) 31%,transparent 50%)}
+  .home-line>img{width:100%;height:100%;object-fit:cover;object-position:center top;transition:transform .65s cubic-bezier(.2,.7,.2,1)}
+  .home-line-copy{position:absolute;inset:auto 20px 23px;z-index:2;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+  .home-line h3{margin:0 0 8px;font-size:clamp(18px,1.6vw,23px);font-weight:600;letter-spacing:-.45px;line-height:1.15}
+  .home-line p{margin:0;max-width:200px;color:#d9e7f3;font-size:12px;line-height:1.55}
+  .home-line-arrow{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border:1px solid #c2dcef;border-radius:50%;transition:background .25s,transform .25s}
+  .home-line:hover>img{transform:scale(1.025)}
+  .home-line:is(:hover,:focus-visible) .home-line-arrow{background:#285676;transform:translateX(2px)}
+  .home-line:focus-visible{outline:3px solid #276fa4;outline-offset:5px}
+  @media(max-width:1150px){.home-lines-grid{gap:13px}.home-line-copy{inset:auto 15px 18px;gap:8px}.home-line-arrow{width:30px;height:30px;flex-basis:30px}.home-line p{font-size:11px}.home-line h3{font-size:19px}.lines-title-break{display:block}}
+  @media(max-width:800px){.home-lines{padding-top:45px}.home-lines-heading{gap:18px}.home-lines-heading h2{font-size:30px}.home-lines-all{font-size:11px;gap:9px}.home-lines-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.home-line-copy{inset:auto 20px 22px}.home-line h3{font-size:22px}.home-line p{font-size:12px}.lines-title-break{display:none}}
+  @media(max-width:600px){.home-lines{padding:38px 0 32px}.home-lines-heading{display:block;margin-bottom:20px}.home-lines-heading h2{font-size:28px;letter-spacing:-.9px;max-width:340px}.home-lines-heading .eyebrow{font-size:8px;margin-bottom:10px}.home-lines-all{margin-top:8px;font-size:11px}.home-lines-grid{gap:12px}.home-line{aspect-ratio:3/4;border-radius:7px}.home-line-copy{inset:auto 12px 14px;display:block}.home-line h3{font-size:18px;margin-bottom:6px}.home-line p{font-size:10.5px;line-height:1.4;max-width:135px;padding-right:4px}.home-line-arrow{position:absolute;right:0;top:-39px;width:29px;height:29px;flex-basis:29px;background:#071f344d}.home-line::after{background:linear-gradient(0deg,#031729 0%,rgba(3,23,41,.94) 20%,rgba(3,23,41,.23) 45%,transparent 62%)}.home-line>img{object-fit:cover}}
+  @media(prefers-reduced-motion:reduce){.home-line>img,.home-line-arrow{transition:none}.home-line:hover>img,.home-line:is(:hover,:focus-visible) .home-line-arrow{transform:none}}
+  @media(forced-colors:active){.home-line{border:2px solid LinkText}.home-line::after{display:none}.home-line-copy{background:Canvas;color:CanvasText}.home-line p{color:CanvasText}.home-line-arrow{border-color:LinkText}}
+</style>

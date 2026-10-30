@@ -1,0 +1,67 @@
+/* Quotation actions share the blue glass finish of the category navigation. */
+.button.button-quote,
+.site-header .header-cta.button-quote,
+.site-header .mobile-nav .button-quote {
+  --quote-surface: radial-gradient(ellipse at 28% 0%, #385f8d 0%, transparent 72%), linear-gradient(112deg, #1d426d, #122b49 86%);
+  --quote-border: #7298c5;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--quote-border);
+  border-radius: 12px;
+  background: var(--quote-surface);
+  color: #f7fbff;
+  text-shadow: 0 1px 1px rgb(2 15 32 / 32%);
+  box-shadow: inset 0 1px 0 rgb(222 239 255 / 24%), inset 0 -1px 0 rgb(1 15 35 / 28%), 0 4px 12px rgb(7 29 58 / 12%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: background 240ms ease, border-color 240ms ease, box-shadow 240ms ease, transform 240ms var(--ease-out);
+}
+.button.button-quote:is(:hover, :focus-visible),
+.site-header .header-cta.button-quote:is(:hover, :focus-visible),
+.site-header .mobile-nav .button-quote:is(:hover, :focus-visible) {
+  --quote-surface: radial-gradient(ellipse at 28% 0%, #426c9b 0%, transparent 74%), linear-gradient(112deg, #254e7b, #183454 86%);
+  background: var(--quote-surface);
+  border-color: #a3c8ef;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgb(233 245 255 / 34%), inset 0 -1px 0 rgb(1 15 35 / 24%), 0 6px 18px rgb(7 29 58 / 17%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.button.button-quote:focus-visible,
+.site-header .header-cta.button-quote:focus-visible,
+.site-header .mobile-nav .button-quote:focus-visible {
+  outline: 3px solid #4a83c1;
+  outline-offset: 4px;
+}
+.button.button-quote::before { background: linear-gradient(120deg, rgb(193 224 255 / 9%), transparent 58%); }
+.button.button-quote::after { background: linear-gradient(105deg, transparent 35%, rgb(210 235 255 / 14%) 48%, transparent 60%); }
+.button.button-quote:active,
+.site-header .header-cta.button-quote:active,
+.site-header .mobile-nav .button-quote:active {
+  box-shadow: inset 0 2px 5px rgb(2 16 37 / 30%), inset 0 1px 0 rgb(214 235 255 / 18%);
+}
+.site-header .mobile-nav .button-quote {
+  margin-top: 10px;
+  padding: 16px 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .button.button-quote,
+  .site-header .header-cta.button-quote,
+  .site-header .mobile-nav .button-quote { transition: none; transform: none; }
+}
+@media (forced-colors: active) {
+  .button.button-quote,
+  .button.button-quote:is(:hover, :focus-visible, :active),
+  .site-header .header-cta.button-quote,
+  .site-header .header-cta.button-quote:is(:hover, :focus-visible, :active),
+  .site-header .mobile-nav .button-quote,
+  .site-header .mobile-nav .button-quote:is(:hover, :focus-visible, :active) {
+    background: ButtonFace;
+    color: ButtonText;
+    border-color: ButtonText;
+    box-shadow: none;
+    text-shadow: none;
+    outline-color: Highlight;
+  }
+}

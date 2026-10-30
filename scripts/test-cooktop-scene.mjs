@@ -271,6 +271,21 @@ test('ray picking selects a real module while drag and multi-touch gestures do n
   assert.deepEqual(f.picks, [0]); f.controller.dispose();
 });
 
+test('closing customization hides placement previews and blocks picks without resetting the kitchen', async () => {
+  const f = await fixture(); f.controller.update(config,selected()); f.draw();
+  const camera = f.renders.at(-1).camera, position = camera.position.clone(), canvas = f.renderer.domElement;
+  f.controller.setInteraction({anchor:0,moduleId:'plate',validCells:[0,1,2],previewCells:[0,3]});
+  const hints = f.asset.scene.getObjectByName('CooktopPlacementHints');
+  f.controller.setEditingEnabled(false); f.draw(); assert.equal(hints.visible,false);
+  const point = new THREE.Vector3(-0.4766667,surface.y+0.04,-0.195).project(camera);
+  const pointer = {pointerId:1,button:0,clientX:(point.x+1)*320,clientY:(1-point.y)*240};
+  canvas.emit('pointerdown',pointer); canvas.emit('pointerup',pointer); assert.deepEqual(f.picks,[]);
+  assert.ok(camera.position.equals(position)); assert.equal(f.host.dataset.cooktopBurnerCount,'6');
+  f.controller.setEditingEnabled(true); f.draw(); assert.equal(hints.visible,true);
+  canvas.emit('pointerdown',pointer); canvas.emit('pointerup',pointer); assert.deepEqual(f.picks,[0]);
+  f.controller.dispose();
+});
+
 test('private drafts can render, but a lost WebGL context stays closed until the view is recreated', async () => {
   const f = await fixture(), draft = structuredClone(config); draft.enabled = false;
   f.controller.update(draft, selected()); f.draw(); assert.equal(f.host.dataset.cooktopBurnerCount, '6');

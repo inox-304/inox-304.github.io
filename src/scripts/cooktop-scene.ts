@@ -8,6 +8,7 @@ import { createFryerTemplate, createKitchenGeometry, type KitchenGeometry } from
 export type CooktopScene = {
   update(config: CooktopConfig, selection: CooktopSelection): void;
   setInteraction(interaction: CooktopInteraction | null): void;
+  setEditingEnabled(enabled: boolean): void;
   setView(view: CooktopView): void;
   setDoors(open: boolean): void;
   readonly hasDoors: boolean;
@@ -16,7 +17,7 @@ export type CooktopScene = {
 };
 export type CooktopInteraction = { anchor: number; moduleId: string | null; validCells: number[]; previewCells: number[] };
 export type CooktopView = 'top' | 'front' | 'perspective';
-type SceneOptions = { onPick: (anchor: number) => void; onError?: (error: Error) => void };
+type SceneOptions = { editingEnabled?: boolean; onPick: (anchor: number) => void; onError?: (error: Error) => void };
 export type CooktopSurface = { minX: number; maxX: number; minZ: number; maxZ: number; y: number };
 type TemplateName = 'BurnerGas' | 'BurnerElectric' | 'Wok' | 'Griddle' | 'Grill' | 'Fryer';
 export type CooktopRenderPart = { moduleId: string; anchor: number; cells: number[]; template: TemplateName; x: number; y: number; z: number; scaleX: number; scaleZ: number };
@@ -213,10 +214,11 @@ export async function createCooktopScene(host: HTMLElement, assetUrl: string, op
     let activeLayout: { columns: number; rows: number } | undefined;
     let activeConfig: CooktopConfig | undefined;
     let interaction: CooktopInteraction | null = null;
+    let editingEnabled = options.editingEnabled !== false;
     function refreshHints() {
       hintTiles.forEach(tile => { tile.visible = false; }); hintsRoot.visible = false;
       host.dataset.cooktopHighlightedCells = '';
-      if (!activeLayout || !interaction) return;
+      if (!editingEnabled || !activeLayout || !interaction) return;
       const count = activeLayout.rows * activeLayout.columns;
       const cells = (value: unknown) => Array.isArray(value) ? [...new Set(value.filter(cell => Number.isInteger(cell) && cell >= 0 && cell < count))] as number[] : [];
       if (!Number.isInteger(interaction.anchor) || interaction.anchor < 0 || interaction.anchor >= count
@@ -305,7 +307,7 @@ export async function createCooktopScene(host: HTMLElement, assetUrl: string, op
       const pointerEvent = event as PointerEvent, start = press; pointers.delete(pointerEvent.pointerId);
       if (start?.id !== pointerEvent.pointerId) return;
       press = undefined;
-      if (start.dragged || errorVisible || !activeLayout || Math.hypot(pointerEvent.clientX - start.x, pointerEvent.clientY - start.y) > 5) return;
+      if (!editingEnabled || start.dragged || errorVisible || !activeLayout || Math.hypot(pointerEvent.clientX - start.x, pointerEvent.clientY - start.y) > 5) return;
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       pointer.set((pointerEvent.clientX - rect.left) / rect.width * 2 - 1, -(pointerEvent.clientY - rect.top) / rect.height * 2 + 1);
@@ -376,6 +378,12 @@ export async function createCooktopScene(host: HTMLElement, assetUrl: string, op
           partsRoot.clear(); activeLayout = undefined; activeConfig = undefined; refreshHints();
           host.dataset.cooktopBurnerCount = '0'; host.dataset.cooktopModuleCount = '0'; report(error);
         }
+      },
+      setEditingEnabled(enabled) {
+        if (disposed || contextLost || typeof enabled !== 'boolean') return;
+        editingEnabled = enabled;
+        if (!enabled) press = undefined;
+        refreshHints(); invalidate();
       },
       setInteraction(next) {
         if (disposed || contextLost) return;

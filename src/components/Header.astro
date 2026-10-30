@@ -17,14 +17,29 @@ const pathname = Astro.url.pathname;
       <a href={withBase('/contacto/')} aria-current={pathname === withBase('/contacto/') ? 'page' : undefined}>Contacto</a>
     </nav>
     <a class="header-search" href={pathname === withBase('/catalogo/') ? '#catalog-search' : withBase('/catalogo/#catalog-search')} aria-label="Buscar equipos en el catálogo"><Icon name="search" size={19}/><span>Buscar</span></a>
-    <a class="header-cta" data-cms-whatsapp href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Hablemos de tu proyecto <Icon name="diagonal" size={17}/></a>
+    <a class="header-cta button-quote" data-cms-whatsapp href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Hablemos de tu proyecto <Icon name="diagonal" size={17}/></a>
     <button type="button" class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span aria-hidden="true"></span><span aria-hidden="true"></span></button>
   </div>
   <nav id="mobile-menu" class="mobile-nav" aria-label="Navegación móvil" hidden>
     <a href={withBase('/catalogo/')} aria-current={pathname.startsWith(withBase('/catalogo/')) ? 'page' : undefined}>Catálogo <Icon/></a><a href={withBase('/#a-medida')}>A medida <Icon/></a><a href={withBase('/#instalaciones')}>Instalaciones <Icon/></a><a href={withBase('/#nosotros')}>Nosotros <Icon/></a><a href={withBase('/contacto/')} aria-current={pathname === withBase('/contacto/') ? 'page' : undefined}>Contacto <Icon/></a>
-    <a data-cms-whatsapp href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Cotizar por WhatsApp <Icon name="whatsapp"/></a>
+    <a class="button-quote" data-cms-whatsapp href={whatsappUrl()} target="_blank" rel="noopener noreferrer">Cotizar por WhatsApp <Icon name="whatsapp"/></a>
   </nav>
 </header>
+<style>
+  /* Keep navigation visually separate from the moving hero on every page. */
+  .site-header,
+  .site-header.site-header-overlay {
+    background: #071f34;
+    border-bottom: 1px solid #24465f;
+    box-shadow: 0 4px 18px rgb(2 16 29 / 14%);
+  }
+  .site-header .mobile-nav {
+    background: #071f34;
+    border-color: #24465f;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+</style>
 <script>
   const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
   const menu = document.querySelector<HTMLElement>('#mobile-menu');

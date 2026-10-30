@@ -7,6 +7,7 @@ import { categories } from '../src/data/categories.ts';
 import { products } from '../src/data/products.ts';
 import { catalogFamilyProducts, getProductFamily } from '../src/lib/product-families.ts';
 import * as helpers from '../src/lib/catalog-controls.ts';
+import * as taxonomy from '../src/lib/catalog-taxonomy.ts';
 
 const familySearchCards = catalogFamilyProducts(products).map(product => {
   const category = categories.find(item => item.id === product.category)?.name || '';
@@ -79,6 +80,30 @@ test('shareable filter URLs preserve the site base and unrelated parameters with
   assert.equal(reset.search, '?campaign=fixture');
 });
 
+test('type URLs belong to one known line, infer it when omitted and disappear when resetting', () => {
+  assert.deepEqual(helpers.readCatalogState(new URLSearchParams('tipo=dispensadores-jugo&buscar=18L')), { category: 'linea-fria', query: '18L', order: 'catalogo', type: 'dispensadores-jugo' });
+  assert.equal(helpers.readCatalogState(new URLSearchParams('categoria=linea-neutra&tipo=dispensadores-jugo')).type, undefined);
+  assert.equal(helpers.readCatalogState(new URLSearchParams('tipo=%3Cscript%3E')).type, undefined);
+  const url = helpers.catalogStateUrl('https://example.test/catalogo/?campaign=demo', { category: 'linea-fria', query: '', order: 'catalogo', type: 'dispensadores-jugo' });
+  assert.equal(url.searchParams.get('tipo'), 'dispensadores-jugo');
+  const reset = helpers.catalogStateUrl(url.href, { category: 'todos', query: '', order: 'catalogo' });
+  assert.equal(reset.search, '?campaign=demo');
+});
+
+test('actual catalog types follow product identity and never classify a cooker as its oven or griddle', () => {
+  const visible = products.filter(product => product.visible !== false);
+  assert.ok(visible.length > 50);
+  for (const product of visible) {
+    const type = taxonomy.getCatalogType(product);
+    assert.ok(type, product.id); assert.equal(type.category, product.category, product.id);
+    assert.equal(type.id.endsWith('-otros'), false, `${product.id} has a specific actual type`);
+  }
+  assert.equal(taxonomy.getCatalogType(visible.find(product => product.id === 'P04')).id, 'cocinas-centrales');
+  assert.equal(taxonomy.getCatalogType(visible.find(product => product.id === 'P01')).id, 'cocinas-casa');
+  assert.equal(taxonomy.getCatalogType({ id: 'new', category: 'linea-caliente', name: 'Nuevo equipo' }).id, 'linea-caliente-otros');
+  assert.equal(taxonomy.getCatalogType({ id: 'new', category: 'unknown', name: 'Cocina' }), null);
+});
+
 test('alphabetical order is natural and returning to catalog order restores the original sequence', () => {
   const items = [{ name: 'Mesa 10', order: 0 }, { name: 'Ármario', order: 1 }, { name: 'Mesa 2', order: 2 }];
   const sorted = [...items].sort((a, b) => helpers.compareCatalogItems(a, b, 'nombre'));
@@ -100,8 +125,8 @@ function browserFixture(api = false, initialUrl = 'https://example.test/catalogo
     return { dataset, hidden: false, focused: false, textContent: '', value: '', events: {}, attributes: {}, classList: { toggle() {} },
       addEventListener(name, fn) { this.events[name] = (event = {}) => fn(event); }, setAttribute(name, value) { this.attributes[name] = value; }, focus(options) { this.focused = true; this.focusOptions = options; }, scrollIntoView(options) { this.scrolled = options; }, querySelector() { return null; }, querySelectorAll() { return []; } };
   }
-  const a = element({ category: 'linea-caliente', name: 'P01 Cocina eléctrica', title: 'Cocina eléctrica', catalogOrder: '0' });
-  const b = element({ category: 'linea-fria', name: 'P02 Armario refrigerado', title: 'Armario refrigerado', catalogOrder: '1' });
+  const a = element({ category: 'linea-caliente', productType: 'cocinas-lineales', name: 'P01 Cocina eléctrica', title: 'Cocina eléctrica', catalogOrder: '0' });
+  const b = element({ category: 'linea-fria', productType: 'armarios-frigorificos', name: 'P02 Armario refrigerado', title: 'Armario refrigerado', catalogOrder: '1' });
   const grid = element({ catalogMode: api ? 'api' : 'static' }); grid.cards = api ? [] : [a, b];
   grid.querySelectorAll = () => [...grid.cards]; grid.append = card => { grid.cards = grid.cards.filter(item => item !== card); grid.cards.push(card); };
   const ids = ['catalog-search', 'catalog-order', 'catalog-heading', 'result-count', 'catalog-empty', 'catalog-loading', 'catalog-unavailable', 'clear-catalog', 'reset-search', 'retry-catalog', 'clear-search-query', 'catalog-search-feedback'];
@@ -113,7 +138,7 @@ function browserFixture(api = false, initialUrl = 'https://example.test/catalogo
   let notifyState;
   const source = readFileSync(new URL('../src/scripts/catalog-controls.ts', import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '');
   runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
-    ...helpers, categories, document, location, window, URLSearchParams, Event,
+    ...helpers, ...taxonomy, categories, document, location, window, URLSearchParams, Event,
     history: { replaceState(_state, _unused, url) { location.href = url.href; location.search = url.search; } },
     MutationObserver: class { constructor(callback) { notifyState = callback; } observe() {} },
   });
@@ -132,6 +157,27 @@ test('browser filters, counts and reset agree; sorting restores editorial order'
   assert.equal(f.a.hidden, false); assert.equal(f.b.hidden, false); assert.equal(search.value, ''); assert.equal(search.focused, true);
 });
 
+test('line disclosure, type filtering, query and browser history agree after CMS refreshes', () => {
+  const f = browserFixture(false, 'https://example.test/catalogo/?categoria=linea-caliente&tipo=cocinas-lineales');
+  const hot = f.buttons.find(button => button.dataset.filter === 'linea-caliente');
+  assert.equal(hot.attributes['aria-expanded'], 'true');
+  assert.equal(f.nodes['#catalog-heading'].textContent, 'Cocinas lineales');
+  assert.equal(f.a.hidden, false); assert.equal(f.b.hidden, true);
+  f.document.events['inox:catalog-updated']();
+  assert.equal(f.a.hidden, false); assert.equal(f.b.hidden, true);
+  hot.events.click(); assert.equal(hot.attributes['aria-expanded'], 'false');
+  hot.events.click(); assert.equal(hot.attributes['aria-expanded'], 'true');
+  f.buttons.find(button => button.dataset.filter === 'linea-fria').events.click();
+  assert.equal(new URLSearchParams(f.location.search).has('tipo'), false);
+  assert.equal(f.a.hidden, true); assert.equal(f.b.hidden, false);
+  f.location.search = '?tipo=cocinas-lineales&buscar=electrica'; f.window.events.popstate();
+  assert.equal(f.a.hidden, false); assert.equal(f.nodes['#catalog-heading'].textContent, 'Cocinas lineales');
+  assert.equal(hot.attributes['aria-expanded'], 'true');
+  f.nodes['#clear-catalog'].events.click();
+  assert.equal(new URLSearchParams(f.location.search).has('tipo'), false);
+  assert.equal(hot.attributes['aria-expanded'], 'false');
+});
+
 test('an API outage offers retry instead of a false no-results message, then preserves filters on refresh', () => {
   const f = browserFixture(true);
   assert.equal(f.nodes['#catalog-loading'].hidden, false); assert.equal(f.nodes['#catalog-empty'].hidden, true);
@@ -142,7 +188,7 @@ test('an API outage offers retry instead of a false no-results message, then pre
   f.nodes['#catalog-search'].value = 'p02'; f.nodes['#catalog-search'].events.input();
   f.grid.cards = [f.a, f.b]; f.document.documentElement.dataset.cmsState = 'live'; f.document.events['inox:catalog-updated']();
   assert.equal(f.a.hidden, true); assert.equal(f.b.hidden, false); assert.equal(f.nodes['#catalog-unavailable'].hidden, true);
-  assert.equal(f.nodes['#result-count'].textContent, '1 equipo para «p02»');
+  assert.equal(f.nodes['#result-count'].textContent, '1 opción para «p02»');
 });
 
 test('clearing only the query preserves category and sort and returns keyboard focus', () => {
@@ -155,7 +201,7 @@ test('clearing only the query preserves category and sort and returns keyboard f
   const params = new URLSearchParams(f.location.search);
   assert.equal(params.get('categoria'), 'linea-fria'); assert.equal(params.get('orden'), 'nombre'); assert.equal(params.has('buscar'), false);
   assert.equal(f.a.hidden, true); assert.equal(f.b.hidden, false);
-  assert.equal(f.nodes['#catalog-search-feedback'].textContent, '1 equipo');
+  assert.equal(f.nodes['#catalog-search-feedback'].textContent, '1 opción');
 });
 
 test('quick searches explore all lines and stay selected across updates and history navigation', () => {
@@ -165,7 +211,7 @@ test('quick searches explore all lines and stay selected across updates and hist
   assert.equal(f.quickSearches[0].attributes['aria-pressed'], 'true'); assert.equal(f.quickSearches[1].attributes['aria-pressed'], 'false');
   assert.equal(new URLSearchParams(f.location.search).has('categoria'), false); assert.equal(new URLSearchParams(f.location.search).get('orden'), 'nombre');
   f.document.events['inox:catalog-updated']();
-  assert.equal(f.nodes['#catalog-search-feedback'].textContent, '1 equipo para «cocina»');
+  assert.equal(f.nodes['#catalog-search-feedback'].textContent, '1 opción para «cocina»');
   f.location.search = '?buscar=armario'; f.window.events.popstate();
   assert.equal(f.nodes['#catalog-search'].value, 'armario'); assert.equal(f.a.hidden, true); assert.equal(f.b.hidden, false);
   assert.equal(f.quickSearches[0].attributes['aria-pressed'], 'false'); assert.equal(f.quickSearches[1].attributes['aria-pressed'], 'true');
@@ -176,7 +222,7 @@ test('search submit moves focus to results and Escape clears query without reset
   f.nodes['#catalog-search'].value = 'p01'; let prevented = 0;
   f.nodes['.catalog-tools'].events.submit({ preventDefault() { prevented++; } });
   assert.equal(prevented, 1); assert.equal(f.nodes['#catalog-heading'].focused, true);
-  assert.equal(f.nodes['#catalog-heading'].scrolled.block, 'start'); assert.equal(f.nodes['#result-count'].textContent, '1 equipo para «p01»');
+  assert.equal(f.nodes['#catalog-heading'].scrolled.block, 'start'); assert.equal(f.nodes['#result-count'].textContent, '1 opción para «p01»');
   f.nodes['#catalog-search'].events.keydown({ key: 'Escape', preventDefault() { prevented++; } });
   assert.equal(prevented, 2); assert.equal(f.nodes['#catalog-search'].value, ''); assert.equal(f.b.hidden, true);
   assert.equal(new URLSearchParams(f.location.search).get('categoria'), 'linea-caliente');

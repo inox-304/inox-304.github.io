@@ -204,6 +204,24 @@ async function dragFixture() {
   const f = await fixture(2); f.controller.setCanopyVisible(false); f.controller.setView('top'); f.draw(); return f;
 }
 
+test('closing customization cancels a lifted module and keeps viewing available without editable guides', async () => {
+  const f = await dragFixture(), canvas = f.renderer.domElement, order = f.host.dataset.cartOrder;
+  const start = modulePointer(f,'plancha'), end = modulePointer(f,'broastera');
+  canvas.emit('pointerdown',start); canvas.emit('pointermove',end); f.draw();
+  assert.ok(f.renders.at(-1).scene.getObjectByName('CartDragPreview'));
+  f.controller.setEditingEnabled(false); f.draw();
+  assert.equal(f.renders.at(-1).scene.getObjectByName('CartDragPreview'),undefined);
+  assert.equal(f.renders.at(-1).scene.getObjectByName('CartPositionGuides').visible,false);
+  assert.equal(f.orbit.enabled,true); assert.equal(canvas.pointerCaptures.size,0);
+  canvas.emit('pointerup',{...end,buttons:0}); assert.deepEqual(f.moves,[]);
+  canvas.emit('pointerdown',start); canvas.emit('pointermove',end); canvas.emit('pointerup',{...end,buttons:0});
+  assert.deepEqual(f.moves,[]); assert.equal(f.host.dataset.cartOrder,order);
+  f.controller.setView('top'); f.controller.setEditingEnabled(true); f.draw();
+  const again = modulePointer(f,'plancha'), destination = modulePointer(f,'broastera');
+  canvas.emit('pointerdown',again); canvas.emit('pointermove',destination); canvas.emit('pointerup',{...destination,buttons:0});
+  assert.equal(f.moves.length,1); f.controller.dispose();
+});
+
 test('mouse and touch drags lift each included module without changing selection, then emit one atomic swap', async () => {
   for (const [index, id] of ids.entries()) {
     const f = await dragFixture(), canvas = f.renderer.domElement, camera = f.renders.at(-1).camera;

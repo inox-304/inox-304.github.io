@@ -7,6 +7,9 @@ import * as cms from '../src/lib/cms.ts';
 import * as api from '../src/lib/cms-api.ts';
 import * as additionals from '../src/lib/product-additionals.ts';
 import * as families from '../src/lib/product-families.ts';
+import * as listings from '../src/lib/catalog-listings.ts';
+import { getCatalogType } from '../src/lib/catalog-taxonomy.ts';
+import { syncCustomization } from '../src/scripts/product-customization.ts';
 import * as cooktop from '../src/lib/cooktop-config.ts';
 import * as cooktopAssets from '../src/lib/cooktop-assets.ts';
 import * as cart from '../src/lib/cart-config.ts';
@@ -101,8 +104,8 @@ function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl, ap
   const saved = new Map(); if (cached) saved.set(`inox:public-catalog:1:${apiUrl}`, JSON.stringify({ version: 1, endpoint: apiUrl, savedAt: Date.now(), data: cached }));
   const storageCalls = [];
   const window = { localStorage: { getItem(key) { storageCalls.push('read'); return saved.get(key) ?? null; }, setItem(key, value) { storageCalls.push('write'); saved.set(key, value); }, removeItem(key) { storageCalls.push('remove'); saved.delete(key); } }, events: {}, addEventListener(name, action) { this.events[name] = action; }, setTimeout: setTimer, clearTimeout: clearTimer, setInterval: setTimer, clearInterval: clearTimer };
-  const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; } };
-  runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...cooktop, ...cooktopAssets, ...cart, ...cartAssets,
+  const history = { pushState(_state, _unused, url) { location.href = new URL(url, location).href; }, replaceState(_state, _unused, url) { location.href = new URL(url, location).href; } };
+  runInNewContext(browserSource, { ...cms, ...api, ...additionals, ...families, ...listings, getCatalogType, syncCustomization, ...cooktop, ...cooktopAssets, ...cart, ...cartAssets,
     catalogSearchText, getProductStage, withBase, renderVariantOptions, document, location, window, history, URL, URLSearchParams, CustomEvent, AbortController, Error,
     setTimeout: setTimer, clearTimeout: clearTimer,
     fetch: async (url, options) => { requests.push({ url: String(url), options }); return fetchImpl ? fetchImpl(url, options) : { ok: true, json: async () => structuredClone(remoteRules) }; },

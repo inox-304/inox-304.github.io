@@ -1,0 +1,16 @@
+---
+import Icon from './Icon.astro';
+import '../styles/product-customization.css';
+---
+<section class="product-customization" data-product-customization hidden aria-label="Opciones del equipo">
+  <div class="customization-entry">
+    <p class="customization-selection" data-customization-selection hidden></p>
+    <button type="button" class="customization-toggle" data-customization-toggle aria-expanded="false" aria-controls="product-customization-panel">
+      <Icon name="plus" size={20}/><span data-customization-label>Cambiar versión</span>
+    </button>
+  </div>
+  <div id="product-customization-panel" class="customization-panel" data-customization-panel hidden>
+    <div class="customization-panel-heading"><p data-customization-intro>Elige la versión que necesitas para tu negocio.</p><button type="button" class="customization-close" data-customization-close aria-label="Cerrar opciones del equipo">Cerrar</button></div>
+    <slot/>
+  </div>
+</section>

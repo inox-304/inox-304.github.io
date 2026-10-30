@@ -1,0 +1,27 @@
+---
+import Icon from './Icon.astro';
+import ProductCard from './ProductCard.astro';
+import { visibleProducts } from '../data/catalog';
+import { selectHomeFeatured } from '../lib/home-featured';
+import { withBase } from '../lib/paths';
+import '../styles/featured-rail.css';
+const showcase = selectHomeFeatured(visibleProducts);
+---
+<section class="featured-rail" aria-labelledby="featured-heading" data-featured-rail>
+  <div class="shell featured-rail-heading">
+    <div><span class="eyebrow">SELECCIÓN DESTACADA</span><h2 id="featured-heading">Equipos que impulsan tu negocio.</h2></div>
+    <a class="text-link dark-link" href={withBase('/catalogo/')}>Ver todo el catálogo <Icon name="arrow" size={18}/></a>
+  </div>
+  <div class="featured-rail-viewport" data-featured-viewport role="region" aria-label="Equipos destacados" aria-roledescription="carrusel" tabindex="0">
+    <div class="featured-rail-track" data-cms-products="home-featured">{showcase.map((product, index) => <ProductCard product={product} products={visibleProducts} index={index}/>)}</div>
+  </div>
+  <div class="shell featured-rail-bottom">
+    <p>Explora, imagina y encuentra el equipo que va contigo.</p>
+    <div class="featured-rail-controls" aria-label="Controles de equipos destacados">
+      <button type="button" data-featured-prev aria-label="Ver equipos anteriores"><Icon name="arrow" size={19}/></button>
+      <button type="button" data-featured-pause aria-label="Pausar movimiento de destacados" aria-pressed="false"><span data-featured-pause-label>Pausar</span></button>
+      <button type="button" data-featured-next aria-label="Ver equipos siguientes"><Icon name="arrow" size={19}/></button>
+    </div>
+  </div>
+</section>
+<script>import '../scripts/featured-rail';</script>

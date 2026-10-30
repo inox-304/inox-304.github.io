@@ -4,12 +4,71 @@ import Brand from './Brand.astro';
 import Icon from './Icon.astro';
 import { site, whatsappUrl } from '../data/site';
 ---
-<footer class="site-footer">
-  <div class="shell footer-top">
-    <div><Brand footer/><p>Diseñamos. Fabricamos. Instalamos.<br/>Acero que está a la altura de tu negocio.</p></div>
+<footer class="site-footer" id="footer">
+  <div class="footer-scene" aria-hidden="true">
+    <img src={withBase('/images/brand/cusco-delivery-footer.webp')} width="2172" height="724" alt="" loading="lazy" decoding="async"/>
+  </div>
+  <div class="shell footer-content">
+    <div class="footer-intro">
+      <Brand footer/>
+      <p class="footer-headline">Desde Cusco,<br/><span>para todo el Perú.</span></p>
+      <p class="footer-description">Diseñamos. Fabricamos. Instalamos.<br/>Acero que está a la altura de tu negocio.</p>
+    </div>
+    <div class="footer-links">
     <div class="footer-column"><span class="eyebrow">EXPLORA</span><a href={withBase('/catalogo/')}>Nuestros equipos</a><a href={withBase('/#a-medida')}>Fabricación a medida</a><a href={withBase('/#instalaciones')}>Instalaciones y servicios</a><a href={withBase('/#nosotros')}>Conoce INOX 304</a></div>
     <div class="footer-column"><span class="eyebrow">CONVERSEMOS</span><a data-cms-whatsapp href={whatsappUrl()} target="_blank" rel="noopener noreferrer"><span data-cms-phone>{site.phone ? `+51 ${site.phone}` : ''}</span> <Icon name="diagonal" size={14}/></a><a data-cms-email href={site.email ? `mailto:${site.email}` : undefined} hidden={!site.email}>{site.email}</a><a data-cms-facebook href={site.facebook || undefined} hidden={!site.facebook} target="_blank" rel="noopener noreferrer">Facebook <Icon name="diagonal" size={14}/></a><a data-cms-social="instagram" href={site.instagram || undefined} hidden={!site.instagram} target="_blank" rel="noopener noreferrer">Instagram <Icon name="diagonal" size={14}/></a><a data-cms-social="tiktok" href={site.tiktok || undefined} hidden={!site.tiktok} target="_blank" rel="noopener noreferrer">TikTok <Icon name="diagonal" size={14}/></a></div>
     <div class="footer-column"><span class="eyebrow">ENCUÉNTRANOS</span><p><span data-business="direccion">{site.address}</span><br/><span class="muted" data-business="referencia_direccion">{site.addressReference}</span></p><p data-business="horarios" data-hide-empty hidden={!site.hours}>{site.hours}</p><a href={withBase('/contacto/')}>Ver ubicación <Icon name="arrow" size={14}/></a></div>
+    </div>
   </div>
   <div class="shell footer-bottom"><span>© {new Date().getFullYear()} <span data-business="empresa">INOX 304</span>. Todos los derechos reservados.</span><span>HECHO PARA DURAR.</span><a href="#top">Volver arriba ↑</a></div>
 </footer>
+<style>
+  .site-footer{position:relative;isolation:isolate;overflow:hidden;padding-top:0;background:#041a2d;color:#f2f8ff;border-top:1px solid #244961}
+  .footer-scene{position:absolute;z-index:-2;inset:0;pointer-events:none}
+  .footer-scene img{width:100%;height:100%;object-fit:cover;object-position:right center}
+  .site-footer::before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(90deg,#041a2d 0%,rgba(4,26,45,.97) 25%,rgba(4,26,45,.88) 47%,rgba(4,26,45,.42) 65%,rgba(4,26,45,.06) 84%),linear-gradient(0deg,#041a2d 0%,rgba(4,26,45,.12) 23%,transparent 55%)}
+  .footer-content{position:relative;padding-block:48px 38px}
+  .footer-intro{max-width:490px}
+  .footer-headline{margin:22px 0 14px;font-size:clamp(28px,2.65vw,40px);line-height:1.12;font-weight:500;letter-spacing:-1.1px}
+  .footer-headline span{color:#b8ddf7}
+  .footer-description{font-size:12px;line-height:1.8;color:#c5d6e5;margin-bottom:30px}
+  .footer-links{display:grid;grid-template-columns:.9fr 1fr 1.25fr;gap:26px;width:64%;max-width:880px}
+  .site-footer .footer-column{gap:4px;font-size:12px;color:#e0ebf5;min-width:0}
+  .site-footer .footer-column:last-child{display:flex;grid-column:auto;align-items:flex-start}
+  .site-footer .footer-column .eyebrow{font-size:9px;letter-spacing:1.7px;color:#94c4e8;margin-bottom:12px}
+  .site-footer .footer-column a{min-height:32px;line-height:1.5;transition:color .2s}
+  .site-footer .footer-column a:hover{color:#a8dcff}
+  .site-footer .footer-column p{line-height:1.8;margin-bottom:8px}
+  .site-footer .muted{color:#b5cadd}
+  .site-footer .footer-bottom{position:relative;border-color:#42627b;padding-block:20px;color:#c4d7e7;align-items:center}
+  .footer-bottom a{display:inline-flex;align-items:center;min-height:32px}
+  @media(min-width:1800px){.footer-scene img{object-position:center 65%}}
+  @media(max-width:1150px){
+    .footer-content{padding-block:42px 28px}
+    .footer-links{width:71%;gap:20px}
+    .site-footer::before{background:linear-gradient(90deg,#041a2d 0%,rgba(4,26,45,.95) 38%,rgba(4,26,45,.73) 61%,rgba(4,26,45,.14)),linear-gradient(0deg,#041a2d,transparent 45%)}
+  }
+  @media(max-width:900px){
+    .footer-content{padding-top:36px}
+    .footer-intro{max-width:440px}
+    .footer-links{width:100%;max-width:none;padding-top:16px}
+    .site-footer::before{background:linear-gradient(90deg,#041a2d 0%,rgba(4,26,45,.9) 36%,rgba(4,26,45,.14) 76%),linear-gradient(0deg,#041a2d 0%,#041a2d 34%,rgba(4,26,45,.8) 52%,transparent 76%)}
+    .footer-scene{height:420px}
+    .footer-scene img{object-position:right center}
+  }
+  @media(max-width:600px){
+    .footer-scene{height:320px;top:150px}
+    .footer-scene img{object-position:right center}
+    .site-footer::before{background:linear-gradient(180deg,#041a2d 0%,rgba(4,26,45,.85) 20%,rgba(4,26,45,.12) 36%,#041a2d 49%)}
+    .footer-content{padding-top:30px;padding-bottom:22px}
+    .footer-intro{min-height:460px}
+    .footer-headline{font-size:30px;margin-top:18px}
+    .footer-description{font-size:11px;margin-bottom:0;max-width:290px}
+    .footer-links{grid-template-columns:1fr 1fr;gap:25px 20px;padding-top:0}
+    .site-footer .footer-column:last-child{grid-column:1/-1;max-width:340px}
+    .site-footer .footer-column a{min-height:40px}
+    .site-footer .footer-column .eyebrow{margin-bottom:8px}
+    .site-footer .footer-bottom{gap:14px;flex-wrap:wrap;padding-block:14px}
+  }
+  @media(prefers-reduced-motion:reduce){.site-footer .footer-column a{transition:none}}
+</style>

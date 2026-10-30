@@ -51,6 +51,20 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   let interaction: CooktopInteraction | null = null;
   const cooktopRoot = document.querySelector<HTMLElement>('[data-cooktop-root]');
   const cartRoot = document.querySelector<HTMLElement>('[data-cart-root]');
+  const customizationOpen = () => {
+    const toggle = document.querySelector<HTMLButtonElement>('[data-customization-toggle]');
+    return !toggle || toggle.getAttribute('aria-expanded') === 'true';
+  };
+  function syncEditing() {
+    const enabled = customizationOpen();
+    modular?.setEditingEnabled(enabled); cartScene?.setEditingEnabled(enabled);
+    if (cartScene) help.textContent = enabled
+      ? 'Arrastra un equipo y suéltalo en la posición resaltada para intercambiarlo. Arrastra el fondo para girar; usa la rueda o dos dedos para acercar. Ver encimera facilita acomodarlos. Esc cancela el arrastre. También puedes elegir posiciones con los controles. Ocultar el toldo es solo para inspección; sigue incluido. Vista ilustrativa, a confirmar con el taller.'
+      : `${navigationHelp} Abre «Personalizar» para acomodar los módulos. Ocultar el toldo es solo para inspección; sigue incluido. Vista ilustrativa, a confirmar con el taller.`;
+    else if (modular) help.textContent = enabled
+      ? `${navigationHelp} Elige una pieza y toca una zona resaltada para colocarla. Vista ilustrativa: las medidas y detalles finales se confirman al cotizar.`
+      : `${navigationHelp} Abre «Personalizar» para elegir la distribución y los módulos. Vista ilustrativa: las medidas y detalles finales se confirman al cotizar.`;
+  }
   let selectedVariant: NonNullable<CmsProduct['variants']>[number] | undefined;
   let doorFrame: number | undefined;
   let doorAction = 0;
@@ -203,9 +217,10 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         host.hidden = false;
         const productId = product.id!;
         const scene = await createCartScene(host, withBase(cartAsset), {
+          editingEnabled: customizationOpen(),
           onError: () => { if (request === revision) failed(); },
-          onPickPosition: position => { if (request === revision) pickCartPosition(cartRoot, productId, position); },
-          onMoveModule: (moduleId, position) => { if (request === revision) dropCartModule(cartRoot, productId, moduleId, position); },
+          onPickPosition: position => { if (request === revision && customizationOpen()) pickCartPosition(cartRoot, productId, position); },
+          onMoveModule: (moduleId, position) => { if (request === revision && customizationOpen()) dropCartModule(cartRoot, productId, moduleId, position); },
         });
         if (request !== revision) { scene.dispose(); return; }
         const latest = readCart(cartRoot, productId);
@@ -214,7 +229,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         if (request !== revision) return;
         scene.setActivePosition(latest.activePosition);
         window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy'); button.firstChild!.textContent = 'Volver a foto ';
-        help.hidden = false; help.textContent = 'Arrastra un equipo y suéltalo en la posición resaltada para intercambiarlo. Arrastra el fondo para girar; usa la rueda o dos dedos para acercar. Ver encimera facilita acomodarlos. Esc cancela el arrastre. También puedes elegir posiciones con los controles. Ocultar el toldo es solo para inspección; sigue incluido. Vista ilustrativa, a confirmar con el taller.';
+        help.hidden = false; syncEditing();
         canopy.hidden = false; canopyVisible = true; canopy.textContent = 'Ocultar toldo'; canopy.setAttribute('aria-pressed', 'false');
         viewpoints.hidden = false;
         const top = viewpoints.querySelector<HTMLButtonElement>('[data-model-view="top"]'); if (top) top.textContent = 'Ver encimera';
@@ -231,7 +246,8 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         host.hidden = false;
         const productId = product.id!;
         const scene = await createCooktopScene(host, withBase(asset), {
-          onPick: anchor => { if (request === revision) pickCooktopAnchor(cooktopRoot, productId, anchor); },
+          editingEnabled: customizationOpen(),
+          onPick: anchor => { if (request === revision && customizationOpen()) pickCooktopAnchor(cooktopRoot, productId, anchor); },
           onError: () => { if (request === revision) message('No se puede representar esta combinación en 3D. Revisa la distribución o vuelve a la foto.'); },
         });
         if (request !== revision) { scene.dispose(); return; }
@@ -240,7 +256,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
         modular = scene; modularLoading = false;
         window.clearTimeout(timeout); message(); button.removeAttribute('aria-busy');
         button.firstChild!.textContent = 'Volver a foto ';
-        help.hidden = false; help.textContent = `${navigationHelp} Elige una pieza y toca una zona resaltada para colocarla. Vista ilustrativa: las medidas y detalles finales se confirman al cotizar.`;
+        help.hidden = false; syncEditing();
         scene.update(latest.config, latest.selection);
         doors.hidden = !scene.hasDoors; doors.setAttribute('aria-pressed', 'false'); doors.textContent = 'Abrir puertas';
         scene.setInteraction(interaction); viewpoints.hidden = false;
@@ -332,7 +348,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
   });
   document.addEventListener('inox:variant-interaction', event => {
     const detail = (event as CustomEvent<{ productId: string }>).detail;
-    if (product?.id === detail?.productId && selectedVariant && button.getAttribute('aria-pressed') !== 'true') void showModel(false);
+    if (product?.id === detail?.productId && customizationOpen() && selectedVariant && button.getAttribute('aria-pressed') !== 'true') void showModel(false);
   });
   document.addEventListener('inox:cooktop-updated', event => {
     const detail = (event as CustomEvent<{ productId: string; interactive: boolean }>).detail;
@@ -346,7 +362,7 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
       return;
     }
     if (modularLoading) return; // Creation applies the newest selection after loading.
-    if (cooktopAssetFor(detail.productId, product.model3d || '') && (detail.interactive || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
+    if (cooktopAssetFor(detail.productId, product.model3d || '') && ((detail.interactive && customizationOpen()) || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
   });
   document.addEventListener('inox:cooktop-interaction', event => {
     const detail = (event as CustomEvent<{ productId: string; interaction: CooktopInteraction | null }>).detail;
@@ -361,12 +377,16 @@ document.querySelectorAll<HTMLElement>('[data-product-media]').forEach(root => {
     if (!state) { if (cartScene || cartLoading) resetViewer(); return; }
     if (cartScene) { cartScene.update(state.selection.included, state.selection.order); cartScene?.setActivePosition(state.activePosition); return; }
     if (cartLoading) return; // First load always applies the latest choice, not the initiating choice.
-    if (cartAssetFor(detail.productId, product.model3d || '') && (detail.interactive || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
+    if (cartAssetFor(detail.productId, product.model3d || '') && ((detail.interactive && customizationOpen()) || !!viewer || button.getAttribute('aria-pressed') === 'true')) void showModel(false, true);
   });
   document.addEventListener('inox:cart-focus', event => {
     const detail = (event as CustomEvent<{ productId: string; position: number | null }>).detail;
     if (!product || product.id !== detail.productId || selectedVariant || !readCart(cartRoot, detail.productId)) return;
     cartScene?.setActivePosition(detail.position);
+  });
+  document.addEventListener('inox:customization-visibility', event => {
+    const detail = (event as CustomEvent<{ productId: string; open: boolean }>).detail;
+    if (product?.id === detail?.productId) syncEditing();
   });
   window.addEventListener('pagehide', resetViewer);
   try { update(JSON.parse(root.dataset.currentProduct ?? root.dataset.initialProduct ?? 'null')); }

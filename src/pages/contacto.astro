@@ -23,7 +23,7 @@ import { crmEndpoint } from '../lib/crm-attribution';
       <label>Cuéntanos un poco más<textarea name="message" rows="4" placeholder="Equipo, capacidad, medidas o ideas para tu negocio…" required maxlength="1500"></textarea></label>
       <div class="form-honey" aria-hidden="true"><label>Deja este campo vacío<input name="website" tabindex="-1" autocomplete="off" maxlength="100"/></label></div>
       <p class="form-note">Enviaremos estos datos a INOX 304 para atender tu consulta. <a href={withBase('/privacidad-acceso/#consultas-comerciales')}>Cómo cuidamos tus datos</a>.</p>
-      <button class="button button-dark" type="submit" disabled>Enviar solicitud <Icon name="diagonal"/></button>
+      <button class="button button-dark button-quote" type="submit" disabled>Enviar solicitud <Icon name="diagonal"/></button>
       <p id="form-status" class="form-status" role="status" aria-live="polite" aria-atomic="true"></p>
       <div class="contact-alternative"><span>¿Prefieres conversar ahora?</span><a id="quote-fallback" class="text-link dark-link" href={whatsappUrl()} target="_blank" rel="noopener noreferrer" hidden={!site.whatsapp}>Continuar por WhatsApp <Icon name="whatsapp"/></a></div>
       <noscript><p>Para guardar tu solicitud activa JavaScript o escríbenos mediante los datos de contacto.</p></noscript>
