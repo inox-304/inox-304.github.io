@@ -13,7 +13,7 @@ const lines = [
 <section id="coleccion" class="home-lines" aria-labelledby="home-lines-title">
   <div class="shell">
     <div class="home-lines-heading">
-      <div><span class="eyebrow">NUESTRAS LÍNEAS</span><h2 id="home-lines-title">Soluciones en acero<br class="lines-title-break"/> para cada necesidad.</h2></div>
+      <h2 id="home-lines-title">Explora nuestras líneas.</h2>
       <a class="home-lines-all" href={withBase('/catalogo/')}>Ver catálogo completo <Icon name="arrow" size={18}/></a>
     </div>
     <nav class="home-lines-grid" aria-label="Explora nuestras líneas de equipos">
@@ -32,9 +32,7 @@ const lines = [
 <style>
   .home-lines{padding:64px 0 42px;background:#f1f4f8;color:#102237;scroll-margin-top:24px}
   .home-lines-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:32px;margin-bottom:25px}
-  .home-lines-heading .eyebrow{display:block;color:#4c637c;font-size:9px;letter-spacing:2.2px;margin-bottom:12px}
   .home-lines-heading h2{font-size:clamp(27px,2.9vw,40px);font-weight:500;letter-spacing:-1.3px;line-height:1.15;margin:0}
-  .lines-title-break{display:none}
   .home-lines-all{display:inline-flex;align-items:center;gap:15px;min-height:44px;flex-shrink:0;color:#194a70;font-size:12px;font-weight:600}
   .home-lines-all:hover{color:#0872ad}
   .home-lines-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
@@ -48,9 +46,9 @@ const lines = [
   .home-line:hover>img{transform:scale(1.025)}
   .home-line:is(:hover,:focus-visible) .home-line-arrow{background:#285676;transform:translateX(2px)}
   .home-line:focus-visible{outline:3px solid #276fa4;outline-offset:5px}
-  @media(max-width:1150px){.home-lines-grid{gap:13px}.home-line-copy{inset:auto 15px 18px;gap:8px}.home-line-arrow{width:30px;height:30px;flex-basis:30px}.home-line p{font-size:11px}.home-line h3{font-size:19px}.lines-title-break{display:block}}
-  @media(max-width:800px){.home-lines{padding-top:45px}.home-lines-heading{gap:18px}.home-lines-heading h2{font-size:30px}.home-lines-all{font-size:11px;gap:9px}.home-lines-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.home-line-copy{inset:auto 20px 22px}.home-line h3{font-size:22px}.home-line p{font-size:12px}.lines-title-break{display:none}}
-  @media(max-width:600px){.home-lines{padding:38px 0 32px}.home-lines-heading{display:block;margin-bottom:20px}.home-lines-heading h2{font-size:28px;letter-spacing:-.9px;max-width:340px}.home-lines-heading .eyebrow{font-size:8px;margin-bottom:10px}.home-lines-all{margin-top:8px;font-size:11px}.home-lines-grid{gap:12px}.home-line{aspect-ratio:3/4;border-radius:7px}.home-line-copy{inset:auto 12px 14px;display:block}.home-line h3{font-size:18px;margin-bottom:6px}.home-line p{font-size:10.5px;line-height:1.4;max-width:135px;padding-right:4px}.home-line-arrow{position:absolute;right:0;top:-39px;width:29px;height:29px;flex-basis:29px;background:#071f344d}.home-line::after{background:linear-gradient(0deg,#031729 0%,rgba(3,23,41,.94) 20%,rgba(3,23,41,.23) 45%,transparent 62%)}.home-line>img{object-fit:cover}}
+  @media(max-width:1150px){.home-lines-grid{gap:13px}.home-line-copy{inset:auto 15px 18px;gap:8px}.home-line-arrow{width:30px;height:30px;flex-basis:30px}.home-line p{font-size:11px}.home-line h3{font-size:19px}}
+  @media(max-width:800px){.home-lines{padding-top:45px}.home-lines-heading{gap:18px}.home-lines-heading h2{font-size:30px}.home-lines-all{font-size:11px;gap:9px}.home-lines-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.home-line-copy{inset:auto 20px 22px}.home-line h3{font-size:22px}.home-line p{font-size:12px}}
+  @media(max-width:600px){.home-lines{padding:38px 0 32px}.home-lines-heading{display:block;margin-bottom:20px}.home-lines-heading h2{font-size:28px;letter-spacing:-.9px;max-width:340px}.home-lines-all{margin-top:8px;font-size:11px}.home-lines-grid{gap:12px}.home-line{aspect-ratio:3/4;border-radius:7px}.home-line-copy{inset:auto 12px 14px;display:block}.home-line h3{font-size:18px;margin-bottom:6px}.home-line p{font-size:10.5px;line-height:1.4;max-width:135px;padding-right:4px}.home-line-arrow{position:absolute;right:0;top:-39px;width:29px;height:29px;flex-basis:29px;background:#071f344d}.home-line::after{background:linear-gradient(0deg,#031729 0%,rgba(3,23,41,.94) 20%,rgba(3,23,41,.23) 45%,transparent 62%)}.home-line>img{object-fit:cover}}
   @media(prefers-reduced-motion:reduce){.home-line>img,.home-line-arrow{transition:none}.home-line:hover>img,.home-line:is(:hover,:focus-visible) .home-line-arrow{transform:none}}
   @media(forced-colors:active){.home-line{border:2px solid LinkText}.home-line::after{display:none}.home-line-copy{background:Canvas;color:CanvasText}.home-line p{color:CanvasText}.home-line-arrow{border-color:LinkText}}
 </style>

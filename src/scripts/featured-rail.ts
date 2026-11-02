@@ -10,7 +10,8 @@ document.querySelectorAll<HTMLElement>('[data-featured-rail]').forEach(root => {
   if (!viewport || !track || !pause || !prev || !next) return;
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let userPaused = motion.matches;
-  let hovered = false, focused = false, touching = false, inView = false, pageSuspended = false;
+  let focused = false, touching = false, inView = false, pageSuspended = false;
+  let keyboardNavigation = true;
   let stride = 0, canMove = false, frame = 0, previousTime = 0, position = viewport.scrollLeft;
   let manualUntil = 0;
   function updateButton() {
@@ -20,8 +21,8 @@ document.querySelectorAll<HTMLElement>('[data-featured-rail]').forEach(root => {
     if (label) label.textContent = userPaused ? 'Reanudar' : 'Pausar';
     pause!.disabled = prev!.disabled = next!.disabled = !canMove;
   }
-  function stop() { if (frame) cancelAnimationFrame(frame); frame = 0; previousTime = 0; }
-  function allowed() { return canMove && !userPaused && !hovered && !focused && !touching && inView && !document.hidden && !pageSuspended; }
+  function stop() { if (frame) cancelAnimationFrame(frame); frame = 0; previousTime = 0; root.dataset.featuredMotion = 'paused'; }
+  function allowed() { return canMove && !userPaused && !focused && !touching && inView && !document.hidden && !pageSuspended; }
   function tick(time: number) {
     frame = 0;
     if (!allowed()) return;
@@ -38,6 +39,7 @@ document.querySelectorAll<HTMLElement>('[data-featured-rail]').forEach(root => {
     frame = requestAnimationFrame(tick);
   }
   function resume() {
+    root.dataset.featuredMotion = allowed() ? 'playing' : 'paused';
     if (!allowed()) { stop(); return; }
     if (!frame) { position = viewport!.scrollLeft; previousTime = 0; frame = requestAnimationFrame(tick); }
   }
@@ -64,19 +66,28 @@ document.querySelectorAll<HTMLElement>('[data-featured-rail]').forEach(root => {
   }
   pause.addEventListener('click', () => { userPaused = !userPaused; updateButton(); resume(); });
   prev.addEventListener('click', () => manual(-1)); next.addEventListener('click', () => manual(1));
-  root.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') { hovered = true; stop(); } });
-  root.addEventListener('pointerleave', () => { hovered = false; resume(); });
-  root.addEventListener('focusin', () => { focused = true; stop(); });
-  root.addEventListener('focusout', () => { queueMicrotask(() => { focused = root.contains(document.activeElement); resume(); }); });
-  viewport.addEventListener('pointerdown', () => { touching = true; stop(); }, { passive: true });
+  // A stationary pointer over this full-width section must not freeze the showcase.
+  // Pause for deliberate interaction instead; keyboard readers keep stable cards,
+  // while focusing the pause/arrow controls never prevents explicit resumption.
+  document.addEventListener('keydown', event => { if (event.key === 'Tab') keyboardNavigation = true; });
+  root.addEventListener('pointerdown', () => { keyboardNavigation = false; focused = false; resume(); }, { passive: true });
+  const syncFocus = () => { focused = keyboardNavigation && viewport.contains(document.activeElement); resume(); };
+  root.addEventListener('focusin', syncFocus);
+  root.addEventListener('focusout', () => { queueMicrotask(syncFocus); });
+  viewport.addEventListener('keydown', () => { keyboardNavigation = true; syncFocus(); });
+  viewport.addEventListener('pointerdown', () => { touching = true; resume(); }, { passive: true });
   const release = () => { if (!touching) return; touching = false; manualUntil = performance.now() + 1000; position = viewport.scrollLeft; resume(); };
   document.addEventListener('pointerup', release, { passive: true }); document.addEventListener('pointercancel', release, { passive: true });
-  viewport.addEventListener('wheel', () => { manualUntil = performance.now() + 1000; position = viewport.scrollLeft; }, { passive: true });
+  viewport.addEventListener('wheel', event => {
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY) || event.shiftKey) {
+      manualUntil = performance.now() + 1000; position = viewport.scrollLeft;
+    }
+  }, { passive: true });
   document.addEventListener('visibilitychange', resume);
   window.addEventListener('pagehide', () => { pageSuspended = true; stop(); });
-  window.addEventListener('pageshow', event => {
+  window.addEventListener('pageshow', () => {
     pageSuspended = false;
-    if (event.persisted) { userPaused = true; updateButton(); }
+    // Going back from a product restores the user's choice, not a new forced pause.
     resume();
   });
   motion.addEventListener('change', () => { userPaused = motion.matches; updateButton(); resume(); });
