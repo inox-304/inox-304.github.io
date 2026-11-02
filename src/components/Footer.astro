@@ -23,10 +23,10 @@ import { site, whatsappUrl } from '../data/site';
   <div class="shell footer-bottom"><span>© {new Date().getFullYear()} <span data-business="empresa">INOX 304</span>. Todos los derechos reservados.</span><span>HECHO PARA DURAR.</span><a href="#top">Volver arriba ↑</a></div>
 </footer>
 <style>
-  .site-footer{position:relative;isolation:isolate;overflow:hidden;padding-top:0;background:#041a2d;color:#f2f8ff;border-top:1px solid #244961}
+  .site-footer{position:relative;isolation:isolate;overflow:hidden;padding-top:0;background:#001020;color:#f2f8ff;border-top:1px solid #244961}
   .footer-scene{position:absolute;z-index:-2;inset:0;pointer-events:none}
   .footer-scene img{width:100%;height:100%;object-fit:cover;object-position:right center}
-  .site-footer::before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(90deg,#041a2d 0%,rgba(4,26,45,.97) 25%,rgba(4,26,45,.88) 47%,rgba(4,26,45,.42) 65%,rgba(4,26,45,.06) 84%),linear-gradient(0deg,#041a2d 0%,rgba(4,26,45,.12) 23%,transparent 55%)}
+  .site-footer::before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(90deg,#001020 0%,rgba(0,16,32,.97) 25%,rgba(0,16,32,.88) 47%,rgba(0,16,32,.42) 65%,rgba(0,16,32,.06) 84%),linear-gradient(0deg,#001020 0%,rgba(0,16,32,.12) 23%,transparent 55%)}
   .footer-content{position:relative;padding-block:48px 38px}
   .footer-intro{max-width:490px}
   .footer-headline{margin:22px 0 14px;font-size:clamp(28px,2.65vw,40px);line-height:1.12;font-weight:500;letter-spacing:-1.1px}
@@ -46,20 +46,20 @@ import { site, whatsappUrl } from '../data/site';
   @media(max-width:1150px){
     .footer-content{padding-block:42px 28px}
     .footer-links{width:71%;gap:20px}
-    .site-footer::before{background:linear-gradient(90deg,#041a2d 0%,rgba(4,26,45,.95) 38%,rgba(4,26,45,.73) 61%,rgba(4,26,45,.14)),linear-gradient(0deg,#041a2d,transparent 45%)}
+    .site-footer::before{background:linear-gradient(90deg,#001020 0%,rgba(0,16,32,.95) 38%,rgba(0,16,32,.73) 61%,rgba(0,16,32,.14)),linear-gradient(0deg,#001020,transparent 45%)}
   }
   @media(max-width:900px){
     .footer-content{padding-top:36px}
     .footer-intro{max-width:440px}
     .footer-links{width:100%;max-width:none;padding-top:16px}
-    .site-footer::before{background:linear-gradient(90deg,#041a2d 0%,rgba(4,26,45,.9) 36%,rgba(4,26,45,.14) 76%),linear-gradient(0deg,#041a2d 0%,#041a2d 34%,rgba(4,26,45,.8) 52%,transparent 76%)}
+    .site-footer::before{background:linear-gradient(90deg,#001020 0%,rgba(0,16,32,.9) 36%,rgba(0,16,32,.14) 76%),linear-gradient(0deg,#001020 0%,#001020 34%,rgba(0,16,32,.8) 52%,transparent 76%)}
     .footer-scene{height:420px}
     .footer-scene img{object-position:right center}
   }
   @media(max-width:600px){
     .footer-scene{height:320px;top:150px}
     .footer-scene img{object-position:right center}
-    .site-footer::before{background:linear-gradient(180deg,#041a2d 0%,rgba(4,26,45,.85) 20%,rgba(4,26,45,.12) 36%,#041a2d 49%)}
+    .site-footer::before{background:linear-gradient(180deg,#001020 0%,rgba(0,16,32,.85) 20%,rgba(0,16,32,.12) 36%,#001020 49%)}
     .footer-content{padding-top:30px;padding-bottom:22px}
     .footer-intro{min-height:460px}
     .footer-headline{font-size:30px;margin-top:18px}
