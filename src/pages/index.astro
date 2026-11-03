@@ -13,14 +13,14 @@ import Services from '../components/Services.astro';
       <defs>
         <filter id="inox-hero-blue-grade" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
           <feComponentTransfer in="SourceGraphic" result="blueScene">
-            <feFuncR type="table" tableValues="0 .005 .015 .035 .07 .13 .24 .43 .69 .88 1"/>
-            <feFuncG type="table" tableValues=".012 .035 .065 .105 .16 .24 .36 .53 .74 .90 1"/>
-            <feFuncB type="table" tableValues=".04 .08 .13 .19 .26 .35 .46 .61 .78 .91 1"/>
+            <feFuncR type="table" tableValues="0 .002 .008 .018 .045 .105 .22 .46 .73 .93 1"/>
+            <feFuncG type="table" tableValues=".004 .018 .04 .075 .13 .22 .35 .56 .79 .95 1"/>
+            <feFuncB type="table" tableValues=".014 .05 .10 .16 .23 .33 .46 .66 .86 .97 1"/>
           </feComponentTransfer>
           <feComponentTransfer in="SourceGraphic" result="steelLight">
-            <feFuncR type="gamma" amplitude="1" exponent=".86" offset="0"/>
-            <feFuncG type="gamma" amplitude="1" exponent=".86" offset="0"/>
-            <feFuncB type="gamma" amplitude="1" exponent=".86" offset="0"/>
+            <feFuncR type="table" tableValues="0 .025 .08 .17 .29 .44 .61 .77 .88 .96 1"/>
+            <feFuncG type="table" tableValues="0 .025 .08 .17 .29 .44 .61 .77 .88 .96 1"/>
+            <feFuncB type="table" tableValues="0 .025 .08 .17 .29 .44 .61 .77 .88 .96 1"/>
           </feComponentTransfer>
           <feImage href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3Cfilter id='soft' x='-50%25' y='-50%25' width='200%25' height='200%25'%3E%3CfeGaussianBlur stdDeviation='4'/%3E%3C/filter%3E%3C/defs%3E%3Crect x='29' y='24' width='58' height='58' rx='5' fill='white' opacity='.65' filter='url(%23soft)'/%3E%3C/svg%3E" preserveAspectRatio="none" x="0" y="0" width="100%" height="100%" result="steelMask"/>
           <feComposite in="steelLight" in2="steelMask" operator="in" result="silverHighlights"/>
@@ -63,7 +63,7 @@ import Services from '../components/Services.astro';
 </Layout>
 <style>
   .hero{--hero-depth:#00101f;height:100svh;min-height:740px;max-height:950px;background:var(--hero-depth);color:#f5faff}
-  .hero-atmosphere{background:radial-gradient(ellipse at 39% 34%,rgba(7,78,126,.35),transparent 55%),linear-gradient(90deg,rgba(0,16,31,.8),rgba(3,33,58,.35) 52%,rgba(3,29,52,.35)),url('/images/brand/stone-texture.webp') center/cover;opacity:1}
+  .hero-atmosphere{background:radial-gradient(ellipse at 39% 34%,rgba(4,55,108,.22),transparent 55%),linear-gradient(90deg,rgba(0,16,31,.8),rgba(3,33,58,.35) 52%,rgba(3,29,52,.35)),url('/images/brand/stone-texture.webp') center/cover;filter:saturate(1.35) contrast(1.15);opacity:1}
   .hero-color-grade{position:absolute;pointer-events:none}
   /* Cool the footage itself; converge to neutral highlights so steel stays silver. */
   .hero-video{filter:url(#inox-hero-blue-grade);opacity:1}
