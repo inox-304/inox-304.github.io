@@ -31,7 +31,8 @@ import Services from '../components/Services.astro';
     </svg>
     <div class="hero-atmosphere" aria-hidden="true"></div>
     <div class="hero-stage" aria-hidden="true">
-      <video id="hero-video" class="hero-video" poster={withBase('/media/hero-poster.jpg')} muted loop playsinline preload="none"><source data-src={withBase('/media/hero-clean.mp4')} type="video/mp4"/></video>
+      <video id="hero-video" class="hero-video" data-src-desktop={withBase('/media/hero-clean.mp4')} data-poster-desktop={withBase('/media/hero-poster.jpg')} data-src-tablet={withBase('/media/hero-tablet.mp4')} data-poster-tablet={withBase('/media/hero-tablet-poster.jpg')} data-src-mobile={withBase('/media/hero-mobile.mp4')} data-poster-mobile={withBase('/media/hero-mobile-poster.jpg')} muted loop playsinline preload="none"><source type="video/mp4"/></video>
+      <noscript><picture class="hero-static"><source media="(max-width:600px)" srcset={withBase('/media/hero-mobile-poster.jpg')}/><source media="(max-width:1100px)" srcset={withBase('/media/hero-tablet-poster.jpg')}/><img src={withBase('/media/hero-poster.jpg')} alt=""/></picture></noscript>
       <div class="hero-stage-shade"></div>
     </div>
     <div class="hero-inner shell">
@@ -67,6 +68,8 @@ import Services from '../components/Services.astro';
   .hero-color-grade{position:absolute;pointer-events:none}
   /* Cool the footage itself; converge to neutral highlights so steel stays silver. */
   .hero-video{filter:url(#inox-hero-blue-grade);opacity:1}
+  .hero-video[data-hero-media="mobile"],.hero-video[data-hero-media="tablet"]{filter:none}
+  .hero-static{position:absolute;inset:0}.hero-static img{width:100%;height:100%;object-fit:cover;filter:url(#inox-hero-blue-grade)}
   .hero-stage-shade{background:linear-gradient(90deg,var(--hero-depth),rgba(0,16,31,.66) 12%,transparent 40%),linear-gradient(0deg,var(--hero-depth),transparent 25%,transparent 82%,rgba(0,16,31,.5))}
   .hero-stage-shade::after{content:"";position:absolute;inset:0;background:transparent;pointer-events:none}
   .hero-stage{mask-image:linear-gradient(90deg,transparent,#000 28%)}
@@ -78,32 +81,9 @@ import Services from '../components/Services.astro';
   .hero-actions>.text-link{color:#d0e3f1}
   .hero .video-toggle{background:rgba(0,16,31,.7);border-color:#577f9c;color:#e6f3ff}
   .hero .video-toggle:hover{background:#123e5d;border-color:#92bedd}
-  @media(max-width:900px){.hero,.hero-inner{height:auto;min-height:880px}.hero-copy{padding-top:128px;padding-bottom:345px}.hero-stage{top:360px;mask-image:linear-gradient(180deg,transparent,#000 15%,#000 85%,transparent)}.hero-stage-shade{background:linear-gradient(180deg,var(--hero-depth),transparent 25%,transparent 75%,var(--hero-depth)),linear-gradient(90deg,var(--hero-depth),transparent 20%)}}
-  @media(max-width:600px){.hero,.hero-inner{min-height:890px}.hero-copy{padding-top:124px;padding-bottom:385px}.hero-stage{top:495px;bottom:66px}}
+  @media(min-width:901px) and (max-width:1100px){.hero-stage{top:50%;left:47%;right:0;bottom:auto;height:auto;aspect-ratio:4/3;transform:translateY(-50%);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),linear-gradient(180deg,transparent,#000 12%,#000 90%,transparent);mask-composite:intersect}.hero-video,.hero-static img{object-fit:contain;object-position:center}.hero-stage-shade{background:linear-gradient(90deg,var(--hero-depth),transparent 12%),linear-gradient(0deg,var(--hero-depth),transparent 20%,transparent 90%,var(--hero-depth))}}
+  @media(max-width:1100px){.hero-static img{filter:none}}
+  @media(max-width:900px){.hero,.hero-inner{height:auto;min-height:1100px}.hero-copy{padding-top:128px;padding-bottom:560px}.hero-stage{top:560px;left:4%;right:4%;bottom:66px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),linear-gradient(180deg,transparent,#000 12%,#000 90%,transparent);mask-composite:intersect}.hero-video,.hero-static img{object-fit:contain;object-position:center}.hero-stage-shade{background:linear-gradient(180deg,var(--hero-depth),transparent 12%,transparent 90%,var(--hero-depth))}}
+  @media(max-width:600px){.hero,.hero-inner{min-height:890px}.hero-copy{padding-top:124px;padding-bottom:385px}.hero-stage{top:0;left:0;right:0;bottom:66px;mask-image:linear-gradient(180deg,#000,#000 92%,transparent);mask-composite:add}.hero-video,.hero-static img{object-fit:cover;object-position:center}.hero-stage-shade{background:linear-gradient(0deg,var(--hero-depth),transparent 10%)}}
 </style>
-<script>
-  const video = document.querySelector<HTMLVideoElement>('#hero-video');
-  const toggle = document.querySelector<HTMLButtonElement>('.video-toggle');
-  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  let loaded = false;
-  function updatePlayback() {
-    if (!video || !toggle) return;
-    const playing = !video.paused;
-    toggle.setAttribute('aria-label', playing ? 'Pausar video de presentación' : 'Reproducir video de presentación');
-    toggle.setAttribute('aria-pressed', String(playing));
-    const label = toggle.querySelector('[data-video-label]'); const icon = toggle.querySelector('[data-video-icon]');
-    if (label) label.textContent = playing ? 'Pausar' : 'Reproducir';
-    if (icon) icon.textContent = playing ? 'Ⅱ' : '▶';
-  }
-  async function playVideo() {
-    if (!video) return;
-    if (!loaded) { video.querySelectorAll('source').forEach(source => { source.src = source.dataset.src || ''; }); video.load(); loaded = true; }
-    try { await video.play(); } catch { updatePlayback(); }
-  }
-  toggle?.addEventListener('click', () => { if (!video) return; video.paused ? void playVideo() : video.pause(); });
-  video?.addEventListener('play', updatePlayback); video?.addEventListener('pause', updatePlayback);
-  motion.addEventListener('change', () => { if (motion.matches) video?.pause(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) video?.pause(); });
-  if (!motion.matches && !connection?.saveData) void playVideo();
-</script>
+<script>import '../scripts/hero-video';</script>
