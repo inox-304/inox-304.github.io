@@ -67,10 +67,12 @@ INSTALLED_APPS = [
     'config.apps.PrivateAdminConfig', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
     'django_otp', 'django_otp.plugins.otp_totp', 'security.apps.SecurityConfig', 'catalog', 'crm',
+    'finance.apps.FinanceConfig', 'finance_intake.apps.FinanceIntakeConfig',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware', 'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware',
+    'finance.upload_limits.FinanceUploadLimitMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware', 'security.middleware.SecuritySessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware', 'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -172,6 +174,18 @@ FRONTEND_DIST = Path(os.getenv('FRONTEND_DIST', PROJECT_DIR / 'dist-server')).re
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000
+
+# Incoming finance messages remain disabled until the owner configures the
+# official Groups API. No credentials are rendered in the administration UI.
+FINANCE_WHATSAPP_ENABLED = os.getenv('FINANCE_WHATSAPP_ENABLED', '0') == '1'
+FINANCE_WHATSAPP_APP_SECRET = os.getenv('FINANCE_WHATSAPP_APP_SECRET', '')
+FINANCE_WHATSAPP_VERIFY_TOKEN = os.getenv('FINANCE_WHATSAPP_VERIFY_TOKEN', '')
+FINANCE_WHATSAPP_PHONE_NUMBER_ID = os.getenv('FINANCE_WHATSAPP_PHONE_NUMBER_ID', '')
+FINANCE_WHATSAPP_OPERATOR_ID = os.getenv('FINANCE_WHATSAPP_OPERATOR_ID', '')
+FINANCE_WHATSAPP_OPERATOR_ID_KIND = os.getenv('FINANCE_WHATSAPP_OPERATOR_ID_KIND', 'bsuid')
+FINANCE_WHATSAPP_GROUP_YAPE = os.getenv('FINANCE_WHATSAPP_GROUP_YAPE', '')
+FINANCE_WHATSAPP_GROUP_CASH = os.getenv('FINANCE_WHATSAPP_GROUP_CASH', '')
+FINANCE_WHATSAPP_GROUP_TRANSFER = os.getenv('FINANCE_WHATSAPP_GROUP_TRANSFER', '')
 
 # Conversion is isolated from HTTP workers and never publishes a result itself.
 MODEL_IMPORT_MAX_SOURCE_BYTES = 20 * 1024 * 1024

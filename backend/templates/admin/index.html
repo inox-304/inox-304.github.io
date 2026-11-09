@@ -8,13 +8,14 @@
 <header class="inox-home-heading">
   <p class="inox-home-eyebrow">TU ESPACIO DE TRABAJO</p>
   <h1>Tu negocio, en orden</h1>
-  <p>Atiende consultas, presenta tus equipos y organiza la fabricación.</p>
+  <p>Atiende consultas, presenta tus equipos y organiza las operaciones de tu negocio.</p>
 </header>
 {% endblock %}
 
 {% block content %}
 {% catalog_overview as overview %}
 {% team_access_overview as team_access %}
+{% finance_access as can_finance %}
 {% if team_access %}
 <section class="inox-home-team" aria-labelledby="team-access-title">
   <div class="inox-home-team-heading">
@@ -50,6 +51,19 @@
       <li><span>03</span><div><strong>Resultados</strong><small>Origen, conversión y tiempo de respuesta.</small></div></li>
     </ul>
     <div class="inox-home-actions"><a class="inox-home-primary" href="{% url 'crm:dashboard' %}">Abrir ventas <span aria-hidden="true">→</span></a>{% if perms.crm.add_opportunity %}<a class="inox-home-secondary" href="{% url 'crm:create' %}">+ Nueva consulta</a>{% endif %}</div>
+  </section>
+  {% endif %}
+  {% if can_finance %}
+  <section class="inox-home-card" aria-labelledby="finance-title">
+    <div class="inox-home-card-heading"><span class="inox-home-eyebrow">CONTROL FINANCIERO</span></div>
+    <h2 id="finance-title">Finanzas</h2>
+    <p class="inox-home-description">Ingresos, egresos y traslados de tus empresas. Cada registro, con su comprobante y revisión.</p>
+    <ul class="inox-home-features">
+      <li><span>01</span><div><strong>Registra y revisa</strong><small>Yapes, efectivo y transferencias, por empresa.</small></div></li>
+      <li><span>02</span><div><strong>Conserva el historial</strong><small>Los precios nuevos no cambian los movimientos anteriores.</small></div></li>
+      <li><span>03</span><div><strong>Consulta tus resultados</strong><small>Flujo de dinero por mes, empresa y moneda.</small></div></li>
+    </ul>
+    <div class="inox-home-actions"><a class="inox-home-primary" href="{% url 'finance:dashboard' %}">Abrir finanzas <span aria-hidden="true">→</span></a></div>
   </section>
   {% endif %}
   {% if overview %}

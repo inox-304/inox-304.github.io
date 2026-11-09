@@ -1,0 +1,6 @@
+{% extends "admin/finance/base.html" %}
+{% block finance_breadcrumb %} / Configuración / {{ label }}{% endblock %}
+{% block finance_content %}
+<header class="fin-heading"><div><span class="fin-eyebrow">{% if company %}{{ company.name }}{% else %}ORGANIZA TUS NEGOCIOS{% endif %}</span><h1>{{ title }}</h1><p>Guarda los datos reales. Desactivar conserva el historial; no elimina registros anteriores.</p></div><a class="fin-button" href="{% url 'finance:settings' %}?tab={{ kind }}{% if company %}&amp;company={{ company.pk }}{% endif %}">← Configuración</a></header>
+<form method="post" class="fin-panel" novalidate>{% csrf_token %}{% include 'admin/finance/_errors.html' %}<div class="fin-form-grid">{% for field in form %}{% include 'admin/finance/_field.html' with field=field %}{% endfor %}</div><div class="fin-form-actions"><span class="fin-note">Los cambios de configuración no recalculan importes históricos.</span><button class="fin-button fin-button-primary" type="submit">Guardar {{ label }} →</button></div></form>
+{% endblock %}

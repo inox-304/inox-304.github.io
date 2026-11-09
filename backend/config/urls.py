@@ -5,6 +5,7 @@ from catalog import inventory_views
 from crm import public_views as crm_public
 
 urlpatterns = [
+    path('admin/finanzas/', include('finance.urls')),
     path('admin/modelos/', include('model_imports.urls')),
     path('admin/auth/', include('security.urls')),
     path('admin/crm/', include('crm.urls')),
@@ -14,6 +15,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/crm/inquiries/', crm_public.inquiries, name='crm-inquiries'),
     path('api/crm/events/', crm_public.events, name='crm-events'),
+    path('api/finanzas/whatsapp/', include('finance_intake.urls')),
     path('', include('catalog.urls')),
     path('catalogo/<slug:slug>/', views.product_page, name='product-page'),
     path('sitemap.xml', views.sitemap, name='sitemap'),

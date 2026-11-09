@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/finance.css' %}?v=1">{% endblock %}
+{% block extrahead %}{{ block.super }}<script defer src="{% static 'inox/finance.js' %}?v=1"></script>{% endblock %}
+{% block bodyclass %}{{ block.super }} inox-finance-page{% endblock %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Panel</a> / <a href="{% url 'finance:dashboard' %}">Finanzas</a>{% block finance_breadcrumb %}{% endblock %}</div>{% endblock %}
+{% block content %}
+<div class="fin-shell">
+  <nav class="fin-nav" aria-label="Finanzas">
+    <a href="{% url 'finance:dashboard' %}"{% if section == 'dashboard' %} aria-current="page"{% endif %}>Resumen y movimientos</a>
+    <a href="{% url 'finance:dashboard' %}?status=draft"{% if section == 'review' %} aria-current="page"{% endif %}>Por revisar{% if pending_count %} <span>{{ pending_count }}</span>{% endif %}</a>
+    <a href="{% url 'finance:connections' %}"{% if section == 'connections' %} aria-current="page"{% endif %}>Recepción y conexiones</a>
+    {% if owner %}<a href="{% url 'finance:settings' %}"{% if section == 'settings' %} aria-current="page"{% endif %}>Configuración</a>{% endif %}
+  </nav>
+  {% block finance_content %}{% endblock %}
+  <footer class="fin-footer"><span>INOX 304 · Finanzas</span><span>Acceso privado por empresa · Historial conservado</span></footer>
+</div>
+{% endblock %}

@@ -10,6 +10,18 @@ register = template.Library()
 
 
 @register.simple_tag(takes_context=True)
+def finance_access(context):
+    """Financial access is explicit and separate from catalog/CRM roles."""
+    from finance.permissions import can_access
+    request = context.get("request")
+    if request is None:
+        return False
+    if not hasattr(request, "_finance_access"):
+        request._finance_access = can_access(request.user)
+    return request._finance_access
+
+
+@register.simple_tag(takes_context=True)
 def team_access_overview(context):
     """Only the configured owner can administer accounts or other users' keys."""
     request = context.get("request")
