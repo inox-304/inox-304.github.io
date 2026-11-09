@@ -212,7 +212,9 @@ class FinanceWorkspaceTests(TestCase):
             response = self.client.get(reverse("finance:download", args=[attachment.pk]))
             self.assertEqual(response.status_code, 200)
             self.assertIn("attachment", response["Content-Disposition"])
-            response.close()
+            # The test client's streaming wrapper closes the file while shielding
+            # the TestCase transaction from close_old_connections on PostgreSQL.
+            self.assertEqual(b"".join(response.streaming_content), content.getvalue())
             self.assertNotContains(self.client.get(reverse("finance:detail", args=[self.movement.pk])), "/media/finance")
             CompanyAccess.objects.filter(user=self.viewer).delete()
             self.assertEqual(self.client.get(reverse("finance:download", args=[attachment.pk])).status_code, 403)
