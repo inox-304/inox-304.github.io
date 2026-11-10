@@ -1,8 +1,15 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net';
 import { basename, dirname, join, resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+
+// Build downloads can cross continents. Node's 250 ms address-family attempt
+// default may abandon reachable IPv4 before an unavailable IPv6 attempt fails.
+// This changes only the build process, not the browser or application server.
+setDefaultAutoSelectFamilyAttemptTimeout(5000);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const destination = join(root, 'backend/static/inox/ocr-vendor/paddle-v0.4.2');
@@ -65,7 +72,10 @@ async function download(entry) {
       try { await writeFile(temporary, data); await rename(temporary, cached); }
       finally { await rm(temporary, { force: true }); }
       return data;
-    } catch (error) { if (attempt === 3 || /integrity mismatch|Unexpected size/.test(error.message)) throw error; }
+    } catch (error) {
+      if (attempt === 3 || /integrity mismatch|Unexpected size/.test(error.message)) throw error;
+      await delay(attempt * 1000);
+    }
   }
 }
 
