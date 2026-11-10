@@ -42,7 +42,23 @@ const cardTemplate = document.querySelector<HTMLTemplateElement>('[data-cms-card
 const initialDefaultMessage = 'Hola INOX 304, me gustaría recibir asesoría para equipar mi negocio.';
 const defaultHero = [...document.querySelectorAll<HTMLElement>('[data-business="hero_title"], [data-business="hero_description"], [data-business="home_text"]')].map(element => ({ element, children: [...element.childNodes].map(child => child.cloneNode(true)) }));
 
-function route(product: CmsProduct) { return apiMode ? apiProductRoute(product) : cmsProductRoute(product, payload?.routes || {}); }
+function route(product: CmsProduct) {
+  const fallback = `${withBase('/equipo/')}?id=${encodeURIComponent(product.id)}`;
+  try {
+    const candidate = apiMode ? apiProductRoute(product) : cmsProductRoute(product, payload?.routes || {});
+    // Bootstrap text is data, including its route map. Never turn an injected
+    // javascript:/data: URL or an external redirect into a clickable product.
+    if (!candidate.startsWith('/') || candidate.startsWith('//') || /[\\\u0000-\u0020\u007f]/.test(candidate)) return fallback;
+    const url = new URL(candidate, location.origin);
+    if (url.origin !== location.origin) return fallback;
+    const prefix = withBase('/catalogo/');
+    const slug = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length).replace(/\/$/, '') : '';
+    if (slug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      return `${prefix}${encodeURIComponent(slug)}/${url.search}${url.hash}`;
+    }
+    return fallback;
+  } catch { return fallback; }
+}
 function category(product: CmsProduct) { return categoryNames[product.category] || product.category; }
 function setText(selector: string, value: string, root: ParentNode = document) { root.querySelectorAll(selector).forEach(element => { element.textContent = value; }); }
 function createCard(product: CmsProduct, index: number, data: CmsData, listing?: CatalogListing<CmsProduct>): HTMLElement {

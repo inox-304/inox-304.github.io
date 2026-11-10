@@ -148,6 +148,15 @@ class CartProductTests(TestCase):
                 self.assertEqual(response.status_code, 400); self.assertFalse(response.json()["valid"])
         self.assertEqual(self.client.get(self.check_url, {"selection": ["{}", "{}"]}).status_code, 400)
 
+    def test_public_validation_never_returns_exception_details(self):
+        for error in (CartValidationError("PRIVATE-VALIDATION-PATH"), ValueError("PRIVATE-PARSER-DETAIL")):
+            with self.subTest(error=type(error).__name__), patch("catalog.views.validate_cart_selection", side_effect=error):
+                response = self.client.get(self.check_url, {"selection": '{"included":[]}'})
+            self.assertEqual(response.status_code, 400)
+            self.assertFalse(response.json()["valid"])
+            self.assertNotIn("PRIVATE-", response.content.decode())
+            self.assertIn("Revisa", response.json()["error"])
+
     def test_drafts_invalid_data_and_wrong_family_fail_closed_without_leaking(self):
         self.product.cart_config = cart_fixture(False); self.product.save()
         self.assertIsNone(public_product(self.product)["cartConfig"])

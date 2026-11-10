@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'parse5';
 import config from '../astro.config.mjs';
 
 // Read the actual static output so this also catches stale links and missing media.
@@ -29,19 +30,14 @@ function publicPath(filename) {
   return `${base}${relativeName(filename)}`.replace(/index\.html$/, '');
 }
 
-function decodeEntities(value) {
-  return value.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
-    .replace(/&#(x[\da-f]+|\d+);/gi, (_, code) =>
-      String.fromCodePoint(code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code)));
-}
-
 async function isFile(filename) {
   try { return (await stat(filename)).isFile(); } catch { return false; }
 }
 
 async function verifyReference(rawValue, filename, context) {
-  const value = decodeEntities(rawValue).trim();
+  // HTML attributes arrive decoded exactly once by the HTML parser. CSS URLs
+  // are not HTML, and must never be passed through an HTML entity decoder.
+  const value = rawValue.trim();
   if (!value || value.startsWith('#')) return;
   let url;
   try {
@@ -85,45 +81,67 @@ async function verifyCss(css, filename) {
   }
 }
 
+export function inspectHtml(html) {
+  // This is a verifier, not a sanitizer: traverse the parsed document without
+  // rewriting markup or accidentally creating tags by removing substrings.
+  const result = { titles: [], h1Count: 0, hasMain: false, references: [], styles: [] };
+  const referenceTags = new Set(['a', 'img', 'source', 'video', 'audio', 'script', 'link', 'iframe', 'track', 'use']);
+  const referenceAttributes = new Set(['src', 'href', 'poster', 'srcset', 'imagesrcset']);
+  const pending = [{ node: parse(html), inert: false }];
+  while (pending.length) {
+    const { node, inert } = pending.pop();
+    const tag = node.tagName;
+    if (!inert && node.namespaceURI === 'http://www.w3.org/1999/xhtml') {
+      if (tag === 'title') result.titles.push((node.childNodes || []).filter(child => child.nodeName === '#text').map(child => child.value).join('').trim());
+      if (tag === 'h1') result.h1Count += 1;
+      if (tag === 'main') result.hasMain = true;
+    }
+    if (referenceTags.has(tag)) {
+      for (const attribute of node.attrs || []) {
+        if (referenceAttributes.has(attribute.name)) result.references.push({ name: attribute.name, value: attribute.value });
+      }
+    }
+    if (tag === 'style') result.styles.push((node.childNodes || []).filter(child => child.nodeName === '#text').map(child => child.value).join(''));
+    for (const child of node.childNodes || []) pending.push({ node: child, inert });
+    // Template content is not a visible landmark, but its assets can be used
+    // by the catalog at runtime and must still exist in the build.
+    if (node.content) pending.push({ node: node.content, inert: true });
+  }
+  return result;
+}
+
 async function verifyHtml(filename) {
   const html = await readFile(filename, 'utf8');
-  const clean = html.replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/(<script\b[^>]*>)[\s\S]*?<\/script>/gi, '$1</script>');
-  const semantic = clean.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
-  const titles = [...semantic.matchAll(/<title\b[^>]*>([\s\S]*?)<\/title>/gi)];
-  const title = titles.length === 1 ? decodeEntities(titles[0][1]).trim() : '';
+  const document = inspectHtml(html);
+  const title = document.titles.length === 1 ? document.titles[0] : '';
   if (!title) errors.push(`${relativeName(filename)}: expected one nonempty title`);
   if (title && titleOwners.has(title)) {
     errors.push(`${relativeName(filename)}: title duplicated in ${titleOwners.get(title)}`);
   }
   if (title) titleOwners.set(title, relativeName(filename));
-  if ([...semantic.matchAll(/<h1\b[^>]*>/gi)].length !== 1) {
+  if (document.h1Count !== 1) {
     errors.push(`${relativeName(filename)}: expected exactly one h1`);
   }
-  if (!/<main\b/i.test(semantic)) errors.push(`${relativeName(filename)}: missing main landmark`);
+  if (!document.hasMain) errors.push(`${relativeName(filename)}: missing main landmark`);
 
-  for (const tag of clean.matchAll(/<(?:a|img|source|video|audio|script|link|iframe|track|use)\b[^>]*>/gi)) {
-    for (const attribute of tag[0].matchAll(/\b(src|href|poster|srcset|imagesrcset)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)) {
-      const name = attribute[1].toLowerCase();
-      const value = attribute[2] ?? attribute[3] ?? attribute[4];
-      if (name.endsWith('srcset')) {
-        // A data URI may contain commas; it does not reference a file in dist.
-        if (value.trim().startsWith('data:')) continue;
-        for (const candidate of value.split(',')) {
-          await verifyReference(candidate.trim().split(/\s+/)[0], filename, name);
-        }
-      } else {
-        await verifyReference(value, filename, name);
+  for (const { name, value } of document.references) {
+    if (name.endsWith('srcset')) {
+      // A data URI may contain commas; it does not reference a file in dist.
+      if (value.trim().startsWith('data:')) continue;
+      for (const candidate of value.split(',')) {
+        await verifyReference(candidate.trim().split(/\s+/)[0], filename, name);
       }
+    } else {
+      await verifyReference(value, filename, name);
     }
   }
-  for (const style of clean.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
-    await verifyCss(style[1], filename);
+  for (const style of document.styles) {
+    await verifyCss(style, filename);
   }
   return html;
 }
 
-try {
+async function main() {
   const files = await walk(dist);
   const htmlFiles = files.filter(filename => filename.endsWith('.html'));
   if (!htmlFiles.length) errors.push('No generated HTML found. Run npm run build first.');
@@ -147,9 +165,14 @@ try {
   } else {
     console.log(`Build verified: ${htmlFiles.length} HTML pages, ${productPages.length} product pages, ${referenceCount} local references. No network requests made.`);
   }
-} catch (error) {
-  console.error(error.code === 'ENOENT'
-    ? 'Build output not found. Run npm run build before npm test.'
-    : `Build verification failed: ${error.message}`);
-  process.exitCode = 1;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { await main(); }
+  catch (error) {
+    console.error(error.code === 'ENOENT'
+      ? 'Build output not found. Run npm run build before npm test.'
+      : `Build verification failed: ${error.message}`);
+    process.exitCode = 1;
+  }
 }

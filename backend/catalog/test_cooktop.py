@@ -411,6 +411,14 @@ class CooktopProductTests(TestCase):
         self.assertEqual(list(Product.objects.values()), before)
         self.assertEqual(AuditLog.objects.count(), audit_count)
 
+    def test_public_validation_never_returns_exception_details(self):
+        with patch("catalog.views.validate_cooktop_selection", side_effect=CooktopValidationError("PRIVATE-VALIDATION-PATH")):
+            response = self.client.get(self.check_url, {"selection": json.dumps(selection())})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["valid"])
+        self.assertNotIn("PRIVATE-", response.content.decode())
+        self.assertIn("Revisa", response.json()["error"])
+
     def test_malformed_persisted_configs_fail_closed_for_both_endpoints_without_cors_for_other_origins(self):
         invalid_configs = [False, [], "PRIVATE-PROBE", {"enabled": True}, {**cooktop_fixture(), "privateSecret": "PRIVATE-PROBE"}]
         malformed_module = cooktop_fixture()

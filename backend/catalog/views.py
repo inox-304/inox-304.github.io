@@ -14,7 +14,7 @@ from .models import MediaAsset, Product, ProductVariant
 from .serializers import public_catalog_data, public_cooktop_config, public_cart_config, public_product_queryset, public_variants
 from .storage import open_private_file
 from .cooktop import CooktopValidationError, cooktop_selection_summary, validate_cooktop_selection
-from .cart import CartValidationError, cart_selection_summary, validate_cart_selection
+from .cart import cart_selection_summary, validate_cart_selection
 from .variant_options import VariantOptionsError, validate_option_values
 
 
@@ -89,8 +89,10 @@ def check_cart_selection(request, code):
         selection = json.loads(raw, object_pairs_hook=_unique_json_object)
         selection = validate_cart_selection(config, selection)
         summary = cart_selection_summary(config, selection)
-    except (ValueError, RecursionError) as exc:
-        error = str(exc) if isinstance(exc, CartValidationError) else "La selección no tiene un formato válido."
+    except (ValueError, RecursionError):
+        # Public responses never serialize exception messages. The interactive
+        # client gives field guidance; server validation remains authoritative.
+        error = "La selección no es válida. Revisa los módulos y las posiciones del carrito."
         return _cooktop_response(request, {"productId": product.code, "valid": False, "error": error}, status=400)
     return _cooktop_response(request, {"productId": product.code, "valid": True, "selection": selection, "summary": summary})
 
@@ -112,8 +114,8 @@ def check_cooktop_selection(request, code):
     try:
         selection = validate_cooktop_selection(config, selection)
         summary = cooktop_selection_summary(config, selection)
-    except CooktopValidationError as exc:
-        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": str(exc)}, status=400)
+    except CooktopValidationError:
+        return _cooktop_response(request, {"productId": product.code, "valid": False, "error": "La selección no es válida. Revisa la distribución y las opciones de la cocina."}, status=400)
     return _cooktop_response(request, {"productId": product.code, "valid": True, "selection": selection, "summary": summary})
 
 
