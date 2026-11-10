@@ -59,6 +59,19 @@ function route(product: CmsProduct) {
     return fallback;
   } catch { return fallback; }
 }
+function setCatalogLink(anchor: HTMLAnchorElement, target: string) {
+  anchor.href = new URL(withBase('/catalogo/'), location.origin).href;
+  try {
+    const destination = new URL(target, location.origin);
+    if (destination.origin !== location.origin) return;
+    if (!destination.pathname.startsWith(withBase('/catalogo/')) && destination.pathname !== withBase('/equipo/')) return;
+    // Assign each URL component in its own browser context. Query/fragment text
+    // cannot replace the scheme or host, and existing % escapes stay intact.
+    anchor.pathname = destination.pathname;
+    anchor.search = destination.search;
+    anchor.hash = destination.hash;
+  } catch { /* Keep the local catalog fallback for an invalid destination. */ }
+}
 function category(product: CmsProduct) { return categoryNames[product.category] || product.category; }
 function setText(selector: string, value: string, root: ParentNode = document) { root.querySelectorAll(selector).forEach(element => { element.textContent = value; }); }
 function createCard(product: CmsProduct, index: number, data: CmsData, listing?: CatalogListing<CmsProduct>): HTMLElement {
@@ -87,7 +100,7 @@ function createCard(product: CmsProduct, index: number, data: CmsData, listing?:
     commerce.append(price, quote); card.append(main, commerce);
   }
   card.hidden = false;
-  const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) main.href = target;
+  const main = card.querySelector<HTMLAnchorElement>('.product-card-main'); if (main) setCatalogLink(main, target);
   card.dataset.productId = product.id;
   card.dataset.productType = getCatalogType(product)?.id || '';
   card.dataset.listingKey = listing?.key || product.id;
