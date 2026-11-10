@@ -180,6 +180,71 @@ El OCR de esta versión trabaja con fotos JPG/PNG. No transforma un PDF en image
 Los comprobantes se conservan como adjuntos privados, con los permisos del
 movimiento, y no se incluyen en los archivos estáticos del lector.
 
+## Contención de red del lector
+
+El formulario de comprobantes tiene una política CSP que limita conexiones,
+scripts, workers y envíos de formulario al origen del panel. Bloquea scripts
+inline, documentos incrustados y cambios de URL base. Las imágenes locales
+`blob:`/`data:` permiten previsualizar y girar la foto sin subirla.
+WhiteNoise aplica la política también a las respuestas de los workers OCR:
+estos no heredan la política de la página. Sus URL incluyen `receipt-policy=1`
+para renovar respuestas antiguas que pudieran seguir en caché sin esos headers.
+
+El documento y Tesseract permiten compilar WebAssembly sin habilitar
+`unsafe-eval`. Solo el worker de Paddle 0.4.2 necesita `unsafe-eval` porque su
+OpenCV construye funciones durante el arranque; esa excepción no permite
+conexiones, importaciones ni workers de otros orígenes. Es una limitación
+concreta del paquete fijado, no una garantía de aislamiento absoluto.
+
+No se añadieron analítica, anuncios, píxeles, API de IA ni reportes CSP externos.
+El guardado autorizado sigue enviando original y campos revisados al servidor
+privado. El alojamiento y almacenamiento pueden registrar metadatos operativos;
+esta política no protege contra un equipo comprometido, extensiones del
+navegador, acceso indebido a cuentas o un servidor comprometido. Tampoco vuelve
+privada una cuenta compartida de GPT/Codex.
+
+## Evaluación de alternativas gratuitas — 10/11/2026
+
+La elección actual conserva procesamiento en el navegador y evita cobrar por
+comprobante. Un modelo mayor no ofrece por sí mismo mejor resultado contable,
+ni sustituye revisar el movimiento. Las siguientes cifras públicas corresponden
+a pruebas diferentes y **no son la precisión del panel ni son comparables entre sí**.
+
+| Opción | Licencia y ejecución | Evidencia y decisión |
+| --- | --- | --- |
+| PP-OCRv6 small, actual | PaddleOCR.js/ONNX en el navegador; Apache 2.0 para Paddle. Modelos servidos por el panel. | Mantener como motor principal ligero. Falta medir extracción exacta en comprobantes representativos de las empresas. |
+| PP-OCRv6 medium | Alternativa Paddle de mayor tamaño; ejecución local, con integración/runtime que debe validarse. | Su informe publica 83,2 % de reconocimiento en su benchmark interno. Evaluar contra small antes de reemplazarlo: ese valor no mide facturas completas ni exactitud financiera. |
+| PaddleOCR-VL-1.6 | Apache 2.0; pipeline Python con CPU o GPU según backend. Modelo de 0,9B parámetros. | Publica 96,3 % en OmniDocBench 1.6. Buen candidato para documentos complejos, pero no está instalado; recursos, latencia, tablas e importes deben probarse. No asumir que cabe en Render gratuito. |
+| Tesseract.js, alternativa actual | Apache 2.0; WebAssembly en navegador. | Ya disponible si falla Paddle o para comparar una foto. La documentación recomienda corregir resolución, inclinación y ruido; reentrenar no suele resolver una mala imagen. |
+| Surya | Código Apache 2.0; pesos con licencia AI Pubs Open Rail-M modificada y condiciones comerciales. CPU/llama.cpp o GPU/vLLM. | No tratarlo como gratuito comercial sin condiciones a futuro. Necesita otro runtime y evaluación de sus pesos/licencia antes de incorporarlo. |
+| docTR | Apache 2.0, Python/PyTorch; ejecución propia posible. | Candidato para comparar detección/reconocimiento local. No hay medición de nuestros comprobantes que justifique migrar ahora. |
+
+Fuentes primarias: [SDK PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/blob/main/paddleocr-js/packages/core/README.md),
+[PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/algorithm/PP-OCRv6/PP-OCRv6.en.md),
+[PaddleOCR-VL](https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/pipeline_usage/PaddleOCR-VL.en.md),
+[Tesseract.js](https://github.com/naptha/tesseract.js),
+[calidad de entrada en Tesseract](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html),
+[Surya y sus condiciones](https://github.com/datalab-to/surya),
+[docTR](https://github.com/mindee/doctr).
+
+Para elegir por evidencia, preparar 50–100 comprobantes anonimizados,
+representativos de efectivo, Yape y transferencias, con datos esperados revisados
+por una persona. Separar una parte para ajustar reglas y otra que nunca se use
+para esos ajustes. Comparar los motores sobre las mismas imágenes y medir:
+
+- Exactitud por campo: importe, moneda, fecha y referencia, conservando ceros.
+- Documentos completos correctos y cobertura: dejar un campo vacío no cuenta
+  como lectura correcta, aunque sea una abstención más segura.
+- Sugerencias incorrectas, intervenciones humanas y duplicados no detectados.
+- Tiempo y memoria en los dispositivos reales, incluidas fotos difíciles.
+
+El umbral de confianza OCR de 85 es una regla para abstenerse; **no significa
+85 % de exactitud**. Obtener todos los ejemplos correctos en una prueba tampoco
+demuestra 100 % de aciertos futuros. Mantener revisión, conciliación y auditoría
+incluso si una evaluación mejora. Si existen XML o exportaciones estructuradas
+de origen verificable, evaluar su importación para evitar transcribir por OCR;
+siguen requiriendo controles de duplicados, empresa, moneda y pago efectivo.
+
 ## Licencias
 
 PaddleOCR y sus modelos, así como OpenCV 4.10.0, usan Apache 2.0. ONNX Runtime y

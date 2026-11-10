@@ -1,4 +1,7 @@
 """Dashboard totals must remain scoped, historical and independent of table state."""
+import csv
+import io
+import json
 import time
 from datetime import date, timedelta
 from decimal import Decimal
@@ -200,4 +203,123 @@ class FinanceDashboardTests(TestCase):
         response = self.client.get(reverse("finance:dashboard"))
         self.assertEqual(response.context["summaries"][0]["income"], Decimal("20"))
         self.assertFalse(response.context["company_tabs"][0]["active"])
+        self.assertFalse(response.context["can_record"])
+
+    def test_one_two_three_or_all_companies_produce_exact_scoped_totals(self):
+        third = Company.objects.create(code="QA_THREE", name="Empresa de prueba C")
+        fourth = Company.objects.create(code="QA_FOUR", name="Empresa de prueba D")
+        accounts = [self.cash, self.foreign]
+        for company in (third, fourth):
+            accounts.append(Account.objects.create(company=company, code="CASH", name="Caja sintética", method="cash", currency="PEN"))
+        for amount, account in zip(("10", "20", "40", "80"), accounts):
+            self.record(amount, account=account)
+        self.record("90", account=self.dollars)
+        self.signin(self.owner)
+        ids = [str(account.company_id) for account in accounts]
+        for selected, expected in ((ids[:1], "10"), (ids[:2], "30"), (ids[:3], "70"), ([], "150")):
+            with self.subTest(selected=selected):
+                response = self.client.get(reverse("finance:dashboard"), {"company": selected})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["summaries"][0]["income"], Decimal(expected))
+                self.assertEqual(response.context["summaries"][1]["income"], Decimal("90"))
+                self.assertEqual(response.context["filters"]["company_ids"], selected)
+                self.assertEqual(response.context["filters"]["company"], selected[0] if len(selected) == 1 else "")
+                self.assertEqual(response.context["selected_company_count"], len(selected) or 4)
+                self.assertEqual(response.context["all_companies_selected"], not selected)
+                expected_ids = set(map(int, selected or ids))
+                self.assertEqual({obj.company_id for obj in response.context["page_obj"]}, expected_ids)
+
+    def test_combined_scope_preserves_method_search_currency_dates_and_review_status(self):
+        second_yape = Account.objects.create(company=self.other, code="YAPE", name="Yape sintético B", method="yape", currency="PEN")
+        self.record("11", account=self.yape, description="Compra objetivo A")
+        self.record("22", account=second_yape, description="Compra objetivo B")
+        pending = self.record("33", account=second_yape, description="Compra objetivo pendiente", status="draft")
+        self.record("44", account=self.cash, description="Compra objetivo efectivo")
+        self.record("55", account=self.yape, description="Otro detalle")
+        self.record("66", account=self.yape, description="Compra objetivo anterior", occurred_on=timezone.localdate() - timedelta(days=1))
+        self.record("77", account=self.dollars, description="Compra objetivo USD")
+        self.signin(self.owner)
+        ids = [str(self.company.pk), str(self.other.pk)]
+        params = {"company": ids, "method": "yape", "currency": "PEN", "q": "objetivo", "status": "draft",
+                  "from": timezone.localdate().isoformat(), "to": timezone.localdate().isoformat()}
+        response = self.client.get(reverse("finance:dashboard"), params)
+        self.assertEqual(response.context["summaries"][0]["income"], Decimal("33"))
+        self.assertEqual(len(response.context["summaries"]), 1)
+        self.assertEqual(response.context["pending_review_count"], 1)
+        self.assertEqual(list(response.context["page_obj"]), [pending])
+        links = [response.context["querystring"], response.context["review_querystring"],
+                 response.context["period_shortcuts"][0]["querystring"],
+                 response.context["summaries"][0]["methods"][1]["querystring"]]
+        for querystring in links:
+            parsed = parse_qs(querystring, keep_blank_values=True)
+            self.assertEqual(parsed["company"], ids)
+            self.assertNotIn("company_ids", parsed)
+            self.assertEqual(parsed["q"], ["objetivo"])
+            self.assertEqual(parsed["currency"], ["PEN"])
+        reset = parse_qs(response.context["reset_filters_querystring"])
+        self.assertEqual(reset, {"company": ids})
+        self.assertNotIn("company", parse_qs(response.context["all_companies_querystring"]))
+
+    def test_every_company_is_authorized_for_combined_dashboard_and_csv(self):
+        self.record("10")
+        self.record("20", account=self.foreign)
+        self.signin(self.viewer)
+        for route in ("finance:dashboard", "finance:export_csv"):
+            for values in ([self.company.pk, self.other.pk], [self.other.pk, self.company.pk], [self.company.pk, 999999999999]):
+                with self.subTest(route=route, values=values):
+                    response = self.client.get(reverse(route), {"company": values})
+                    self.assertEqual(response.status_code, 404)
+                    self.assertNotContains(response, self.other.name, status_code=404)
+            for values in ([self.company.pk, "bad"], [self.company.pk, "１２"], ["1" * 13], [str(self.company.pk)] * 101):
+                with self.subTest(route=route, values=values):
+                    self.assertEqual(self.client.get(reverse(route), {"company": values}).status_code, 403)
+        self.assertEqual(self.client.get(reverse("finance:dashboard"), {"company": ["", ""]}).context["summaries"][0]["income"], Decimal("10"))
+
+    def test_duplicate_and_padded_company_ids_are_normalized_without_double_counting(self):
+        self.record("10")
+        self.record("20", account=self.foreign)
+        self.signin(self.owner)
+        response = self.client.get(reverse("finance:dashboard"), {"company": [str(self.company.pk), "", f"00{self.company.pk}", f" {self.other.pk} "]})
+        self.assertEqual(response.context["filters"]["company_ids"], [str(self.company.pk), str(self.other.pk)])
+        self.assertEqual(response.context["summaries"][0]["income"], Decimal("30"))
+        self.assertEqual(response.context["page_obj"].paginator.count, 2)
+
+    def test_combined_export_and_pagination_keep_selection_and_historical_snapshots(self):
+        item = Item.objects.create(company=self.company, code="HISTORY", name="Detalle original", current_unit_price=Decimal("10"), currency="PEN")
+        movement = self.record("20", description="Reporte A", lines=[{"item": item, "quantity": Decimal("2"), "unit_price": Decimal("10"), "unit_cost": Decimal("4")}])
+        for index in range(30):
+            self.record("1", account=self.foreign, description=f"Reporte B {index}")
+        third = Company.objects.create(code="QA_EXPORT", name="No seleccionada")
+        outside = Account.objects.create(company=third, code="CASH", name="Caja externa", method="cash", currency="PEN")
+        self.record("999", account=outside, description="Fuera de consulta")
+        item.current_unit_price = Decimal("99")
+        item.save()
+        before, audits = list(movement.lines.values()), Audit.objects.count()
+        self.signin(self.owner)
+        ids = [str(self.company.pk), str(self.other.pk)]
+        params = {"company": ids, "method": "cash", "currency": "PEN", "status": "posted", "q": "Reporte", "from": "", "to": ""}
+        response = self.client.get(reverse("finance:dashboard"), {**params, "page": "2"})
+        self.assertEqual(response.context["page_obj"].paginator.count, 31)
+        self.assertEqual(len(response.context["page_obj"]), 1)
+        self.assertEqual(parse_qs(response.context["querystring"])["company"], ids)
+        export = self.client.get(reverse("finance:export_csv") + "?" + response.context["querystring"])
+        self.assertEqual(export.status_code, 200)
+        rows = list(csv.DictReader(io.StringIO(export.content.decode("utf-8-sig"))))
+        self.assertEqual(len(rows), 31)
+        self.assertEqual({row["Empresa"] for row in rows}, {self.company.name, self.other.name})
+        snapshot = next(row["Detalles históricos (JSON)"] for row in rows if row["Código"] == movement.code)
+        self.assertEqual(Decimal(json.loads(snapshot)[0]["precio_unitario"]), Decimal("10"))
+        self.assertEqual(list(movement.lines.values()), before)
+        self.assertEqual(Audit.objects.count(), audits)
+
+    def test_record_permission_is_limited_to_selected_companies(self):
+        CompanyAccess.objects.create(company=self.other, user=self.viewer, role="record")
+        self.signin(self.viewer)
+        response = self.client.get(reverse("finance:dashboard"), {"company": [self.company.pk]})
+        self.assertFalse(response.context["can_record"])
+        response = self.client.get(reverse("finance:dashboard"), {"company": [self.company.pk, self.other.pk]})
+        self.assertTrue(response.context["can_record"])
+        self.other.active = False
+        self.other.save()
+        response = self.client.get(reverse("finance:dashboard"), {"company": [self.company.pk, self.other.pk]})
         self.assertFalse(response.context["can_record"])

@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.http import FileResponse, HttpResponse, HttpResponseBadRequest
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -59,20 +59,47 @@ def selected_company(request, *, active=False):
     return companies.first()
 
 
+def filter_querystring(filters, **overrides):
+    """Keep repeated company IDs in every drill-down, export and page link."""
+    params = {key: value for key, value in filters.items() if key not in ("company", "company_ids")}
+    params["company"] = filters.get("company_ids", [])
+    params.update(overrides)
+    return urlencode(params, doseq=True)
+
+
 def filtered_movements(request, *, apply_status=True):
-    query = Movement.objects.filter(company__in=accessible_companies(request.user)).select_related("company", "account", "category", "destination_account")
+    companies = accessible_companies(request.user)
+    query = Movement.objects.filter(company__in=companies).select_related("company", "account", "category", "destination_account")
     today = timezone.localdate()
-    filters = {key: request.GET.get(key, "")[:160].strip() for key in ("company", "q", "status", "method", "currency", "from", "to")}
+    filters = {key: request.GET.get(key, "")[:160].strip() for key in ("q", "status", "method", "currency", "from", "to")}
+    values = request.GET.getlist("company")
+    if len(values) > 100:
+        raise PermissionDenied
+    company_ids = []
+    for value in values:
+        value = value.strip()
+        if not value:
+            continue
+        if not value.isascii() or not value.isdecimal() or len(value) > 12:
+            raise PermissionDenied
+        canonical = str(int(value))
+        if canonical not in company_ids:
+            company_ids.append(canonical)
+    if company_ids:
+        allowed_ids = {str(pk) for pk in companies.filter(pk__in=company_ids).values_list("pk", flat=True)}
+        if set(company_ids) != allowed_ids:
+            # Never silently drop an unauthorized company from a combined report.
+            raise Http404
+        query = query.filter(company_id__in=company_ids)
+    filters["company_ids"] = company_ids
+    # Creation forms accept a single company; multi-company reports must not
+    # accidentally preselect the last company submitted in the query string.
+    filters["company"] = company_ids[0] if len(company_ids) == 1 else ""
     if "from" not in request.GET:
         filters["from"] = today.replace(day=1).isoformat()
     if "to" not in request.GET:
         filters["to"] = today.isoformat()
     errors = []
-    if filters["company"]:
-        if not filters["company"].isascii() or not filters["company"].isdecimal() or len(filters["company"]) > 12:
-            raise PermissionDenied
-        company = get_object_or_404(accessible_companies(request.user), pk=int(filters["company"]))
-        query = query.filter(company=company)
     for key, lookup in (("from", "occurred_on__gte"), ("to", "occurred_on__lte")):
         if filters[key]:
             try:
@@ -114,14 +141,14 @@ def dashboard(request):
     scope, filters, errors = filtered_movements(request, apply_status=False)
     query = scope.filter(status=filters["status"]) if filters["status"] else scope
     companies = accessible_companies(request.user)
-    active_companies = companies.filter(active=True)
-    can_record_selected = any(can_company(request.user, company, "record") for company in active_companies.filter(pk=int(filters["company"]))) if filters["company"] else any(can_company(request.user, company, "record") for company in active_companies)
+    selected_companies = companies.filter(pk__in=filters["company_ids"]) if filters["company_ids"] else companies
+    can_record_selected = any(can_company(request.user, company, "record") for company in selected_companies.filter(active=True))
     summaries = dashboard_metrics(scope)
     for summary in summaries:
         for method in summary["methods"]:
-            method["querystring"] = urlencode({**filters, "method": method["key"], "currency": summary["currency"]})
+            method["querystring"] = filter_querystring(filters, method=method["key"], currency=summary["currency"])
         for company in summary["companies"]:
-            company["querystring"] = urlencode({**filters, "company": company["id"], "currency": summary["currency"]})
+            company["querystring"] = filter_querystring(filters, company=company["id"], currency=summary["currency"])
     today = timezone.localdate()
     month_start = today.replace(day=1)
     previous_end = month_start - timedelta(days=1)
@@ -129,18 +156,20 @@ def dashboard(request):
     for label, start, end in (("Este mes", month_start.isoformat(), today.isoformat()),
                               ("Mes anterior", previous_end.replace(day=1).isoformat(), previous_end.isoformat()),
                               ("Todo el historial", "", "")):
-        period_shortcuts.append({"label": label, "querystring": urlencode({**filters, "from": start, "to": end}),
+        period_shortcuts.append({"label": label, "querystring": filter_querystring(filters, **{"from": start, "to": end}),
                                  "selected": filters["from"] == start and filters["to"] == end})
     pending = scope.filter(status=Movement.Status.DRAFT)
     return render(request, "admin/finance/dashboard.html", base_context(request, title="Finanzas", section="review" if filters["status"] == "draft" else "dashboard",
         can_record=can_record_selected,
-        filters=filters, filter_errors=errors, querystring=urlencode(filters), page_obj=Paginator(query, 30).get_page(request.GET.get("page")),
+        filters=filters, filter_errors=errors, querystring=filter_querystring(filters), page_obj=Paginator(query, 30).get_page(request.GET.get("page")),
         summaries=summaries, filtered_drafts=query.filter(status="draft").count(),
-        pending_review_count=pending.count(), scoped_review_preview=pending[:3], review_querystring=urlencode({**filters, "status": "draft"}),
-        company_tabs=[{"id": company.pk, "name": company.name, "active": company.active, "selected": filters["company"] == str(company.pk),
-                       "querystring": urlencode({**filters, "company": company.pk})} for company in companies],
-        all_companies_querystring=urlencode({**filters, "company": ""}), period_shortcuts=period_shortcuts,
-        has_companies=companies.exists(), has_accounts=Account.objects.filter(company__in=companies, active=True).exists(),
+        pending_review_count=pending.count(), scoped_review_preview=pending[:3], review_querystring=filter_querystring(filters, status="draft"),
+        company_tabs=[{"id": company.pk, "name": company.name, "active": company.active, "selected": str(company.pk) in filters["company_ids"],
+                       "querystring": filter_querystring(filters, company=company.pk)} for company in companies],
+        all_companies_querystring=filter_querystring(filters, company=[]), all_companies_selected=not filters["company_ids"],
+        selected_company_count=selected_companies.count(), reset_filters_querystring=urlencode({"company": filters["company_ids"]}, doseq=True),
+        period_shortcuts=period_shortcuts,
+        has_companies=companies.exists(), has_accounts=Account.objects.filter(company__in=selected_companies, active=True).exists(),
         currencies=CURRENCIES, statuses=Movement.Status.choices, methods=Account.Method.choices))
 
 

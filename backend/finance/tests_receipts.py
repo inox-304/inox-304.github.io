@@ -114,6 +114,14 @@ class ReceiptWorkspaceTests(TestCase):
         self.assertEqual([company.pk for company in response.context["record_companies"]], [self.company.pk])
         self.assertNotContains(response, self.other.name)
 
+    def test_reader_policy_contains_external_requests_and_refreshes_cached_workers(self):
+        self.signin(self.recorder)
+        response = self.client.get(self.url)
+        self.assertIn("connect-src 'self'", response["Content-Security-Policy"])
+        self.assertIn("form-action 'self'", response["Content-Security-Policy"])
+        self.assertNotIn("'unsafe-eval'", response["Content-Security-Policy"])
+        self.assertContains(response, 'worker.min.js?receipt-policy=1')
+
     def test_anonymous_missing_mfa_viewer_and_ungranted_superuser_cannot_upload(self):
         self.assertEqual(self.client.post(self.url, self.payload()).status_code, 302)
         self.client.force_login(self.owner)

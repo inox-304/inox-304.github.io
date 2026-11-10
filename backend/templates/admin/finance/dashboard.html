@@ -25,16 +25,20 @@
   {% elif not has_accounts %}
   <section class="fin-onboarding fin-panel"><div><span class="fin-eyebrow">02 · PREPARA EL REGISTRO</span><h2>Añade tus cuentas y cajas.</h2><p>Define las cuentas bancarias, Yapes y cajas de efectivo de cada empresa, con su moneda.</p></div>{% if owner %}<a class="fin-button fin-button-primary" href="{% url 'finance:settings' %}?tab=accounts">Configurar cuentas →</a>{% else %}<p>El propietario puede añadirlas desde Configuración.</p>{% endif %}</section>
   {% endif %}
-  <section class="fin-scope" aria-label="Seleccionar empresa">
-    <span class="fin-eyebrow">TU ESPACIO DE TRABAJO</span>
-    <nav class="fin-company-tabs" aria-label="Empresas">
-      <a href="?{{ all_companies_querystring }}"{% if not filters.company %} aria-current="page"{% endif %}><span class="fin-company-mark" aria-hidden="true">◈</span>Todas mis empresas</a>
-      {% for company in company_tabs %}<a href="?{{ company.querystring }}"{% if company.selected %} aria-current="page"{% endif %}><span class="fin-company-mark" aria-hidden="true">{{ company.name|slice:':1' }}</span>{{ company.name }}{% if not company.active %}<small>Inactiva</small>{% endif %}</a>{% endfor %}
-    </nav>
+  <section class="fin-scope" aria-label="Seleccionar empresas">
+    <div class="fin-scope-heading"><span class="fin-eyebrow">TU ESPACIO DE TRABAJO</span><span class="fin-scope-count">{% if all_companies_selected %}Todas tus empresas{% else %}{{ selected_company_count }} empresa{{ selected_company_count|pluralize:'s' }} en esta consulta{% endif %}</span></div>
+    <form method="get" class="fin-company-form">
+      <input type="hidden" name="q" value="{{ filters.q }}"><input type="hidden" name="from" value="{{ filters.from }}"><input type="hidden" name="to" value="{{ filters.to }}">
+      <input type="hidden" name="method" value="{{ filters.method }}"><input type="hidden" name="currency" value="{{ filters.currency }}"><input type="hidden" name="status" value="{{ filters.status }}">
+      <fieldset class="fin-company-choices"><legend>Elige una o combina varias empresas</legend><div class="fin-company-tabs">
+        {% for company in company_tabs %}<label class="fin-company-choice"><input type="checkbox" name="company" value="{{ company.id }}"{% if company.selected or all_companies_selected %} checked{% endif %}><span class="fin-company-mark" aria-hidden="true">{{ company.name|slice:':1' }}</span><span>{{ company.name }}{% if not company.active %}<small>Inactiva</small>{% endif %}</span></label>{% endfor %}
+      </div></fieldset>
+      <div class="fin-company-actions"><button type="submit" class="fin-button fin-button-primary fin-button-small">Aplicar selección <span aria-hidden="true">→</span></button><a href="?{{ all_companies_querystring }}"{% if all_companies_selected %} aria-current="page"{% endif %}>Ver todas</a><span>Sin marcas se muestran todas las empresas a las que tienes acceso.</span></div>
+    </form>
   </section>
   <section class="fin-panel fin-controls" aria-label="Filtros de movimientos">
     <form method="get" role="search">
-      <input type="hidden" name="company" value="{{ filters.company }}">
+      {% for company_id in filters.company_ids %}<input type="hidden" name="company" value="{{ company_id }}">{% endfor %}
       <div class="fin-period-row"><span class="fin-filter-title">Periodo de consulta</span><div class="fin-period-links">{% for shortcut in period_shortcuts %}<a href="?{{ shortcut.querystring }}"{% if shortcut.selected %} aria-current="page"{% endif %}>{{ shortcut.label }}</a>{% endfor %}</div></div>
       <div class="fin-main-filters">
         <label>Desde<input type="date" name="from" value="{{ filters.from }}"></label>
@@ -48,7 +52,7 @@
           <label>Medio<select name="method"><option value="">Todos los medios</option>{% for value,label in methods %}<option value="{{ value }}"{% if filters.method == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
           <label>Moneda<select name="currency"><option value="">Todas, por separado</option>{% for value,label in currencies %}<option value="{{ value }}"{% if filters.currency == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
           <label>Estado de la lista<select name="status"><option value="">Todos los estados</option>{% for value,label in statuses %}<option value="{{ value }}"{% if filters.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-          <a class="fin-reset" href="{% url 'finance:dashboard' %}{% if filters.company %}?company={{ filters.company }}{% endif %}">Restablecer filtros</a>
+          <a class="fin-reset" href="{% url 'finance:dashboard' %}{% if reset_filters_querystring %}?{{ reset_filters_querystring }}{% endif %}">Restablecer filtros</a>
         </div>
       </details>
     </form>

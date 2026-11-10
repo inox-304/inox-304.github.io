@@ -39,6 +39,7 @@ test('CPU worker uses local pinned models and retains all recognition candidates
   const creating = createReceiptPaddle();
   const worker = workers.at(-1);
   const options = worker.messages[0].payload.options;
+  assert.equal(new URL(worker.url).searchParams.get('receipt-policy'), '1', 'Policy changes refresh worker response headers cached by previous releases.');
   assert.equal(options.ortOptions.backend, 'wasm');
   assert.equal(options.ortOptions.numThreads, 1);
   assert.equal(options.ortOptions.disableWasmProxy, true);

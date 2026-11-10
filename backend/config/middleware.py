@@ -1,3 +1,6 @@
+from .receipt_policy import RECEIPT_CSP, RECEIPT_PATH
+
+
 class ResponsePolicyMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -10,4 +13,6 @@ class ResponsePolicyMiddleware:
         if request.path.startswith('/admin/'):
             response.headers['X-Robots-Tag'] = 'noindex, nofollow'
             response.headers['Referrer-Policy'] = 'same-origin'
+        if request.path == RECEIPT_PATH:
+            response.headers['Content-Security-Policy'] = RECEIPT_CSP
         return response

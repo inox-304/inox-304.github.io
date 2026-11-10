@@ -4,7 +4,7 @@
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/receipt-ocr.css' %}">{% endblock %}
 {% block extrahead %}{{ block.super }}<script type="module" src="{% static 'inox/receipt-ocr.js' %}"></script>{% endblock %}
 {% block finance_content %}
-<div data-receipt-reader data-paddle-url="{% static 'inox/ocr-vendor/paddle-v0.4.2/receipt-paddle.js' %}" data-parser-url="{% static 'inox/receipt-parser.js' %}" data-library-url="{% static 'inox/ocr-vendor/v7/tesseract.min.js' %}" data-worker-url="{% static 'inox/ocr-vendor/v7/worker.min.js' %}" data-core-url="{% static 'inox/ocr-vendor/v7/core/tesseract-core-lstm.wasm.js' %}" data-language-url="{% static 'inox/ocr-vendor/v7/lang/spa.traineddata.gz' %}">
+<div data-receipt-reader data-paddle-url="{% static 'inox/ocr-vendor/paddle-v0.4.2/receipt-paddle.js' %}" data-parser-url="{% static 'inox/receipt-parser.js' %}" data-library-url="{% static 'inox/ocr-vendor/v7/tesseract.min.js' %}" data-worker-url="{% static 'inox/ocr-vendor/v7/worker.min.js' %}?receipt-policy=1" data-core-url="{% static 'inox/ocr-vendor/v7/core/tesseract-core-lstm.wasm.js' %}" data-language-url="{% static 'inox/ocr-vendor/v7/lang/spa.traineddata.gz' %}">
   <header class="fin-heading"><div><span class="fin-eyebrow">DEL COMPROBANTE AL REGISTRO</span><h1>Una foto. Todo en orden.</h1><p>El lector propone los datos. Tú los revisas antes de guardar.</p></div><a class="fin-button" href="{% url 'finance:create' %}?company={{ company.pk }}">Registro manual →</a></header>
   <ol class="receipt-steps" aria-label="Proceso de registro"><li><span>01</span> Elige la empresa</li><li><span>02</span> Añade tu foto</li><li><span>03</span> Revisa y guarda</li></ol>
   <section class="receipt-company fin-panel">

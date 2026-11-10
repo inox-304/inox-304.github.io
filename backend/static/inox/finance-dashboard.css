@@ -12,14 +12,23 @@
 .fin-overview a.fin-hero-secondary { color:#d4e5f2; font-size:12px; text-align:center; padding:5px; }
 .fin-access-label { padding:13px 20px; border:1px solid #5e819a; border-radius:10px; color:#d7e7f3; font-size:13px; text-align:center; }
 .fin-scope { margin-bottom:20px; }
-.fin-scope>.fin-eyebrow { margin-bottom:12px; font-size:9px; }
+.fin-scope-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.fin-scope-heading .fin-eyebrow { font-size:9px; margin:0; }
+.fin-scope-count { color:#41627c; font-size:11px; }
+.fin-company-choices { min-width:0; margin:0; padding:0; border:0; }
+.fin-company-choices legend { font-size:12px; font-weight:600; margin-bottom:12px; padding:0; }
 .fin-company-tabs { display:flex; gap:9px; flex-wrap:wrap; }
-.fin-company-tabs a { display:flex; align-items:center; gap:9px; min-height:45px; max-width:100%; overflow-wrap:anywhere; padding:8px 15px 8px 8px; background:#fff; border:1px solid #d5e2ed; border-radius:11px; font-size:12px; font-weight:600; text-decoration:none; }
-.fin-company-tabs a[aria-current] { background:#103952; border-color:#103952; color:white; box-shadow:0 3px 8px #092d5012; }
+.fin-overview .fin-company-choice { display:flex; align-items:center; gap:9px; min-height:45px; max-width:100%; overflow-wrap:anywhere; padding:8px 15px 8px 11px; background:#fff; border:1px solid #d5e2ed; border-radius:11px; font-size:12px; font-weight:600; cursor:pointer; }
+.fin-overview .fin-company-choice:has(input:checked) { background:#103952; border-color:#103952; color:white; box-shadow:0 3px 8px #092d5012; }
+.fin-overview .fin-company-choice input { flex:0 0 auto; appearance:auto; width:16px; height:16px; min-height:0; margin:0; padding:0; accent-color:#c7e6ff; }
+.fin-company-choice:focus-within { outline:2px solid #3478ad; outline-offset:3px; }
 .fin-company-mark { display:grid; place-items:center; flex-shrink:0; width:28px; height:28px; border-radius:7px; background:#edf3f8; color:#42647e; font-size:12px; }
-.fin-company-tabs [aria-current] .fin-company-mark { background:#2b526e; color:#dceefa; }
-.fin-company-tabs a:hover { border-color:#638eae; }
+.fin-company-choice:has(input:checked) .fin-company-mark { background:#2b526e; color:#dceefa; }
+.fin-overview .fin-company-choice:hover { border-color:#638eae; }
 .fin-company-tabs small { font-size:10px; font-weight:400; }
+.fin-company-actions { display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin-top:14px; }
+.fin-company-actions>a { font-size:12px; text-decoration:underline; text-underline-offset:3px; }
+.fin-company-actions>span { font-size:11px; color:#527088; }
 .fin-controls { padding:22px 25px 13px; }
 .fin-period-row { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:18px; }
 .fin-filter-title { font-size:12px; font-weight:650; }
@@ -148,7 +157,7 @@
   .fin-hero-actions { margin-top:23px; }
   .fin-overview .fin-hero-secondary { font-size:12px; }
   .fin-company-tabs { gap:7px; }
-  .fin-company-tabs a { padding:7px 10px 7px 7px; font-size:11px; min-height:42px; }
+  .fin-overview .fin-company-choice { padding:7px 10px; font-size:11px; min-height:44px; }
   .fin-company-mark { width:25px; height:25px; }
   .fin-main-filters { gap:12px; }
   .fin-main-filters .fin-dashboard-search,.fin-main-filters>.fin-button { grid-column:1/-1; }

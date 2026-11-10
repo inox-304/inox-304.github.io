@@ -7,12 +7,12 @@ El módulo está integrado en `/admin/finanzas/` y utiliza el inicio de sesión 
 - Empresas, cuentas o cajas, categorías y códigos de ítems editables desde el panel.
 - Registro manual de ingresos, egresos y traslados internos, con borradores antes de confirmar.
 - Revisión de comprobantes, detalles de cantidades y precios históricos, anulación con motivo y cierre mensual.
-- Filtros por empresa, fechas, estado, medio, tipo y búsqueda; totales separados por moneda.
+- Filtros por una o varias empresas, fechas, estado, medio y búsqueda; totales separados por moneda.
 - Permisos financieros por empresa, independientes de Catálogo, Inventario y CRM.
 - Exportación CSV y respaldo privado descargable por el propietario.
 - Recepción técnica de WhatsApp preparada y desactivada hasta completar su configuración y verificar entregas reales.
 
-No hay saldos iniciales inventados, movimientos de ejemplo ni datos financieros cargados automáticamente. No están implementados el OCR, el procesamiento con OpenAI, el envío de preguntas por WhatsApp, la conexión bancaria, la validación SUNAT ni la importación masiva del histórico desde 2018. Guardar un comprobante no extrae ni contabiliza su contenido.
+No hay saldos iniciales inventados, movimientos de ejemplo ni datos financieros cargados automáticamente. El lector de fotos usa PaddleOCR en el navegador, con Tesseract como alternativa, y permite corregir los datos antes de guardar un borrador. No están implementados el procesamiento con OpenAI, el envío de preguntas por WhatsApp, el OCR automático de mensajes entrantes, la conexión bancaria, la validación SUNAT ni la importación masiva del histórico desde 2018. Guardar un comprobante no confirma un movimiento. El alcance del lector está en [FINANZAS-OCR.md](FINANZAS-OCR.md).
 
 ## Preparación por el propietario
 
@@ -41,7 +41,9 @@ Solo la identidad propietaria configurada en `SECURITY_OWNER_USERNAME` administr
 
 ## Leer el resumen financiero
 
-La portada de Finanzas permite cambiar de empresa, consultar el mes actual, el anterior o todo el historial y buscar un detalle, referencia o código FIN. En **Más filtros** se eligen medio, moneda y estado de la lista.
+La portada de Finanzas permite marcar una, dos, tres o más empresas y pulsar **Aplicar selección**. **Ver todas**, o aplicar sin marcas, muestra todas las empresas a las que el usuario tiene acceso. Se puede consultar el mes actual, el anterior o todo el historial y buscar un detalle, referencia o código FIN. En **Más filtros** se eligen medio, moneda y estado de la lista.
+
+La selección combinada se conserva al cambiar de periodo o medio, buscar, abrir pendientes, paginar y exportar CSV. **Restablecer filtros** conserva las empresas y vuelve al periodo inicial. La comparación muestra el aporte de cada empresa dentro de la consulta. Elegir varias empresas no amplía los permisos: todos sus identificadores deben estar autorizados. Para registrar un comprobante se elige siempre una empresa concreta en el formulario.
 
 - Los indicadores, la comparación por empresa y los medios muestran únicamente movimientos **confirmados**. El filtro de estado cambia la lista inferior, no esos resultados. Fechas, empresa, búsqueda, medio y moneda sí se aplican a ambos.
 - **Por revisar** cuenta los borradores de la consulta, aunque la lista esté mostrando confirmados o anulados. La pestaña superior de revisión conserva el contador general de las empresas autorizadas.
@@ -152,6 +154,10 @@ uv run --project backend python backend/manage.py migrate finance_intake
 Estas migraciones crean el esquema; no crean usuarios, contraseñas, saldos ni movimientos. No ejecutar un `seed`, `reset` o restauración por el mero hecho de desplegar el módulo.
 
 ## Riesgos y siguientes verificaciones
+
+El OCR local y los filtros no generan cargos por lectura ni requieren una suscripción de IA. Esto no implica infraestructura ilimitada ni WhatsApp gratuito: la [FAQ oficial de Meta](https://whatsappbusiness.com/resources/faq/) consultada el 10/11/2026 distingue acceso directo sin cuota adicional y tarifas por mensajes entregados. La elegibilidad y tarifas concretas para los grupos deben verificarse antes de activar el número técnico. El bot continúa sin conectar.
+
+El alojamiento tiene límites de capacidad y disponibilidad ([Render Free](https://render.com/docs/free), [Neon](https://neon.com/pricing)). Como referencia calculada, 100 fotos diarias de 2 MB sumarían aproximadamente 6 GB cada 30 días; no es consumo medido del negocio. Antes de conservar indefinidamente ese volumen, definir tamaño de fotos, retención y respaldos, sin borrar ni degradar originales automáticamente.
 
 Los riesgos principales son registrar una empresa o importe incorrecto, duplicar factura y pago, exponer documentos a usuarios equivocados, perder disponibilidad del alojamiento o depender de una conexión externa sin verificar. Los borradores, permisos por empresa, referencias de pago, auditoría y exportaciones reducen estos riesgos; no los eliminan.
 

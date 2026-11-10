@@ -5,6 +5,7 @@ from email.utils import parseaddr
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from django.core.exceptions import ImproperlyConfigured
+from config.receipt_policy import receipt_static_headers
 from security.smtp_backend import SUPPORTED_SMTP_BACKENDS
 from security.mail_config import GMAIL_API_BACKEND
 
@@ -146,6 +147,7 @@ STATIC_URL = '/admin-static/'
 STATIC_ROOT = DATA_DIR / 'admin-static'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 WHITENOISE_MAX_AGE = 0 if DEBUG else 3600
+WHITENOISE_ADD_HEADERS_FUNCTION = receipt_static_headers
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'config.static_storage.InoxStaticFilesStorage'

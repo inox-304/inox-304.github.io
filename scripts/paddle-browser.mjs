@@ -10,7 +10,8 @@ export async function createReceiptPaddle({ onProgress = () => {}, signal } = {}
   }
   const base = new URL('./', import.meta.url);
   if (base.origin !== globalThis.location.origin) throw new Error('El lector requiere recursos del mismo sitio.');
-  const worker = new Worker(new URL('paddle-worker.js', base), { type: 'module', name: 'inox-receipt-paddle' });
+  // A policy revision refreshes an older cached worker response without CSP.
+  const worker = new Worker(new URL('paddle-worker.js?receipt-policy=1', base), { type: 'module', name: 'inox-receipt-paddle' });
   const pending = new Map();
   let requestId = 0;
   let stopped = false;
