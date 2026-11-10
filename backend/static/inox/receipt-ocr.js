@@ -207,8 +207,10 @@ if (root) {
       if (!reader || token !== job) return;
       const { data } = await reader.recognize(canvasForPhoto(), {}, { text: true });
       if (token !== job) return;
-      const text = String(data.text || '').slice(0, 30000);
-      find('text').textContent = text;
+      const text = String(data.text || '');
+      // Parse the whole result: truncating first could hide a second total or
+      // invoice. The parser refuses oversized documents rather than guessing.
+      find('text').textContent = text.slice(0, 60000);
       find('text-section').hidden = !text;
       const parsed = parser.parseReceiptText(text);
       const count = showSuggestions(parsed, !Number.isFinite(data.confidence) || data.confidence < 60);
