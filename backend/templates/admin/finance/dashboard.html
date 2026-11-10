@@ -1,29 +1,99 @@
 {% extends "admin/finance/base.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/finance-dashboard.css' %}">{% endblock %}
 {% block finance_content %}
-<header class="fin-heading"><div><span class="fin-eyebrow">CLARIDAD PARA CADA EMPRESA</span><h1>Tu dinero, en orden.</h1><p>Registra, revisa y entiende los ingresos y egresos de cada negocio desde un solo lugar.</p></div><div class="fin-actions"><a class="fin-button" href="{% url 'finance:export_csv' %}?{{ querystring }}">Exportar CSV ↓</a>{% if can_record %}<a class="fin-button" href="{% url 'finance:create' %}{% if filters.company %}?company={{ filters.company }}{% endif %}">＋ Registro manual</a><a class="fin-button fin-button-primary" href="{% url 'finance:receipt_create' %}{% if filters.company %}?company={{ filters.company }}{% endif %}">Leer comprobante ↗</a>{% endif %}</div></header>
-{% if not has_companies %}
-<section class="fin-banner"><span class="fin-eyebrow">EMPECEMOS CON LO REAL</span><h2>Cuatro empresas. Un espacio de trabajo.</h2><p>Prepara INOX 304, Armosac, Victor y Shamo. Después añade sus cuentas, categorías e ítems. Puedes cambiar los nombres o incorporar más empresas cuando lo necesites.</p>{% if owner %}<form method="post" action="{% url 'finance:prepare_companies' %}">{% csrf_token %}<button class="fin-button" type="submit">Preparar mis cuatro empresas →</button></form><small>Solo crea nombres con PEN como moneda inicial editable. No agrega saldos, pagos ni información ficticia.</small>{% endif %}</section>
-{% elif not has_accounts %}<section class="fin-banner"><h2>El siguiente paso: tus cuentas y cajas.</h2><p>Añade dónde se recibe o sale el dinero: una cuenta bancaria, un Yape o una caja de efectivo para cada empresa. Elige su moneda y empieza a registrar.</p>{% if owner %}<a class="fin-button" href="{% url 'finance:settings' %}?tab=accounts">Configurar cuentas →</a>{% else %}<small>El propietario puede preparar las cuentas desde Configuración.</small>{% endif %}</section>{% endif %}
-<section class="fin-panel" aria-label="Filtros de movimientos"><form method="get" role="search">
-  <div class="fin-filter">
-    <label>Empresa<select name="company"><option value="">Todas mis empresas</option>{% for company in companies %}<option value="{{ company.pk }}"{% if filters.company == company.pk|stringformat:'s' %} selected{% endif %}>{{ company.name }}{% if not company.active %} · Inactiva{% endif %}</option>{% endfor %}</select></label>
-    <label class="fin-search">Buscar movimiento<input type="search" name="q" value="{{ filters.q }}" maxlength="160" placeholder="Detalle, referencia o FIN-…"></label>
-    <label>Desde<input type="date" name="from" value="{{ filters.from }}"></label><label>Hasta<input type="date" name="to" value="{{ filters.to }}"></label>
-  </div>
-  <div class="fin-filter-more"><label>Estado<select name="status"><option value="">Todos los estados</option>{% for value,label in statuses %}<option value="{{ value }}"{% if filters.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label>Medio<select name="method"><option value="">Todos los medios</option>{% for value,label in methods %}<option value="{{ value }}"{% if filters.method == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label>Moneda<select name="currency"><option value="">Por separado</option>{% for value,label in currencies %}<option value="{{ value }}"{% if filters.currency == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><div class="fin-actions"><button class="fin-button fin-button-primary" type="submit">Aplicar</button><a href="{% url 'finance:dashboard' %}">Limpiar</a></div></div>
-</form>{% for error in filter_errors %}<p class="fin-field-error" role="alert">{{ error }}</p>{% endfor %}</section>
-{% for summary in summaries %}
-<section aria-label="Resultados en {{ summary.currency }}"><div class="fin-panel-heading"><h2>{{ summary.currency }} · Movimientos confirmados</h2><span class="fin-count">{{ summary.count }} registros</span></div><div class="fin-stats">
-  <div class="fin-stat positive"><span>Ingresos</span><strong>{{ summary.income|floatformat:2 }}</strong><small>Dinero recibido</small></div>
-  <div class="fin-stat negative"><span>Egresos</span><strong>{{ summary.expense|floatformat:2 }}</strong><small>Dinero pagado</small></div>
-  <div class="fin-stat"><span>Flujo neto</span><strong>{{ summary.net|floatformat:2 }}</strong><small>Ingresos menos egresos</small></div>
-  <div class="fin-stat"><span>Traslados internos</span><strong>{{ summary.transfer|floatformat:2 }}</strong><small>Excluidos de ingresos y egresos</small></div>
-</div></section>
-{% empty %}<div class="fin-status-note"><span aria-hidden="true">◷</span><p>Aún no hay movimientos confirmados con estos filtros. Los borradores y anulados no suman en los resultados.</p></div>{% endfor %}
-<p class="fin-note">Los importes corresponden al periodo y filtros seleccionados. El flujo neto no representa utilidad ni saldo bancario: no incluye saldos iniciales, cuentas por cobrar o valorización de inventario. Cada moneda se informa por separado.</p>
-<section class="fin-panel"><div class="fin-panel-heading"><div><span class="fin-eyebrow">REGISTRO Y TRAZABILIDAD</span><h2>{% if filters.status == 'draft' %}Pendientes de revisión{% else %}Movimientos{% endif %}</h2></div><span class="fin-count">{{ page_obj.paginator.count }} registros · {{ filtered_drafts }} por revisar</span></div>
-{% if page_obj %}<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Movimiento</th><th>Empresa / cuenta</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="fin-money">Importe</th></tr></thead><tbody>{% for movement in page_obj %}<tr><td><a href="{% url 'finance:detail' movement.pk %}"><strong>{{ movement.description|truncatechars:75 }}</strong></a><small class="fin-code">{{ movement.code }}{% if movement.reference %} · {{ movement.reference }}{% endif %}</small></td><td><strong>{{ movement.company.name }}</strong><small>{{ movement.account.name }} · {{ movement.account.get_method_display }}</small></td><td>{{ movement.occurred_on|date:'d/m/Y' }}</td><td>{{ movement.get_kind_display }}</td><td><span class="fin-badge" data-state="{{ movement.status }}">{{ movement.get_status_display }}</span></td><td class="fin-money">{{ movement.currency }} {{ movement.amount|floatformat:2 }}</td></tr>{% endfor %}</tbody></table></div>
-{% else %}<div class="fin-empty"><div class="fin-empty-icon" aria-hidden="true">↗</div><h3>Todo comienza con un registro claro.</h3><p>{% if has_accounts %}Prueba otros filtros o guarda un ingreso, egreso o traslado. Primero será un borrador para revisar.{% else %}Prepara las empresas y sus cuentas. Aquí aparecerán los registros reales, con su fecha, medio y empresa.{% endif %}</p>{% if can_record and has_accounts %}<div class="fin-actions"><a class="fin-button fin-button-primary" href="{% url 'finance:create' %}">Nuevo movimiento</a></div>{% endif %}</div>{% endif %}
-{% if page_obj.paginator.num_pages > 1 %}<nav class="fin-pagination" aria-label="Páginas de movimientos"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><div class="fin-actions">{% if page_obj.has_previous %}<a class="fin-button fin-button-small" href="?{{ querystring }}&amp;page={{ page_obj.previous_page_number }}">← Anterior</a>{% endif %}{% if page_obj.has_next %}<a class="fin-button fin-button-small" href="?{{ querystring }}&amp;page={{ page_obj.next_page_number }}">Siguiente →</a>{% endif %}</div></nav>{% endif %}
-</section>
+<div class="fin-overview">
+  <header class="fin-overview-hero">
+    <div>
+      <span class="fin-eyebrow">CONTROL FINANCIERO · INOX 304</span>
+      <h1>Tu negocio, en perspectiva.</h1>
+      <p>Una vista clara del dinero que entra, del que sale y de lo que falta revisar.</p>
+      <span class="fin-hero-footnote"><span aria-hidden="true">✓</span> Los resultados suman únicamente movimientos confirmados.</span>
+    </div>
+    <div class="fin-hero-actions">
+      {% if can_record %}
+      <a class="fin-button fin-upload-cta" href="{% url 'finance:receipt_create' %}{% if filters.company %}?company={{ filters.company }}{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 4h8l4 4v12H4V4h4Zm8 0v5h4M8 13h8M8 17h5"/></svg>Subir comprobante <span aria-hidden="true">↗</span></a>
+      <a class="fin-hero-secondary" href="{% url 'finance:create' %}{% if filters.company %}?company={{ filters.company }}{% endif %}">＋ Registrar manualmente</a>
+      {% else %}<span class="fin-access-label">Vista de consulta</span>{% endif %}
+    </div>
+  </header>
+  {% if not has_companies %}
+  <section class="fin-onboarding fin-panel">
+    <div><span class="fin-eyebrow">01 · ORGANIZA TU ESPACIO</span><h2>Empieza por tus empresas.</h2><p>Prepara INOX 304, Armosac, Victor y Shamo. Sus nombres y monedas se pueden editar; también puedes añadir más empresas.</p></div>
+    {% if owner %}<form method="post" action="{% url 'finance:prepare_companies' %}">{% csrf_token %}<button class="fin-button fin-button-primary" type="submit">Preparar mis cuatro empresas →</button><small>Solo crea nombres y PEN como moneda inicial editable. No agrega saldos ni movimientos.</small></form>{% endif %}
+  </section>
+  {% elif not has_accounts %}
+  <section class="fin-onboarding fin-panel"><div><span class="fin-eyebrow">02 · PREPARA EL REGISTRO</span><h2>Añade tus cuentas y cajas.</h2><p>Define las cuentas bancarias, Yapes y cajas de efectivo de cada empresa, con su moneda.</p></div>{% if owner %}<a class="fin-button fin-button-primary" href="{% url 'finance:settings' %}?tab=accounts">Configurar cuentas →</a>{% else %}<p>El propietario puede añadirlas desde Configuración.</p>{% endif %}</section>
+  {% endif %}
+  <section class="fin-scope" aria-label="Seleccionar empresa">
+    <span class="fin-eyebrow">TU ESPACIO DE TRABAJO</span>
+    <nav class="fin-company-tabs" aria-label="Empresas">
+      <a href="?{{ all_companies_querystring }}"{% if not filters.company %} aria-current="page"{% endif %}><span class="fin-company-mark" aria-hidden="true">◈</span>Todas mis empresas</a>
+      {% for company in company_tabs %}<a href="?{{ company.querystring }}"{% if company.selected %} aria-current="page"{% endif %}><span class="fin-company-mark" aria-hidden="true">{{ company.name|slice:':1' }}</span>{{ company.name }}{% if not company.active %}<small>Inactiva</small>{% endif %}</a>{% endfor %}
+    </nav>
+  </section>
+  <section class="fin-panel fin-controls" aria-label="Filtros de movimientos">
+    <form method="get" role="search">
+      <input type="hidden" name="company" value="{{ filters.company }}">
+      <div class="fin-period-row"><span class="fin-filter-title">Periodo de consulta</span><div class="fin-period-links">{% for shortcut in period_shortcuts %}<a href="?{{ shortcut.querystring }}"{% if shortcut.selected %} aria-current="page"{% endif %}>{{ shortcut.label }}</a>{% endfor %}</div></div>
+      <div class="fin-main-filters">
+        <label>Desde<input type="date" name="from" value="{{ filters.from }}"></label>
+        <label>Hasta<input type="date" name="to" value="{{ filters.to }}"></label>
+        <label class="fin-dashboard-search">Buscar un movimiento<input type="search" name="q" value="{{ filters.q }}" maxlength="160" placeholder="Detalle, referencia o código FIN-…"></label>
+        <button class="fin-button fin-button-primary" type="submit">Ver resultados <span aria-hidden="true">→</span></button>
+      </div>
+      <details class="fin-extra-filters"{% if filters.method or filters.currency or filters.status %} open{% endif %}>
+        <summary>Más filtros <span>Medio, moneda y estado</span>{% if filters.method or filters.currency or filters.status %}<span class="fin-active-filter">Activos</span>{% endif %}</summary>
+        <div class="fin-detail-filters">
+          <label>Medio<select name="method"><option value="">Todos los medios</option>{% for value,label in methods %}<option value="{{ value }}"{% if filters.method == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <label>Moneda<select name="currency"><option value="">Todas, por separado</option>{% for value,label in currencies %}<option value="{{ value }}"{% if filters.currency == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <label>Estado de la lista<select name="status"><option value="">Todos los estados</option>{% for value,label in statuses %}<option value="{{ value }}"{% if filters.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <a class="fin-reset" href="{% url 'finance:dashboard' %}{% if filters.company %}?company={{ filters.company }}{% endif %}">Restablecer filtros</a>
+        </div>
+      </details>
+    </form>
+    {% for error in filter_errors %}<p class="fin-field-error" role="alert">{{ error }}</p>{% endfor %}
+  </section>
+  <section class="fin-review-strip" aria-label="{{ pending_review_count }} movimientos por revisar en esta consulta">
+    <div class="fin-review-count" aria-hidden="true">{{ pending_review_count }}</div>
+    <div><h2>{% if pending_review_count %}Movimientos por revisar{% else %}Sin pendientes en esta consulta{% endif %}</h2><p>{% if pending_review_count %}Revisa la empresa, el importe y el comprobante antes de confirmar.{% else %}Los borradores que coincidan con tus filtros aparecerán aquí.{% endif %}</p></div>
+    {% if pending_review_count %}<a class="fin-button fin-button-small" href="?{{ review_querystring }}#movimientos">Ir a revisión <span aria-hidden="true">→</span></a>{% endif %}
+  </section>
+  {% for summary in summaries %}
+  <section class="fin-currency-section" aria-labelledby="currency-{{ summary.currency }}">
+    <div class="fin-section-heading"><div><span class="fin-eyebrow">RESULTADOS DEL PERIODO</span><h2 id="currency-{{ summary.currency }}">{% if summary.currency == 'PEN' %}Soles{% else %}Dólares{% endif %}<span class="fin-currency-tag">{{ summary.currency }}</span></h2></div><span class="fin-confirmed-note">{{ summary.count }} movimientos confirmados</span></div>
+    <div class="fin-stats">
+      <article class="fin-stat positive"><div class="fin-metric-top"><span>Ingresos</span><span class="fin-metric-icon" aria-hidden="true">↙</span></div><strong>{{ summary.income|floatformat:'2g' }}</strong><small>Dinero recibido · {{ summary.currency }}</small></article>
+      <article class="fin-stat negative"><div class="fin-metric-top"><span>Egresos</span><span class="fin-metric-icon" aria-hidden="true">↗</span></div><strong>{{ summary.expense|floatformat:'2g' }}</strong><small>Dinero pagado · {{ summary.currency }}</small></article>
+      <article class="fin-stat fin-net"><div class="fin-metric-top"><span>Flujo neto</span><span class="fin-metric-icon" aria-hidden="true">⇄</span></div><strong>{{ summary.net|floatformat:'2g' }}</strong><small>Ingresos − egresos · {{ summary.currency }}</small></article>
+      <article class="fin-stat"><div class="fin-metric-top"><span>Traslados internos</span><span class="fin-metric-icon" aria-hidden="true">↔</span></div><strong>{{ summary.transfer|floatformat:'2g' }}</strong><small>Entre cuentas · Fuera del flujo neto</small></article>
+    </div>
+    <div class="fin-analytics-grid">
+      <section class="fin-panel fin-trend" aria-label="Evolución mensual en {{ summary.currency }}">
+        <div class="fin-panel-heading"><div><h3>Cómo se mueve tu dinero</h3><p>Ingresos y egresos por mes · {{ summary.currency }}</p></div><div class="fin-chart-legend"><span><i class="fin-income-dot" aria-hidden="true"></i>Ingresos</span><span><i class="fin-expense-dot" aria-hidden="true"></i>Egresos</span></div></div>
+        <div class="fin-month-chart" role="img" aria-label="Comparación mensual de ingresos y egresos en {{ summary.currency }}. Importes exactos en la tabla desplegable siguiente.">
+          {% for month in summary.months %}<div class="fin-month-column"><div class="fin-month-bars"><div class="fin-month-bar fin-income-bar" data-positive="{{ month.income|yesno:'true,false' }}" style="--bar-height:{{ month.income_pct }}%" title="{{ month.label }} · Ingresos: {{ summary.currency }} {{ month.income|floatformat:2 }}"></div><div class="fin-month-bar fin-expense-bar" data-positive="{{ month.expense|yesno:'true,false' }}" style="--bar-height:{{ month.expense_pct }}%" title="{{ month.label }} · Egresos: {{ summary.currency }} {{ month.expense|floatformat:2 }}"></div></div><span>{{ month.label }}</span></div>{% endfor %}
+        </div>
+        {% if summary.chart_truncated %}<p class="fin-note">El gráfico muestra los últimos 12 meses del periodo con actividad. Los totales superiores incluyen toda la consulta.</p>{% endif %}
+        <details class="fin-chart-values"><summary>Ver importes por mes</summary><div class="fin-table-wrap" tabindex="0" role="region" aria-label="Importes mensuales en {{ summary.currency }}"><table class="fin-table"><thead><tr><th>Mes</th><th class="fin-money">Ingresos</th><th class="fin-money">Egresos</th><th class="fin-money">Flujo neto</th></tr></thead><tbody>{% for month in summary.months %}<tr><td>{{ month.label }}</td><td class="fin-money">{{ month.income|floatformat:'2g' }}</td><td class="fin-money">{{ month.expense|floatformat:'2g' }}</td><td class="fin-money">{{ month.net|floatformat:'2g' }}</td></tr>{% endfor %}</tbody></table></div></details>
+      </section>
+      <section class="fin-panel fin-methods" aria-label="Medios de pago en {{ summary.currency }}">
+        <div class="fin-panel-heading"><div><h3>Tus tres medios de registro</h3><p>Los mismos medios para todas tus empresas.</p></div></div>
+        {% for method in summary.methods %}<a class="fin-method" data-method="{{ method.key }}" href="?{{ method.querystring }}#movimientos"><span class="fin-method-icon" aria-hidden="true">{% if method.key == 'cash' %}S/{% elif method.key == 'yape' %}Y{% else %}⇄{% endif %}</span><div class="fin-method-body"><div class="fin-method-title"><strong>{{ method.label }}</strong><span>{{ method.count }} registros <span aria-hidden="true">↗</span></span></div><div class="fin-method-amounts"><span>Entró <b>{{ method.income|floatformat:'2g' }}</b></span><span>Salió <b>{{ method.expense|floatformat:'2g' }}</b></span></div>{% if method.transfer %}<small>{{ method.transfer|floatformat:'2g' }} en traslados, excluidos de entradas y salidas.</small>{% endif %}</div></a>{% endfor %}
+        <p class="fin-note fin-method-note">Importes en {{ summary.currency }}. Estos medios clasifican registros; no indican una conexión activa con WhatsApp.</p>
+      </section>
+    </div>
+    {% if not filters.company %}<section class="fin-panel fin-company-comparison"><div class="fin-panel-heading"><div><h3>Cada empresa, por separado</h3><p>Solo movimientos confirmados de esta consulta · {{ summary.currency }}</p></div></div><div class="fin-table-wrap" tabindex="0" role="region" aria-label="Comparación por empresa en {{ summary.currency }}"><table class="fin-table"><thead><tr><th>Empresa</th><th class="fin-money">Ingresos</th><th class="fin-money">Egresos</th><th class="fin-money">Flujo neto</th><th>Registros</th></tr></thead><tbody>{% for company in summary.companies %}<tr><td><a href="?{{ company.querystring }}"><strong>{{ company.name }} <span aria-hidden="true">↗</span></strong></a></td><td class="fin-money fin-cell-income">{{ company.income|floatformat:'2g' }}</td><td class="fin-money">{{ company.expense|floatformat:'2g' }}</td><td class="fin-money">{{ company.net|floatformat:'2g' }}</td><td>{{ company.count }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+  </section>
+  {% empty %}
+  <section class="fin-panel fin-empty-summary"><span class="fin-empty-icon" aria-hidden="true">▥</span><div><h2>Tu panorama empieza con datos confirmados.</h2><p>Aún no hay movimientos confirmados en esta consulta. Puedes revisar borradores o cambiar el periodo; aquí aparecerán tus cifras reales y su evolución.</p></div></section>
+  {% endfor %}
+  <div class="fin-report-notes"><p><strong>Cómo leer este resumen.</strong> El flujo neto es dinero recibido menos dinero pagado; no representa utilidad ni saldo bancario. Las monedas se mantienen separadas. El filtro de estado solo cambia la lista de movimientos.</p><p><strong>Precios históricos conservados.</strong> Cada detalle guarda su precio y costo registrados. Cambiar las sugerencias de un ítem no modifica operaciones anteriores.</p></div>
+  <section class="fin-panel fin-movements" id="movimientos">
+    <div class="fin-panel-heading"><div><span class="fin-eyebrow">DETALLE DE TU CONSULTA</span><h2>{% if filters.status == 'draft' %}Pendientes de revisión{% else %}Movimientos{% endif %}</h2><p>{{ page_obj.paginator.count }} registros{% if filters.status %} · Estado filtrado{% endif %}</p></div><a class="fin-button fin-button-small" href="{% url 'finance:export_csv' %}?{{ querystring }}">Exportar CSV <span aria-hidden="true">↓</span></a></div>
+    {% if page_obj %}<div class="fin-table-wrap" tabindex="0" role="region" aria-label="Lista de movimientos"><table class="fin-table"><thead><tr><th>Movimiento</th><th>Empresa / cuenta</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="fin-money">Importe</th></tr></thead><tbody>{% for movement in page_obj %}<tr><td><a href="{% url 'finance:detail' movement.pk %}"><strong>{{ movement.description|truncatechars:75 }}</strong></a><small class="fin-code">{{ movement.code }}{% if movement.reference %} · {{ movement.reference }}{% endif %}</small></td><td><strong>{{ movement.company.name }}</strong><small>{{ movement.account.name }} · {{ movement.account.get_method_display }}</small></td><td>{{ movement.occurred_on|date:'d/m/Y' }}</td><td>{{ movement.get_kind_display }}</td><td><span class="fin-badge" data-state="{{ movement.status }}">{{ movement.get_status_display }}</span></td><td class="fin-money">{{ movement.currency }} {{ movement.amount|floatformat:'2g' }}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="fin-empty"><h3>No hay movimientos con estos filtros.</h3><p>{% if has_accounts %}Amplía el periodo o registra un comprobante. Cada registro comienza como borrador para revisar.{% else %}Prepara tus empresas y cuentas para empezar a registrar.{% endif %}</p>{% if can_record and has_accounts %}<div class="fin-actions"><a class="fin-button fin-button-primary" href="{% url 'finance:receipt_create' %}{% if filters.company %}?company={{ filters.company }}{% endif %}">Subir el primer comprobante</a></div>{% endif %}</div>{% endif %}
+    {% if page_obj.paginator.num_pages > 1 %}<nav class="fin-pagination" aria-label="Páginas de movimientos"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><div class="fin-actions">{% if page_obj.has_previous %}<a class="fin-button fin-button-small" href="?{{ querystring }}&amp;page={{ page_obj.previous_page_number }}#movimientos">← Anterior</a>{% endif %}{% if page_obj.has_next %}<a class="fin-button fin-button-small" href="?{{ querystring }}&amp;page={{ page_obj.next_page_number }}#movimientos">Siguiente →</a>{% endif %}</div></nav>{% endif %}
+  </section>
+</div>
 {% endblock %}

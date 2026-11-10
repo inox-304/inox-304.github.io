@@ -39,6 +39,19 @@ En **Configuración → Accesos**, elegir la empresa, la cuenta del panel y uno 
 
 Solo la identidad propietaria configurada en `SECURITY_OWNER_USERNAME` administra empresas, configuración y permisos financieros. Ser administrador técnico o tener permisos generales de Django no otorga por sí solo este control. Las otras cuentas necesitan una asignación financiera explícita. La recepción compartida de WhatsApp y el respaldo completo también se reservan al propietario.
 
+## Leer el resumen financiero
+
+La portada de Finanzas permite cambiar de empresa, consultar el mes actual, el anterior o todo el historial y buscar un detalle, referencia o código FIN. En **Más filtros** se eligen medio, moneda y estado de la lista.
+
+- Los indicadores, la comparación por empresa y los medios muestran únicamente movimientos **confirmados**. El filtro de estado cambia la lista inferior, no esos resultados. Fechas, empresa, búsqueda, medio y moneda sí se aplican a ambos.
+- **Por revisar** cuenta los borradores de la consulta, aunque la lista esté mostrando confirmados o anulados. La pestaña superior de revisión conserva el contador general de las empresas autorizadas.
+- El gráfico compara ingresos y egresos mensuales, separados por moneda. Muestra como máximo doce meses consecutivos hasta el último movimiento del periodo; avisa cuando omite meses anteriores. Los totales siguen incluyendo todo el periodo. **Ver importes por mes** expone los valores exactos sin depender del gráfico.
+- Efectivo, Yapes y Transacciones permiten abrir los movimientos de ese medio. Son categorías del registro; su presencia no significa que WhatsApp esté conectado. Los traslados se muestran aparte y no incrementan el flujo neto.
+- Las empresas sin actividad no reciben importes ficticios: se pueden seleccionar, pero no aparecen en una comparación de movimientos confirmados sin tener registros.
+- Soles y dólares no se suman ni convierten automáticamente. El resumen describe flujo de dinero registrado, no rentabilidad ni saldo conciliado.
+
+El dashboard funciona sin JavaScript adicional, conserva los permisos por empresa y no cambia datos, precios ni snapshots al consultar. Sus agregaciones se realizan en la base de datos, sin descargar todo el historial al navegador.
+
 ## Registrar y revisar una operación
 
 1. Abrir **Nuevo movimiento** y seleccionar la empresa correcta.
@@ -145,3 +158,13 @@ Los riesgos principales son registrar una empresa o importe incorrecto, duplicar
 Antes de activar automatización: verificar OBA y recepción con mensajes de prueba, evaluar disponibilidad del servidor para webhooks, acordar presupuesto de API, revisar la extracción con documentos sintéticos y mantener una revisión humana de importes y faltantes. Las respuestas automáticas, el OCR y la conciliación deben activarse como funciones independientes, con pruebas y límites definidos.
 
 La cuenta de GPT/Codex usada para desarrollo puede ser compartida. No cargar allí finanzas reales ni credenciales personales. La futura API deberá usar un proyecto empresarial privado, con secretos del servidor y acceso limitado. La restricción personal del propietario a usar Google solo en su PC no equivale a un bloqueo técnico de una cuenta GPT compartida.
+
+## Evaluar la lectura con el método del contador
+
+Depositar archivos históricos en una carpeta no entrena el OCR. Antes de adaptar patrones de lectura y clasificación, preparar una muestra de 50–100 comprobantes anonimizados de los tres medios, con el resultado correcto de importe, moneda, fecha, referencia y empresa. Reservar parte de la muestra para comprobar los cambios sin utilizarla para ajustarlos. Incluir fotografías difíciles y documentos con más de un importe, no solo ejemplos fáciles.
+
+Medir aciertos por campo, documentos completos correctos, duplicados detectados y correcciones necesarias. La confianza que devuelve OCR no equivale a la probabilidad de que un movimiento financiero sea correcto. No hay una garantía comprobada de 99,99 % para este flujo; tampoco se ha medido todavía su precisión con documentos reales del negocio. Los benchmarks de otros modelos no sustituyen esa evaluación.
+
+El lector gratuito PaddleOCR instalado mantiene revisión humana y confirmación separada. Un modelo abierto más grande, como PaddleOCR-VL, requeriría un entorno de ejecución distinto y una comparación real antes de decidir si mejora el resultado. XML o CSV estructurado pueden evitar errores de transcripción cuando estén disponibles, pero aún requieren validar su origen, tipo de operación y posibles duplicados.
+
+`FINANZAS_PRIVADAS/` está excluida de Git para evitar publicar accidentalmente originales colocados allí. Esto **no** cifra la carpeta, restringe Windows ni evita que un archivo leído por un asistente entre en el contexto de una cuenta compartida. Usar únicamente ejemplos anonimizados en esta cuenta; analizar el historial real en un entorno con acceso exclusivo y autorización específica. No existe importación automática de esa carpeta.

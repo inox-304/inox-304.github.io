@@ -1,7 +1,7 @@
 """Private, company-scoped finance workspace behind the existing admin MFA gate."""
 import csv
 import json
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import urlencode
 
 from django.contrib import admin, messages
@@ -17,7 +17,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 
 from catalog.storage import open_private_file
 from .forms import AccountForm, AttachmentForm, CategoryForm, CompanyForm, ItemForm, LineFormSet, MemberForm, MovementForm, PeriodForm, ReceiptReviewForm
-from .metrics import movement_metrics
+from .metrics import dashboard_metrics
 from .models import Account, Attachment, Audit, Category, ClosedPeriod, Company, CompanyAccess, CURRENCIES, Item, Movement
 from .permissions import accessible_companies, can_access, can_company, is_owner, require_company
 from . import services
@@ -59,7 +59,7 @@ def selected_company(request, *, active=False):
     return companies.first()
 
 
-def filtered_movements(request):
+def filtered_movements(request, *, apply_status=True):
     query = Movement.objects.filter(company__in=accessible_companies(request.user)).select_related("company", "account", "category", "destination_account")
     today = timezone.localdate()
     filters = {key: request.GET.get(key, "")[:160].strip() for key in ("company", "q", "status", "method", "currency", "from", "to")}
@@ -86,7 +86,8 @@ def filtered_movements(request):
         errors.append("La fecha inicial debe ser anterior o igual a la final.")
         query = query.none()
     if filters["status"] in Movement.Status.values:
-        query = query.filter(status=filters["status"])
+        if apply_status:
+            query = query.filter(status=filters["status"])
     else:
         filters["status"] = ""
     if filters["method"] in Account.Method.values:
@@ -110,14 +111,36 @@ def filtered_movements(request):
 @require_GET
 def dashboard(request):
     require_access(request)
-    query, filters, errors = filtered_movements(request)
-    active_companies = accessible_companies(request.user).filter(active=True)
+    scope, filters, errors = filtered_movements(request, apply_status=False)
+    query = scope.filter(status=filters["status"]) if filters["status"] else scope
+    companies = accessible_companies(request.user)
+    active_companies = companies.filter(active=True)
     can_record_selected = any(can_company(request.user, company, "record") for company in active_companies.filter(pk=int(filters["company"]))) if filters["company"] else any(can_company(request.user, company, "record") for company in active_companies)
+    summaries = dashboard_metrics(scope)
+    for summary in summaries:
+        for method in summary["methods"]:
+            method["querystring"] = urlencode({**filters, "method": method["key"], "currency": summary["currency"]})
+        for company in summary["companies"]:
+            company["querystring"] = urlencode({**filters, "company": company["id"], "currency": summary["currency"]})
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    previous_end = month_start - timedelta(days=1)
+    period_shortcuts = []
+    for label, start, end in (("Este mes", month_start.isoformat(), today.isoformat()),
+                              ("Mes anterior", previous_end.replace(day=1).isoformat(), previous_end.isoformat()),
+                              ("Todo el historial", "", "")):
+        period_shortcuts.append({"label": label, "querystring": urlencode({**filters, "from": start, "to": end}),
+                                 "selected": filters["from"] == start and filters["to"] == end})
+    pending = scope.filter(status=Movement.Status.DRAFT)
     return render(request, "admin/finance/dashboard.html", base_context(request, title="Finanzas", section="review" if filters["status"] == "draft" else "dashboard",
         can_record=can_record_selected,
         filters=filters, filter_errors=errors, querystring=urlencode(filters), page_obj=Paginator(query, 30).get_page(request.GET.get("page")),
-        summaries=movement_metrics(query), filtered_drafts=query.filter(status="draft").count(),
-        has_companies=accessible_companies(request.user).exists(), has_accounts=Account.objects.filter(company__in=accessible_companies(request.user), active=True).exists(),
+        summaries=summaries, filtered_drafts=query.filter(status="draft").count(),
+        pending_review_count=pending.count(), scoped_review_preview=pending[:3], review_querystring=urlencode({**filters, "status": "draft"}),
+        company_tabs=[{"id": company.pk, "name": company.name, "active": company.active, "selected": filters["company"] == str(company.pk),
+                       "querystring": urlencode({**filters, "company": company.pk})} for company in companies],
+        all_companies_querystring=urlencode({**filters, "company": ""}), period_shortcuts=period_shortcuts,
+        has_companies=companies.exists(), has_accounts=Account.objects.filter(company__in=companies, active=True).exists(),
         currencies=CURRENCIES, statuses=Movement.Status.choices, methods=Account.Method.choices))
 
 
