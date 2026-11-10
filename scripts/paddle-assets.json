@@ -1,0 +1,15 @@
+{
+  "sdkVersion": "0.4.2",
+  "worker": { "source": "node_modules/@paddleocr/paddleocr-js/dist/assets/worker-entry-C9UNuyOJ.js", "bytes": 11341486, "sha256": "477db3f009c118823a5f9ebe15f1e96c1c464165715ba28a9884290f61addf52" },
+  "packages": { "@paddleocr/paddleocr-js": "0.4.2", "onnxruntime-web": "1.24.3" },
+  "downloads": [
+    { "path": "models/PP-OCRv6_small_det.tar", "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv6_small_det_onnx_infer.tar", "bytes": 9891840, "sha256": "d218f6fbf0f1c23d2161bd6ac7f5eaa6104fa89955c09290497e31008e2618e4" },
+    { "path": "models/PP-OCRv6_small_rec.tar", "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv6_small_rec_onnx_infer.tar", "bytes": 21319680, "sha256": "d267ab077a44a0eedb1ea8f8c542d263f211de8e9d7a029bf9fcfff7e5a88fb1" },
+    { "path": "licenses/PaddleOCR-APACHE-2.0.txt", "url": "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/e5046169b225bcdfbe25d45b4e809ff0f1a69c2c/LICENSE", "bytes": 11376, "sha256": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e" },
+    { "path": "licenses/onnxruntime-MIT.txt", "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.24.3/LICENSE", "bytes": 1073, "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c" },
+    { "path": "licenses/onnxruntime-ThirdPartyNotices.txt", "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.24.3/ThirdPartyNotices.txt", "bytes": 325054, "sha256": "0e07b95f3a8d6230037707c5c4a2b554d12c4cb67369669ac255635528ffcee2" },
+    { "path": "licenses/opencv-APACHE-2.0.txt", "url": "https://raw.githubusercontent.com/opencv/opencv/4.10.0/LICENSE", "bytes": 11358, "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30" },
+    { "path": "licenses/clipper-BOOST-1.0.txt", "url": "https://www.boost.org/LICENSE_1_0.txt", "bytes": 1338, "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566" },
+    { "path": "licenses/clipper-jsbn-LICENSE.txt", "url": "https://raw.githubusercontent.com/andyperlitch/jsbn/master/LICENSE", "bytes": 1544, "sha256": "e0e396530fd1624126e9a7e0df94811e4062e03baeccb07bc33c934b0fd93a85" }
+  ]
+}

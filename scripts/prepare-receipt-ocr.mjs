@@ -1,5 +1,5 @@
-// Reproducible, self-hosted browser OCR assets. No network requests at build time:
-// npm ci obtains the exact, integrity-checked packages from package-lock.json.
+// Reproducible, self-hosted browser OCR assets. Tesseract comes from npm ci;
+// Paddle's model downloads are pinned by size/SHA-256 and cached at build time.
 import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -69,3 +69,4 @@ if (check) {
   await writeFile(join(destination, 'manifest.json'), manifest);
 }
 console.log(`Receipt OCR: ${check ? 'verified' : 'prepared'} ${files.length} local assets (${(files.reduce((sum, file) => sum + file.bytes, 0) / 1024 / 1024).toFixed(1)} MiB).`);
+await import('./paddle-prepare.mjs');

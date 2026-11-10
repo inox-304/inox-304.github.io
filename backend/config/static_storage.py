@@ -9,6 +9,10 @@ class InoxStaticCompressor(Compressor):
     def should_compress(self, filename):
         path = str(filename).replace("\\", "/")
         name = PurePosixPath(path).name
+        # Paddle's models, embedded OpenCV and ORT WASM are precompressed in
+        # the Node build. Never run concurrent Brotli over them during startup.
+        if "inox/ocr-vendor/paddle-v0.4.2/" in path:
+            return False
         # Both original and manifest-hashed copies contain '.wasm.'. The OCR
         # worker uses the original filename; its reproducible gzip sibling is
         # supplied by prepare-receipt-ocr.mjs. Brotli-compressing these large

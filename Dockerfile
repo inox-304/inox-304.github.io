@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY scripts/prepare-receipt-ocr.mjs scripts/receipt-ocr-NOTICE.txt ./scripts/
+COPY scripts/paddle-* ./scripts/
 RUN npm run finance:assets
 COPY astro.config.mjs tsconfig.json ./
 COPY src ./src

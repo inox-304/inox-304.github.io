@@ -25,6 +25,8 @@ if (root) {
   const status = find('status');
   const readButton = find('read');
   const cancelButton = find('cancel');
+  const alternativeButton = find('alternative');
+  const engineLabel = find('engine');
   const progress = find('progress');
   const saveButton = find('save');
   const fields = ['amount', 'currency', 'occurred_on', 'reference', 'description'];
@@ -35,8 +37,10 @@ if (root) {
   let angle = 0;
   let ready = false;
   let worker = null;
-  let workerPromise = null;
   let libraryPromise = null;
+  const failedImports = new Map();
+  let engineController = null;
+  let lastEngine = 'paddle';
   let job = 0;
   let engineGeneration = 0;
   let busy = false;
@@ -56,11 +60,22 @@ if (root) {
     status.textContent = message;
     status.dataset.state = state;
   }
+  async function loadModule(value) {
+    const url = new URL(assetUrl(value));
+    const key = url.href;
+    const failures = failedImports.get(key) || 0;
+    // A failed module evaluation may be cached by the browser. Retry only the
+    // failed module with a fresh URL; successful modules retain normal caching.
+    if (failures) url.searchParams.set('reader-retry', String(failures));
+    try { return await import(url.href); }
+    catch (error) { failedImports.set(key, failures + 1); throw error; }
+  }
   function setBusy(value) {
     busy = value;
     readButton.disabled = value || !ready;
     readButton.textContent = value ? 'Leyendo…' : 'Volver a leer foto';
     cancelButton.hidden = !value;
+    alternativeButton.disabled = value || !ready;
     progress.hidden = !value;
     find('rotate').disabled = value;
     form.setAttribute('aria-busy', String(value));
@@ -82,14 +97,18 @@ if (root) {
     find('text').textContent = '';
     find('text-section').hidden = true;
   }
-  function stop() {
-    job += 1;
+  function releaseReader() {
     engineGeneration += 1;
     clearTimeout(timeout);
+    engineController?.abort();
+    engineController = null;
     const old = worker;
     worker = null;
-    workerPromise = null;
-    if (old) old.terminate().catch(() => {});
+    if (old) Promise.resolve(old.terminate()).catch(() => {});
+  }
+  function stop() {
+    job += 1;
+    releaseReader();
     setBusy(false);
   }
   function discardImage() {
@@ -101,6 +120,7 @@ if (root) {
     image.removeAttribute('src');
     largeImage.removeAttribute('src');
     find('preview').hidden = true;
+    alternativeButton.hidden = true;
     readButton.disabled = true;
     readButton.textContent = 'Leer foto';
   }
@@ -109,18 +129,32 @@ if (root) {
       const script = document.createElement('script');
       script.src = assetUrl(root.dataset.libraryUrl);
       script.async = true;
-      script.onload = () => globalThis.Tesseract?.createWorker ? resolve(globalThis.Tesseract) : reject(new Error('Reader unavailable'));
-      script.onerror = () => { script.remove(); libraryPromise = null; reject(new Error('Reader load failed')); };
+      const failed = () => { script.remove(); reject(new Error('Reader load failed')); };
+      script.onload = () => globalThis.Tesseract?.createWorker ? resolve(globalThis.Tesseract) : failed();
+      script.onerror = failed;
       document.head.append(script);
-    });
+    }).catch((error) => { libraryPromise = null; throw error; });
     return libraryPromise;
   }
-  async function getWorker(token) {
-    if (worker) return worker;
-    if (!workerPromise) workerPromise = (async () => {
+  async function getWorker(token, engine, signal) {
       const generation = engineGeneration;
+      if (engine === 'paddle') {
+        const paddle = await loadModule(root.dataset.paddleUrl);
+        if (token !== job || signal.aborted) return null;
+        const created = await paddle.createReceiptPaddle({
+          signal,
+          onProgress(message) {
+            if (!busy || generation !== engineGeneration) return;
+            progress.value = Math.max(progress.value, Math.min(94, Math.round((message.progress || 0) * 94)));
+            announce('PaddleOCR está leyendo tu comprobante. La primera carga puede tardar; la foto permanece en tu dispositivo.');
+          },
+        });
+        if (token !== job || signal.aborted) { await created.terminate(); return null; }
+        worker = created;
+        return created;
+      }
       const library = await loadLibrary();
-      if (token !== job) return null;
+      if (token !== job || signal.aborted) return null;
       const created = await library.createWorker(['spa', 'eng'], 1, {
         workerPath: assetUrl(root.dataset.workerUrl),
         corePath: new URL('./', assetUrl(root.dataset.coreUrl)).href,
@@ -136,13 +170,11 @@ if (root) {
         },
         errorHandler() { /* A bounded timeout/recognize rejection restores the manual form. */ },
       });
-      if (token !== job) { await created.terminate(); return null; }
-      await created.setParameters({ tessedit_pageseg_mode: '3', preserve_interword_spaces: '1' });
-      if (token !== job) { await created.terminate(); return null; }
+      if (token !== job || signal.aborted) { await created.terminate(); return null; }
       worker = created;
+      await created.setParameters({ tessedit_pageseg_mode: '3', preserve_interword_spaces: '1' });
+      if (token !== job || signal.aborted) { await created.terminate(); return null; }
       return created;
-    })();
-    return workerPromise;
   }
   function canvasForPhoto() {
     const source = originalImage;
@@ -171,14 +203,14 @@ if (root) {
     }
     list.hidden = !items.length;
   }
-  function showSuggestions(parsed, lowQuality) {
-    const messages = [...parsed.warnings];
+  function showSuggestions(parsed, lowQuality, assessment = { uncertainFields: [], warnings: [] }) {
+    const messages = [...parsed.warnings, ...assessment.warnings];
     if ([...edited].some((key) => form.elements[key].value)) messages.push('Los campos que escribiste se conservaron. Compáralos también con esta foto.');
     if (lowQuality) messages.unshift('La lectura tiene poca claridad. No completamos campos automáticamente; comprueba la foto y escribe los datos.');
     let count = 0;
     for (const key of fields) {
       const value = parsed.suggestions[key];
-      if (!value || lowQuality) continue;
+      if (!value || lowQuality || assessment.uncertainFields.includes(key)) continue;
       const field = form.elements[key];
       const note = document.createElement('span');
       note.className = 'receipt-evidence';
@@ -204,23 +236,63 @@ if (root) {
     showWarnings(messages);
     return count;
   }
-  async function readPhoto() {
+  async function recognize(token, engine) {
+    if (token !== job) throw new Error('Reading cancelled');
+    releaseReader();
+    const controller = new AbortController();
+    engineController = controller;
+    root.dataset.readerEngine = engine;
+    lastEngine = engine;
+    engineLabel.textContent = engine === 'paddle' ? 'Lector: PaddleOCR · Español' : 'Lector alternativo: Tesseract';
+    const aborted = new Promise((_, reject) => {
+      controller.signal.addEventListener('abort', () => reject(new Error('Reading stopped')), { once: true });
+      timeout = setTimeout(() => {
+        controller.abort();
+      }, 150000);
+    });
+    try {
+      return await Promise.race([(async () => {
+        const reader = await getWorker(token, engine, controller.signal);
+        if (!reader || token !== job || controller.signal.aborted) throw new Error('Reading cancelled');
+        const canvas = canvasForPhoto();
+        if (engine === 'paddle') return reader.recognize(canvas);
+        const { data } = await reader.recognize(canvas, {}, { text: true });
+        return data;
+      })(), aborted]);
+    } finally {
+      // A cancelled/old job must never destroy the replacement photo's worker.
+      if (engineController === controller) releaseReader();
+    }
+  }
+  async function readPhoto(preferredEngine = 'paddle') {
     if (!ready || busy) return;
     const token = ++job;
     invalidateReview();
     clearSuggestions();
     setBusy(true);
     progress.value = 0;
+    alternativeButton.hidden = true;
     announce('Preparando la lectura privada de tu foto…');
     timeout = setTimeout(() => {
       if (token !== job) return;
       stop();
-      announce('La lectura tardó demasiado. Puedes volver a intentarlo con una foto más nítida o completar los campos manualmente.', 'error');
+      announce('No se pudo preparar el lector a tiempo. Puedes volver a intentarlo o completar los campos manualmente.', 'error');
     }, 150000);
     try {
-      const [reader, parser] = await Promise.all([getWorker(token), import(assetUrl(root.dataset.parserUrl))]);
-      if (!reader || token !== job) return;
-      const { data } = await reader.recognize(canvasForPhoto(), {}, { text: true });
+      const parser = await loadModule(root.dataset.parserUrl);
+      if (token !== job) return;
+      let data;
+      let fallback = false;
+      try {
+        data = await recognize(token, preferredEngine);
+      } catch (error) {
+        if (token !== job) return;
+        if (preferredEngine !== 'paddle') throw error;
+        fallback = true;
+        progress.value = 0;
+        announce('El lector avanzado no pudo completar la lectura. Estamos probando el lector alternativo en tu dispositivo…');
+        data = await recognize(token, 'tesseract');
+      }
       if (token !== job) return;
       const text = String(data.text || '');
       // Parse the whole result: truncating first could hide a second total or
@@ -228,9 +300,12 @@ if (root) {
       find('text').textContent = text.slice(0, 60000);
       find('text-section').hidden = !text;
       const parsed = parser.parseReceiptText(text);
-      const count = showSuggestions(parsed, !Number.isFinite(data.confidence) || data.confidence < 60);
+      const assessment = lastEngine === 'paddle' ? parser.assessReceiptSuggestions(parsed, data.lines) : undefined;
+      const lowQuality = lastEngine !== 'paddle' && (!Number.isFinite(data.confidence) || data.confidence < 60);
+      const count = showSuggestions(parsed, lowQuality, assessment);
       progress.value = 100;
-      announce(count ? `Lectura lista: ${count} ${count === 1 ? 'dato sugerido' : 'datos sugeridos'}. Revisa cada campo comparándolo con la foto.` : 'Lectura terminada. No hay datos seguros para completar automáticamente; revisa el texto y completa los campos.', count ? 'success' : '');
+      const prefix = fallback ? 'Se utilizó el lector alternativo. ' : '';
+      announce(prefix + (count ? `Lectura lista: ${count} ${count === 1 ? 'dato sugerido' : 'datos sugeridos'}. Revisa cada campo comparándolo con la foto.` : 'Lectura terminada. No hay datos seguros para completar automáticamente; revisa el texto y completa los campos.'), count ? 'success' : '');
     } catch {
       if (token === job) {
         announce('No pudimos leer esta foto. Tus datos siguen aquí: completa el registro a mano o vuelve a intentar la lectura.', 'error');
@@ -238,6 +313,10 @@ if (root) {
       }
     } finally {
       if (token === job) { clearTimeout(timeout); setBusy(false); }
+      if (ready && !busy) {
+        alternativeButton.hidden = false;
+        alternativeButton.textContent = lastEngine === 'paddle' ? 'Probar lector alternativo' : 'Volver a probar PaddleOCR';
+      }
     }
   }
   async function choosePhoto() {
@@ -275,7 +354,8 @@ if (root) {
     }
   }
   fileInput.addEventListener('change', choosePhoto);
-  readButton.addEventListener('click', readPhoto);
+  readButton.addEventListener('click', () => readPhoto());
+  alternativeButton.addEventListener('click', () => readPhoto(lastEngine === 'paddle' ? 'tesseract' : 'paddle'));
   cancelButton.addEventListener('click', () => { stop(); announce('Lectura cancelada. Puedes completar los datos manualmente o volver a leer la foto.'); });
   find('clear').addEventListener('click', () => { fileInput.value = ''; discardImage(); clearSuggestions(); invalidateReview(); announce('Foto retirada. Selecciona otro comprobante.'); });
   find('rotate').addEventListener('click', () => {

@@ -209,3 +209,31 @@ export function parseReceiptText(text, { today = new Date() } = {}) {
   result.warnings.push(REVIEW_NOTE);
   return result;
 }
+
+/**
+ * Paddle confidence belongs to the exact evidence supporting each field, not
+ * the document average. Keep low-confidence rows in the parser input so they
+ * can still reveal conflicting totals; only withhold their field suggestions.
+ * Tesseract's global confidence must not be passed as per-line evidence here.
+ */
+export function assessReceiptSuggestions(parsed, lines) {
+  const result = { uncertainFields: [], warnings: [] };
+  const evidenceKey = value => normalized(value).replace(/\s+/gu, ' ');
+  const confidenceByText = new Map();
+  for (const line of Array.isArray(lines) ? lines : []) {
+    if (typeof line?.text !== 'string' || !line.text.trim()) continue;
+    const key = evidenceKey(line.text);
+    const score = Number.isFinite(line.confidence) && line.confidence >= 0 && line.confidence <= 100 ? line.confidence : 0;
+    confidenceByText.set(key, Math.min(confidenceByText.get(key) ?? 100, score));
+  }
+  const labels = { amount: 'del importe', currency: 'de la moneda', occurred_on: 'de la fecha', reference: 'de la referencia', description: 'del detalle' };
+  for (const field of Object.keys(parsed?.suggestions || {})) {
+    const evidence = parsed?.evidence?.[field];
+    const fragments = typeof evidence === 'string' ? evidence.split(/\r?\n/u).map(evidenceKey).filter(Boolean) : [];
+    if (!fragments.length || fragments.some(fragment => !confidenceByText.has(fragment) || confidenceByText.get(fragment) < 85)) {
+      result.uncertainFields.push(field);
+      result.warnings.push(`La lectura ${labels[field] || 'del dato'} tiene poca claridad. Compruébalo en la foto y escríbelo manualmente.`);
+    }
+  }
+  return result;
+}

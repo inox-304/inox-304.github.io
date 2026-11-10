@@ -10,7 +10,7 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "test": "node --test scripts/test-cms-routes.mjs scripts/test-verify-build.mjs scripts/test-receipt-parser.mjs && node scripts/verify-build.mjs",
+    "test": "node --test scripts/test-cms-routes.mjs scripts/test-verify-build.mjs scripts/test-receipt-parser.mjs scripts/test-receipt-paddle.mjs scripts/paddle-browser.test.mjs && node scripts/verify-build.mjs",
     "check:models": "node scripts/check-models.mjs",
     "build:published": "node --env-file-if-exists=.env scripts/configure-domain.mjs && npm run build && npm test && npm run check:models",
     "build:server": "node scripts/build-server.mjs",
@@ -26,9 +26,11 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
+    "@paddleocr/paddleocr-js": "0.4.2",
     "@tesseract.js-data/eng": "1.0.0",
     "@tesseract.js-data/spa": "1.0.0",
     "@types/three": "0.183.1",
+    "onnxruntime-web": "1.24.3",
     "parse5": "8.1.1",
     "tesseract.js": "7.0.0",
     "typescript": "6.0.3"

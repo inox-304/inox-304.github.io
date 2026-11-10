@@ -4,7 +4,7 @@
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/receipt-ocr.css' %}">{% endblock %}
 {% block extrahead %}{{ block.super }}<script type="module" src="{% static 'inox/receipt-ocr.js' %}"></script>{% endblock %}
 {% block finance_content %}
-<div data-receipt-reader data-parser-url="{% static 'inox/receipt-parser.js' %}" data-library-url="{% static 'inox/ocr-vendor/v7/tesseract.min.js' %}" data-worker-url="{% static 'inox/ocr-vendor/v7/worker.min.js' %}" data-core-url="{% static 'inox/ocr-vendor/v7/core/tesseract-core-lstm.wasm.js' %}" data-language-url="{% static 'inox/ocr-vendor/v7/lang/spa.traineddata.gz' %}">
+<div data-receipt-reader data-paddle-url="{% static 'inox/ocr-vendor/paddle-v0.4.2/receipt-paddle.js' %}" data-parser-url="{% static 'inox/receipt-parser.js' %}" data-library-url="{% static 'inox/ocr-vendor/v7/tesseract.min.js' %}" data-worker-url="{% static 'inox/ocr-vendor/v7/worker.min.js' %}" data-core-url="{% static 'inox/ocr-vendor/v7/core/tesseract-core-lstm.wasm.js' %}" data-language-url="{% static 'inox/ocr-vendor/v7/lang/spa.traineddata.gz' %}">
   <header class="fin-heading"><div><span class="fin-eyebrow">DEL COMPROBANTE AL REGISTRO</span><h1>Una foto. Todo en orden.</h1><p>El lector propone los datos. Tú los revisas antes de guardar.</p></div><a class="fin-button" href="{% url 'finance:create' %}?company={{ company.pk }}">Registro manual →</a></header>
   <ol class="receipt-steps" aria-label="Proceso de registro"><li><span>01</span> Elige la empresa</li><li><span>02</span> Añade tu foto</li><li><span>03</span> Revisa y guarda</li></ol>
   <section class="receipt-company fin-panel">
@@ -28,6 +28,7 @@
         <div class="receipt-preview" data-receipt-preview hidden><img data-receipt-image alt="Comprobante seleccionado para revisión"><div class="receipt-photo-actions"><button type="button" class="fin-button fin-button-small" data-receipt-rotate>Girar 90° ↻</button><button type="button" class="fin-button fin-button-small" data-receipt-zoom>Ampliar ↗</button><button type="button" class="fin-button fin-button-small" data-receipt-clear>Quitar foto</button></div><p class="fin-note" data-receipt-filename></p></div>
         <div class="receipt-reader-actions"><button class="fin-button fin-button-primary" type="button" data-receipt-read disabled>Leer foto</button><button class="fin-button" type="button" data-receipt-cancel hidden>Cancelar lectura</button><a class="fin-button" href="#receipt-review-title">Revisar datos ↓</a></div>
         <div class="receipt-status" role="status" aria-live="polite" aria-atomic="true" data-receipt-status>Selecciona una foto nítida, completa y de frente. También puedes completar los campos a mano.</div>
+        <div class="receipt-engine-row"><span class="fin-note" data-receipt-engine>Lector: PaddleOCR · Español</span><button type="button" class="fin-button fin-button-small" data-receipt-alternative hidden>Probar lector alternativo</button></div>
         <progress data-receipt-progress max="100" value="0" aria-label="Progreso de lectura" hidden></progress>
         <noscript><p class="fin-risk">Activa JavaScript para leer la foto automáticamente. Puedes adjuntarla y completar todos los campos manualmente.</p></noscript>
         <ul class="receipt-warnings" data-receipt-warnings hidden></ul>

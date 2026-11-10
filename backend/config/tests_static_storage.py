@@ -5,6 +5,18 @@ from .static_storage import InoxStaticCompressor
 
 
 class StaticCompressionTests(SimpleTestCase):
+    def test_paddle_resources_use_build_time_compression(self):
+        compressor = InoxStaticCompressor(quiet=True)
+        for path in (
+            'inox/ocr-vendor/paddle-v0.4.2/paddle-worker.js',
+            'inox/ocr-vendor/paddle-v0.4.2/paddle-worker.0123456789ab.js',
+            'inox/ocr-vendor/paddle-v0.4.2/models/PP-OCRv6_small_rec.tar',
+            'inox/ocr-vendor/paddle-v0.4.2/runtime/ort-wasm-simd-threaded.jsep.wasm',
+            r'C:\static\inox\ocr-vendor\paddle-v0.4.2\runtime\ort-wasm-simd-threaded.jsep.0123456789ab.wasm',
+        ):
+            with self.subTest(path=path):
+                self.assertFalse(compressor.should_compress(path))
+
     def test_large_ocr_cores_use_build_time_gzip_for_plain_and_hashed_names(self):
         compressor = InoxStaticCompressor(quiet=True)
         for path in (

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseReceiptText } from '../backend/static/inox/receipt-parser.js';
+import { assessReceiptSuggestions, parseReceiptText } from '../backend/static/inox/receipt-parser.js';
 
 const parse = text => parseReceiptText(text, { today: new Date(2026, 10, 10, 12) });
 
@@ -90,4 +90,66 @@ test('content and instructions in a document cannot override the extraction cont
   assert.deepEqual(result.suggestions, { amount: '100.00', currency: 'PEN' });
   assert.equal(result.evidence.amount, 'TOTAL S/ 100.00');
   assert.ok(result.warnings.some(message => message.includes('Revisa cada dato')));
+});
+
+test('Paddle withholds only fields whose own evidence is uncertain, not every field in the document', () => {
+  const lines = [
+    { text: 'FACTURA F001-123', confidence: 99 },
+    { text: 'TOTAL S/ 118.00', confidence: 84.99 },
+    { text: 'FECHA: 09/11/2026', confidence: 94 },
+    { text: 'Texto decorativo difícil', confidence: 10 },
+  ];
+  const parsed = parse(lines.map(line => line.text).join('\n'));
+  const assessed = assessReceiptSuggestions(parsed, lines);
+  assert.deepEqual(new Set(assessed.uncertainFields), new Set(['amount', 'currency']));
+  assert.equal(assessed.warnings.length, 2);
+  assert.equal(parsed.suggestions.amount, '118.00', 'assessment must not rewrite or drop recognized evidence');
+  assert.equal(parsed.suggestions.occurred_on, '2026-11-09');
+});
+
+test('Paddle multiline totals require confidence in both their label and their value', () => {
+  const parsed = parse('TOTAL A PAGAR\nS/ 128.50');
+  for (const scores of [[84, 99], [99, 84]]) {
+    const result = assessReceiptSuggestions(parsed, [
+      { text: 'TOTAL A PAGAR', confidence: scores[0] },
+      { text: 'S/ 128.50', confidence: scores[1] },
+    ]);
+    assert.deepEqual(new Set(result.uncertainFields), new Set(['amount', 'currency']));
+  }
+  assert.deepEqual(assessReceiptSuggestions(parsed, [
+    { text: 'TOTAL A PAGAR', confidence: 85 },
+    { text: 'S/ 128.50', confidence: 85 },
+  ]), { uncertainFields: [], warnings: [] });
+});
+
+test('Paddle matches harmless spacing and accents but does not invent missing evidence', () => {
+  const parsed = parse('FECHA DE EMISIÓN: 09/11/2026');
+  assert.deepEqual(assessReceiptSuggestions(parsed, [{ text: '  fecha  de emision: 09/11/2026  ', confidence: 98 }]).uncertainFields, []);
+  for (const lines of [[], null, [{ text: 'FECHA DE EMISIÓN: 08/11/2026', confidence: 99 }]]) {
+    assert.deepEqual(assessReceiptSuggestions(parsed, lines).uncertainFields, ['occurred_on']);
+  }
+  assert.deepEqual(assessReceiptSuggestions({ suggestions: { amount: '123.45' }, evidence: {} }, []).uncertainFields, ['amount']);
+});
+
+test('Paddle invalid confidence and weak repeated evidence never inherit a high document score', () => {
+  const parsed = parse('TOTAL S/ 100.00');
+  for (const confidence of [undefined, null, '99', NaN, Infinity, -1, 101, 0.99]) {
+    assert.deepEqual(new Set(assessReceiptSuggestions(parsed, [{ text: 'TOTAL S/ 100.00', confidence }]).uncertainFields), new Set(['amount', 'currency']));
+  }
+  const repeated = [
+    { text: 'TOTAL S/ 100.00', confidence: 99 },
+    { text: 'TOTAL S/ 100.00', confidence: 40 },
+  ];
+  assert.deepEqual(new Set(assessReceiptSuggestions(parsed, repeated).uncertainFields), new Set(['amount', 'currency']));
+});
+
+test('low-confidence conflicting totals remain conflicts instead of making the other amount look safe', () => {
+  const lines = [
+    { text: 'TOTAL S/ 100.00', confidence: 99 },
+    { text: 'TOTAL A PAGAR S/ 90.00', confidence: 40 },
+  ];
+  const parsed = parse(lines.map(line => line.text).join('\n'));
+  assert.equal(parsed.suggestions.amount, undefined);
+  assert.ok(parsed.warnings.some(message => message.includes('total no es inequívoco')));
+  assert.deepEqual(assessReceiptSuggestions(parsed, lines).uncertainFields, []);
 });
