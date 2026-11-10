@@ -21,7 +21,6 @@ from security.services import AUTH_AT, LAST_SEEN, VERSION
 from .forms import ReceiptReviewForm
 from .models import Account, Attachment, Audit, Company, CompanyAccess, Movement
 from .services import close_period, create_receipt_draft, post_movement, void_movement
-from .upload_limits import MAX_REQUEST_BYTES
 
 
 @override_settings(SECURITY_OWNER_USERNAME="receipt-owner@example.test", SECURITY_EMAIL_ENABLED=True,
@@ -159,17 +158,6 @@ class ReceiptWorkspaceTests(TestCase):
     def test_csrf_still_required_for_authenticated_upload(self):
         client = self.signin(self.owner, Client(enforce_csrf_checks=True))
         self.assertEqual(client.post(self.url, self.payload()).status_code, 403)
-        self.assertFalse(Movement.objects.exists())
-
-    def test_new_upload_endpoint_is_bounded_before_views(self):
-        self.signin(self.owner)
-        response = self.client.post(self.url, b"small", content_type="application/octet-stream", CONTENT_LENGTH=str(MAX_REQUEST_BYTES + 1))
-        self.assertEqual(response.status_code, 413)
-        response = self.client.post(self.url, b"small", content_type="application/octet-stream", CONTENT_LENGTH="")
-        self.assertEqual(response.status_code, 411)
-        with patch("finance.upload_limits.MAX_FILE_BYTES", 16):
-            response = self.client.post(self.url, self.payload())
-        self.assertEqual(response.status_code, 413)
         self.assertFalse(Movement.objects.exists())
 
     def test_same_submission_retry_returns_one_draft_and_one_original(self):

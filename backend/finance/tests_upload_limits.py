@@ -23,7 +23,9 @@ def upload(request, pk):
     return JsonResponse({"files": len(request.FILES), "bytes": sum(file.size for file in request.FILES.values())}, status=201)
 
 
-urlpatterns = [path("admin/finanzas/<int:pk>/comprobante/", upload), path("token/", token), path("unrelated/", token)]
+urlpatterns = [path("admin/finanzas/<int:pk>/comprobante/", upload),
+    path("admin/finanzas/comprobante/nuevo/", upload, {"pk": 12}),
+    path("token/", token), path("unrelated/", token)]
 
 
 @override_settings(ROOT_URLCONF=__name__, ALLOWED_HOSTS=["testserver"], MIDDLEWARE=[
@@ -90,3 +92,13 @@ class FinanceUploadLimitTests(SimpleTestCase):
     def test_other_routes_and_get_are_unchanged(self):
         self.assertEqual(self.client.get("/unrelated/").status_code, 200)
         self.assertEqual(self.client.get(self.url).status_code, 201)
+
+
+class ReceiptUploadLimitTests(FinanceUploadLimitTests):
+    """The pre-view body guard does not need a database transaction.
+
+    A rejected multipart stream closes its response and emits request_finished.
+    Exercise that lifecycle with SimpleTestCase, outside the wrapping database
+    transaction of receipt workspace tests (which PostgreSQL correctly closes).
+    """
+    url = "/admin/finanzas/comprobante/nuevo/"

@@ -9,11 +9,19 @@ if (root) {
   const reviewed = form.elements.reviewed;
   // Keep local image URLs confined to actual image elements, never a generic
   // element that could become a script or embedded document after DOM changes.
-  const image = root.querySelector('img[data-receipt-image]');
-  const largeImage = root.querySelector('img[data-receipt-large-image]');
-  if (!(image instanceof HTMLImageElement) || !(largeImage instanceof HTMLImageElement)) {
+  const previewPlaceholder = root.querySelector('img[data-receipt-image]');
+  const zoomPlaceholder = root.querySelector('img[data-receipt-large-image]');
+  if (!(previewPlaceholder instanceof HTMLImageElement) || !(zoomPlaceholder instanceof HTMLImageElement)) {
     throw new Error('Receipt image elements unavailable');
   }
+  const image = new Image();
+  image.alt = 'Comprobante seleccionado para revisión';
+  image.setAttribute('data-receipt-image', '');
+  previewPlaceholder.replaceWith(image);
+  const largeImage = new Image();
+  largeImage.alt = 'Vista ampliada del comprobante';
+  largeImage.setAttribute('data-receipt-large-image', '');
+  zoomPlaceholder.replaceWith(largeImage);
   const status = find('status');
   const readButton = find('read');
   const cancelButton = find('cancel');
