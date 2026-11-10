@@ -1,4 +1,5 @@
 /* Private receipt reader: photos stay in memory until the ordinary form POST. */
+export {};
 const root = document.querySelector('[data-receipt-reader]');
 
 if (root) {
@@ -6,7 +7,13 @@ if (root) {
   const form = find('form');
   const fileInput = form.elements.document;
   const reviewed = form.elements.reviewed;
-  const image = find('image');
+  // Keep local image URLs confined to actual image elements, never a generic
+  // element that could become a script or embedded document after DOM changes.
+  const image = root.querySelector('img[data-receipt-image]');
+  const largeImage = root.querySelector('img[data-receipt-large-image]');
+  if (!(image instanceof HTMLImageElement) || !(largeImage instanceof HTMLImageElement)) {
+    throw new Error('Receipt image elements unavailable');
+  }
   const status = find('status');
   const readButton = find('read');
   const cancelButton = find('cancel');
@@ -84,7 +91,7 @@ if (root) {
     originalImage = null;
     ready = false;
     image.removeAttribute('src');
-    find('large-image').removeAttribute('src');
+    largeImage.removeAttribute('src');
     find('preview').hidden = true;
     readButton.disabled = true;
     readButton.textContent = 'Leer foto';
@@ -271,7 +278,7 @@ if (root) {
     announce('Vista girada. Pulsa «Volver a leer foto» para repetir la lectura. Se guardará el archivo original.');
   });
   const dialog = find('dialog');
-  find('zoom').addEventListener('click', () => { find('large-image').src = image.src; dialog.showModal(); });
+  find('zoom').addEventListener('click', () => { largeImage.src = image.src; dialog.showModal(); });
   find('close').addEventListener('click', () => dialog.close());
   const drop = find('drop');
   drop.addEventListener('dragover', (event) => { event.preventDefault(); drop.classList.add('is-dragging'); });
