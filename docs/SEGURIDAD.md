@@ -18,6 +18,16 @@ El propietario controla los permisos para añadir llaves a las cuentas de gerenc
 
 Las acciones masivas del catálogo comprueban permisos tanto al mostrarse como al ejecutarse. Duplicar exige permiso para crear el producto y los componentes que se copian. Los archivos privados se sirven mediante vistas autorizadas, con tipos permitidos y encabezados de protección; el almacén de datos y los respaldos nunca se publican como directorio estático.
 
+La restauración del historial exige permiso para consultar el historial y para modificar el objeto; las variaciones, adicionales e imágenes también exigen permiso sobre su producto. Los eventos de seguridad quedan reservados al propietario, incluso frente a otros superusuarios del catálogo.
+
+Al consumir un segundo factor se vuelve a verificar la cuenta, su contraseña, la caducidad y la versión de sesión dentro de la transacción. Los flujos bloquean primero el estado de seguridad y después la cuenta para coordinar los cambios concurrentes. Una cuenta revocada o una contraseña cambiada durante la solicitud no debe completar el acceso ni regenerar códigos de recuperación.
+
+## Finanzas
+
+Los permisos financieros son independientes de los permisos del catálogo y se comprueban por empresa en cada solicitud, incluidos los adjuntos, las exportaciones y los enlaces directos. Solo el propietario administra las delegaciones. Una revocación o una reducción de permisos debe aplicarse también a sesiones ya iniciadas. Las pruebas cubren usuarios anónimos, cuentas sin acceso financiero, empresas ajenas y solicitudes POST sin CSRF.
+
+Los importes confirmados y sus precios históricos se conservan. Vincular un mensaje a un borrador exige que su grupo de origen coincida con el medio de pago de la cuenta; editar o confirmar ese borrador vuelve a comprobarlo. Las operaciones relacionadas bloquean empresa, movimiento y mensaje en un orden consistente para evitar conflictos concurrentes.
+
 ## Alojamiento
 
 `DEBUG` debe estar desactivado en producción. El dominio, cookies seguras, CSRF y RP de passkeys deben corresponder a la dirección pública definitiva. `TRUST_REVERSE_PROXY` solo se habilita detrás de un proxy controlado que reemplace el encabezado de IP configurado; una plataforma distinta de Caddy requiere verificar sus encabezados antes de reutilizar esa opción.

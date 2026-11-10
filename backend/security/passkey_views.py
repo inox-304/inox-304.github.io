@@ -175,7 +175,7 @@ def register_options(request):
         data = payload(request)
         with transaction.atomic():
             state = SecurityState.objects.select_for_update().get(user=request.user)
-            user = get_user_model().objects.get(pk=request.user.pk)
+            user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
             if not context_valid(request, user, state, "register") or not user.check_password(data.get("password", "")):
                 return error("Confirma tu contraseña para vincular este dispositivo.", 403)
             authorization = None
@@ -215,7 +215,7 @@ def register_verify(request):
         data = payload(request)
         with transaction.atomic():
             state = SecurityState.objects.select_for_update().get(user=request.user)
-            user = get_user_model().objects.get(pk=request.user.pk)
+            user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
             item = consume_challenge(request, user, state, data, "register", config)
             if item is None:
                 return error()
@@ -273,7 +273,7 @@ def login_options(request):
         return error(status=429)
     with transaction.atomic():
         state = SecurityState.objects.select_for_update().get(user=user)
-        user = get_user_model().objects.get(pk=user.pk)
+        user = get_user_model().objects.select_for_update().get(pk=user.pk)
         if not context_valid(request, user, state, "login"):
             return error(status=403)
         devices = list(active_devices(user))
@@ -304,7 +304,7 @@ def login_verify(request):
         data = payload(request)
         with transaction.atomic():
             state = SecurityState.objects.select_for_update().get(user=user)
-            user = get_user_model().objects.get(pk=user.pk)
+            user = get_user_model().objects.select_for_update().get(pk=user.pk)
             item = consume_challenge(request, user, state, data, "login", config)
             if item is None:
                 return error()

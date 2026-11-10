@@ -87,15 +87,20 @@ def start_pending(request, user, mode):
     request.session.set_expiry(seconds("SECURITY_PENDING_SECONDS", 300))
 
 
-def pending_user(request, mode=None):
+def pending_user(request, mode=None, *, lock=False):
     pending = request.session.get(PENDING_KEY)
     if not isinstance(pending, dict):
         return None
     if pending.get("expires", 0) <= time.time() or (mode and pending.get("mode") != mode):
         request.session.flush()
         return None
-    user = get_user_model().objects.filter(pk=pending.get("user_id"), is_active=True, is_staff=True).first()
-    if user is None or not constant_time_compare(pending.get("auth_hash", ""), user.get_session_auth_hash()) or pending.get("version") != state_for(user).session_version:
+    users = get_user_model().objects.filter(pk=pending.get("user_id"), is_active=True, is_staff=True)
+    # After locking SecurityState, token redemption must re-read and lock the
+    # account too: the password or active flag may change while a request waits.
+    user = (users.select_for_update() if lock else users).first()
+    if (user is None or pending.get("expires", 0) <= time.time()
+            or not constant_time_compare(pending.get("auth_hash", ""), user.get_session_auth_hash())
+            or pending.get("version") != state_for(user).session_version):
         request.session.flush()
         return None
     return user

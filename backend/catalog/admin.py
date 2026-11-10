@@ -464,11 +464,21 @@ class AuditLogAdmin(admin.ModelAdmin):
         return [path("<int:log_id>/restore/", self.admin_site.admin_view(self.restore_view), name="catalog_audit_restore")] + super().get_urls()
 
     def restore_view(self, request, log_id):
+        # A guessed history URL must not reveal previous private values or grant
+        # a second editing route to accounts that cannot consult the history.
+        if not self.has_view_permission(request):
+            raise PermissionDenied
         log = get_object_or_404(AuditLog, pk=log_id)
         model = next((model for model in TRACKED_MODELS if model._meta.label_lower == log.entity), None)
         if not model or model is MediaAsset or not request.user.has_perm(f"catalog.change_{model._meta.model_name}") or not log.before:
             raise PermissionDenied
         obj = get_object_or_404(model, pk=log.object_id)
+        if model in (ProductVariant, ProductAdditional, ProductImage):
+            # These records are edited through the product's inlines. Restoring
+            # them must respect the parent permission just like the editor does.
+            product_admin = self.admin_site._registry[Product]
+            if not product_admin.has_change_permission(request, obj.product):
+                raise PermissionDenied
         if request.method == "POST":
             try:
                 with transaction.atomic(), audit_context(request.user, "restore"):

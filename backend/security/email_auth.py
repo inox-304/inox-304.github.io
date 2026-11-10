@@ -150,7 +150,7 @@ def issue_email_challenge(request, user, purpose):
     permanently_rejected = False
     with transaction.atomic():
         state = SecurityState.objects.select_for_update().get(user=user)
-        user = get_user_model().objects.get(pk=user.pk)
+        user = get_user_model().objects.select_for_update().get(pk=user.pk)
         if not valid_context(request, user, state, purpose):
             raise InvalidEmailFlow()
         try:
@@ -230,7 +230,7 @@ def verify_email_challenge(request, user, challenge_id, token, purpose):
         return None
     with transaction.atomic():
         state = SecurityState.objects.select_for_update().get(user=user)
-        user = get_user_model().objects.get(pk=user.pk)
+        user = get_user_model().objects.select_for_update().get(pk=user.pk)
         if not valid_context(request, user, state, purpose):
             return None
         device = EmailDevice.objects.select_for_update().filter(user=user).first()

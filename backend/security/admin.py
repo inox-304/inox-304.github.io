@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from .models import SecurityEvent
+from .passkeys import is_owner
 
 # Account authorization uses the owner-only accounts screen. Generic auth/MFA
 # editors remain disabled: they could bypass owner, role and enrollment checks.
@@ -29,4 +30,4 @@ class SecurityEventAdmin(admin.ModelAdmin):
         return False
 
     def has_view_permission(self, request, obj=None):
-        return request.user.is_superuser
+        return is_owner(request.user)

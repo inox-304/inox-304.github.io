@@ -6,11 +6,12 @@ from urllib.parse import quote
 
 import django_otp
 import qrcode
-from django.contrib.auth import authenticate, logout
+from django.contrib.auth import authenticate, get_user_model, logout
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
@@ -120,8 +121,10 @@ def otp_view(request):
         if form.is_valid():
             with transaction.atomic():
                 state = SecurityState.objects.select_for_update().get(user=user)
-                # A reset in another request invalidates this pending login too.
-                if request.session[PENDING_KEY]["version"] != state.session_version:
+                user = pending_user(request, mode, lock=True)
+                # Revalidate after waiting for locks, before consuming a token
+                # or creating a session. A pre-lock user object can be stale.
+                if user is None or request.session[PENDING_KEY]["version"] != state.session_version:
                     request.session.flush()
                     return redirect("security:login")
                 device = verify_device(user, form.cleaned_data["method"], form.cleaned_data["token"])
@@ -171,6 +174,9 @@ def setup_view(request):
         if form.is_valid():
             with transaction.atomic():
                 state = SecurityState.objects.select_for_update().get(user=user)
+                user = pending_user(request, "setup", lock=True)
+                if user is None:
+                    return redirect("security:login")
                 permission = EnrollmentPermission.objects.select_for_update().filter(user=user, used_at__isnull=True, expires_at__gt=timezone.now()).first()
                 device = TOTPDevice.objects.select_for_update().filter(pk=device.pk, user=user, confirmed=False).first()
                 if permission is None or device is None or state.session_version != request.session[PENDING_KEY]["version"] or TOTPDevice.objects.filter(user=user, confirmed=True).exists():
@@ -233,10 +239,14 @@ def regenerate_codes(request):
     if form.is_valid():
         with transaction.atomic():
             state = SecurityState.objects.select_for_update().get(user=request.user)
-            if request.session.get(VERSION) != state.session_version:
+            user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            if (not user.is_active or not user.is_staff or state.mfa_method != "totp"
+                    or not is_admin_authenticated(request)
+                    or request.session.get(VERSION) != state.session_version
+                    or not constant_time_compare(request.session.get("_auth_user_hash", ""), user.get_session_auth_hash())):
                 logout(request)
                 return redirect("security:login")
-            device = verify_device(request.user, "totp", form.cleaned_data["token"])
+            device = verify_device(user, "totp", form.cleaned_data["token"])
             if device:
                 version = revoke_sessions(request.user)
                 _, codes = generate_recovery_codes(request.user)

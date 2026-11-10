@@ -209,6 +209,37 @@ class InboxReviewTests(TestCase):
         self.receipt.refresh_from_db()
         self.assertIsNone(self.receipt.movement_id)
 
+    def test_linked_receipt_method_cannot_be_changed_by_later_draft_edit(self):
+        from finance.models import Account, CompanyAccess
+        from finance.services import update_draft
+
+        CompanyAccess.objects.create(company=self.company, user=self.other, role="record")
+        cash = Account.objects.create(company=self.company, code="CASH", name="Efectivo", method="cash")
+        link_receipt(self.receipt.pk, self.movement, actor=self.owner)
+        with self.assertRaisesMessage(ValidationError, "grupo de origen"):
+            update_draft(self.movement.pk, {"account": cash}, self.other, 1)
+        self.movement.refresh_from_db()
+        self.assertEqual(self.movement.account_id, self.account.pk)
+        self.assertEqual(self.movement.version, 1)
+        self.assertEqual(self.movement.audit_entries.count(), 1)
+        # Other legitimate corrections remain possible without relinking evidence.
+        updated = update_draft(self.movement.pk, {"description": "Descripción corregida"}, self.other, 1)
+        self.assertEqual(updated.description, "Descripción corregida")
+
+    def test_confirmation_rechecks_existing_receipt_method(self):
+        from finance.services import post_movement
+
+        # Simulate an inconsistent older draft/import; confirmation must fail closed.
+        self.receipt.method = "cash"
+        self.receipt.movement = self.movement
+        self.receipt.status = "linked"
+        self.receipt.save()
+        with self.assertRaisesMessage(ValidationError, "grupo de origen"):
+            post_movement(self.movement.pk, self.owner, 1)
+        self.movement.refresh_from_db()
+        self.assertEqual(self.movement.status, "draft")
+        self.assertIsNone(self.movement.posted_at)
+
     def test_ignore_preserves_original_and_demands_reason(self):
         with self.assertRaises(ValidationError):
             ignore_receipt(self.receipt.pk, "", actor=self.owner)

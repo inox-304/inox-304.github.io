@@ -68,6 +68,47 @@ class CatalogActionPermissionTests(TestCase):
     def test_reader_cannot_publish_through_forged_action_post(self):
         self.assert_forged_action_preserves_catalog("publish_products")
 
+    def test_restore_requires_history_permission_before_disclosing_previous_values(self):
+        self.product.internal_notes = "PRIVATE-HISTORICAL-NOTE"
+        self.product.save()
+        self.product.internal_notes = "Current note"
+        self.product.save()
+        log = AuditLog.objects.filter(entity="catalog.product", object_id=str(self.product.pk)).latest("pk")
+        url = reverse("admin:catalog_audit_restore", args=(log.pk,))
+        self.set_permissions("view_product", "change_product")
+        before = AuditLog.objects.count()
+        for method in (self.client.get, self.client.post):
+            response = method(url)
+            self.assertEqual(response.status_code, 403)
+            self.assertNotContains(response, "PRIVATE-HISTORICAL-NOTE", status_code=403)
+        self.assertEqual(self.client.get(reverse("admin:catalog_audit_restore", args=(999999,))).status_code, 403)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.internal_notes, "Current note")
+        self.assertEqual(AuditLog.objects.count(), before)
+        self.set_permissions("view_product", "change_product", "view_auditlog")
+        self.assertContains(self.client.get(url), "PRIVATE-HISTORICAL-NOTE")
+        self.assertEqual(self.client.post(url).status_code, 302)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.internal_notes, "PRIVATE-HISTORICAL-NOTE")
+
+    def test_restoring_an_inline_requires_parent_edit_permission(self):
+        variant = ProductVariant.objects.create(product=self.product, name="Original")
+        variant.name = "Current"
+        variant.save()
+        log = AuditLog.objects.filter(entity="catalog.productvariant", object_id=str(variant.pk)).latest("pk")
+        url = reverse("admin:catalog_audit_restore", args=(log.pk,))
+        self.set_permissions("view_auditlog", "change_productvariant")
+        before = AuditLog.objects.count()
+        for method in (self.client.get, self.client.post):
+            self.assertEqual(method(url).status_code, 403)
+        variant.refresh_from_db()
+        self.assertEqual(variant.name, "Current")
+        self.assertEqual(AuditLog.objects.count(), before)
+        self.set_permissions("view_auditlog", "change_productvariant", "change_product")
+        self.assertEqual(self.client.post(url).status_code, 302)
+        variant.refresh_from_db()
+        self.assertEqual(variant.name, "Original")
+
     def test_reader_cannot_hide_through_forged_action_post(self):
         self.product.is_published = True
         self.product.save()

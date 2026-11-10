@@ -16,16 +16,21 @@ def require_inbox_owner(actor):
 
 @transaction.atomic
 def link_receipt(pk, movement, *, actor):
-    from finance.models import Movement
+    from finance.models import Company, Movement
 
     require_inbox_owner(actor)
+    reference = Movement.objects.only("company_id").get(pk=movement.pk)
+    # Match financial edits: company first, movement second, receipt last.
+    # A joined SELECT FOR UPDATE can lock movement before its company and
+    # deadlock with an edit already holding that company lock.
+    company = Company.objects.select_for_update().get(pk=reference.company_id)
+    movement = Movement.objects.select_for_update().get(pk=movement.pk)
     receipt = IntakeMessage.objects.select_for_update().get(pk=pk)
-    movement = Movement.objects.select_for_update().select_related("account", "company").get(pk=movement.pk)
     if receipt.status not in (IntakeMessage.Status.PENDING, IntakeMessage.Status.NEEDS_REVIEW):
         raise ValidationError("Este mensaje ya fue revisado; no se puede reutilizar.")
     if movement.status != "draft":
         raise ValidationError("Vincula el mensaje a un borrador antes de confirmarlo.")
-    if not movement.company.active:
+    if not company.active:
         raise ValidationError("La empresa del movimiento está inactiva.")
     if movement.account.method != receipt.method:
         raise ValidationError("El medio de la cuenta no coincide con el grupo de origen. Revisa el movimiento.")

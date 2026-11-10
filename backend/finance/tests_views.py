@@ -5,6 +5,7 @@ import tempfile
 import time
 import uuid
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -143,9 +144,75 @@ class FinanceWorkspaceTests(TestCase):
 
     def test_post_only_and_csrf_required(self):
         client = self.signin(self.owner, Client(enforce_csrf_checks=True))
-        for name, args in (("prepare_companies", []), ("post", [self.movement.pk]), ("void", [self.movement.pk]), ("upload", [self.movement.pk]), ("member_save", [])):
+        access = CompanyAccess.objects.get(user=self.viewer, company=self.company)
+        for name, args in (("prepare_companies", []), ("post", [self.movement.pk]), ("void", [self.movement.pk]), ("upload", [self.movement.pk]), ("member_save", []),
+                           ("member_remove", [access.pk]), ("period_action", []), ("receipt_action", [1]), ("backup", [])):
             self.assertEqual(client.get(reverse(f"finance:{name}", args=args)).status_code, 405)
             self.assertEqual(client.post(reverse(f"finance:{name}", args=args), {}).status_code, 403)
+        for name, args in (("create", []), ("edit", [self.movement.pk]), ("setup_create", ["companies"]), ("setup_edit", ["companies", self.company.pk])):
+            self.assertEqual(client.post(reverse(f"finance:{name}", args=args), {}).status_code, 403)
+
+    def test_grant_revocation_is_effective_in_same_session_and_preserves_other_company(self):
+        CompanyAccess.objects.create(user=self.reviewer, company=self.other, role="view")
+        self.signin(self.reviewer)
+        self.assertEqual(self.client.get(reverse("finance:detail", args=[self.movement.pk])).status_code, 200)
+        CompanyAccess.objects.filter(user=self.reviewer, company=self.company).delete()
+        for name in ("detail", "edit"):
+            self.assertEqual(self.client.get(reverse(f"finance:{name}", args=[self.movement.pk])).status_code, 404)
+        for name in ("edit", "post", "void", "upload"):
+            self.assertEqual(self.client.post(reverse(f"finance:{name}", args=[self.movement.pk]), self.payload()).status_code, 404)
+        self.assertEqual(self.client.post(reverse("finance:create") + f"?company={self.company.pk}", self.payload()).status_code, 404)
+        self.assertEqual(self.client.get(reverse("finance:export_csv"), {"company": self.company.pk}).status_code, 404)
+        self.assertNotContains(self.client.get(reverse("finance:dashboard")), self.company.name)
+        export = self.client.get(reverse("finance:export_csv"))
+        self.assertNotIn(self.company.name, export.content.decode("utf-8-sig"))
+        self.assertIn(self.other.name, export.content.decode("utf-8-sig"))
+        self.assertEqual(self.client.get(reverse("finance:detail", args=[self.foreign_movement.pk])).status_code, 200)
+        self.movement.refresh_from_db()
+        self.assertEqual((self.movement.status, self.movement.version), ("draft", 1))
+
+    def test_role_downgrade_revokes_mutations_without_logging_out(self):
+        self.signin(self.reviewer)
+        CompanyAccess.objects.filter(user=self.reviewer, company=self.company).update(role="view")
+        self.assertEqual(self.client.get(reverse("finance:detail", args=[self.movement.pk])).status_code, 200)
+        for name in ("edit", "post", "void", "upload"):
+            self.assertEqual(self.client.post(reverse(f"finance:{name}", args=[self.movement.pk]), self.payload()).status_code, 403)
+        self.assertEqual(self.client.post(reverse("finance:create") + f"?company={self.company.pk}", self.payload()).status_code, 403)
+        self.movement.refresh_from_db()
+        self.assertEqual((self.movement.status, self.movement.version), ("draft", 1))
+
+    def test_company_grant_to_another_superuser_never_grants_owner_operations(self):
+        from finance_intake.models import IntakeMessage
+        CompanyAccess.objects.create(user=self.outsider, company=self.company, role="review")
+        receipt = IntakeMessage.objects.create(provider_message_id="owner-only-qa", fingerprint="a" * 64,
+            group_id="qa-cash", method="cash", sender_id="qa", sender_id_kind="bsuid", message_type="text", text="Owner-only original")
+        self.signin(self.outsider)
+        self.assertEqual(self.client.get(reverse("finance:dashboard")).status_code, 200)
+        access = CompanyAccess.objects.get(user=self.viewer, company=self.company)
+        with patch("finance.backup_views.build_backup") as backup:
+            for name, args, data in (("backup", [], {}), ("prepare_companies", [], {}), ("member_save", [], {"user": self.outsider.pk, "role": "review"}),
+                    ("member_remove", [access.pk], {}), ("period_action", [], {"action": "reopen", "year": 2026, "month": 1, "reason": "Not owner"}),
+                    ("setup_edit", ["companies", self.company.pk], {"name": "Changed"}),
+                    ("receipt_action", [receipt.pk], {"action": "link", "movement": self.movement.pk}),
+                    ("receipt_action", [receipt.pk], {"action": "ignore", "reason": "Not authorized"})):
+                self.assertEqual(self.client.post(reverse(f"finance:{name}", args=args), data).status_code, 403)
+            backup.assert_not_called()
+        self.assertNotContains(self.client.get(reverse("finance:connections"), {"received_status": "all"}), receipt.text)
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.status, "pending")
+        self.assertIsNone(receipt.movement_id)
+        self.assertTrue(CompanyAccess.objects.filter(pk=access.pk).exists())
+
+    def test_foreign_document_is_denied_before_storage_and_has_no_public_route(self):
+        with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory):
+            content = io.BytesIO()
+            Image.new("RGB", (2, 2), "white").save(content, "PNG")
+            attachment = attach_document(self.foreign_movement.pk, SimpleUploadedFile("private.png", content.getvalue()), self.owner)
+            self.signin(self.reviewer)
+            with patch("finance.views.open_private_file") as storage:
+                self.assertEqual(self.client.get(reverse("finance:download", args=[attachment.pk])).status_code, 404)
+                storage.assert_not_called()
+            self.assertEqual(self.client.get("/media/" + attachment.file.name).status_code, 404)
 
     def test_prepare_companies_is_explicit_idempotent_and_names_editable(self):
         self.signin(self.owner)

@@ -58,6 +58,13 @@ def _current_objects(movement):
     movement.account = Account.objects.get(pk=movement.account_id)
     if not movement.account.active:
         raise ValidationError({"account": "La cuenta está inactiva."})
+    if movement.pk:
+        # Linking validates this once, but a recorder may edit the draft later.
+        # Recheck while holding the movement lock, also when confirming older drafts.
+        from finance_intake.models import IntakeMessage
+        receipt_method = IntakeMessage.objects.filter(movement_id=movement.pk).values_list("method", flat=True).first()
+        if receipt_method is not None and receipt_method != movement.account.method:
+            raise ValidationError({"account": "El medio de la cuenta no coincide con el grupo de origen del mensaje vinculado. Revisa la cuenta antes de guardar o confirmar."})
     if movement.destination_account_id:
         movement.destination_account = Account.objects.get(pk=movement.destination_account_id)
         if not movement.destination_account.active:
