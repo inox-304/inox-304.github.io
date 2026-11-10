@@ -1,0 +1,18 @@
+INOX 304 - Self-hosted receipt OCR
+
+Tesseract.js 7.0.0 and Tesseract.js-core 7.0.0
+https://github.com/naptha/tesseract.js
+https://github.com/naptha/tesseract.js-core
+Apache License 2.0; full license texts are in the licenses directory.
+Additional bundled notices are retained beside each minified script.
+
+Spanish and English traineddata from @tesseract.js-data/spa 1.0.0 and
+@tesseract.js-data/eng 1.0.0, using the 4.0.0_best_int data.
+https://github.com/naptha/tessdata
+The upstream traineddata repository is licensed under Apache License 2.0.
+The npm language package wrappers declare MIT; their original package metadata
+is retained in licenses/spa-package.json and licenses/eng-package.json.
+
+No receipt, credential or financial data is included in these public assets.
+The application supplies explicit same-origin worker, core and language paths
+instead of the library's default external CDN paths.

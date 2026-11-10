@@ -11,6 +11,7 @@ backend/.env
 backend/data
 backend/.venv
 backend/.portable-python
+backend/static/inox/ocr-vendor
 .work
 HISTORICO
 CONTEXTO

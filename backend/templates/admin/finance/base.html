@@ -10,6 +10,7 @@
   <nav class="fin-nav" aria-label="Finanzas">
     <a href="{% url 'finance:dashboard' %}"{% if section == 'dashboard' %} aria-current="page"{% endif %}>Resumen y movimientos</a>
     <a href="{% url 'finance:dashboard' %}?status=draft"{% if section == 'review' %} aria-current="page"{% endif %}>Por revisar{% if pending_count %} <span>{{ pending_count }}</span>{% endif %}</a>
+    {% if can_record %}<a href="{% url 'finance:receipt_create' %}"{% if section == 'receipt' %} aria-current="page"{% endif %}>Leer comprobante</a>{% endif %}
     <a href="{% url 'finance:connections' %}"{% if section == 'connections' %} aria-current="page"{% endif %}>Recepción y conexiones</a>
     {% if owner %}<a href="{% url 'finance:settings' %}"{% if section == 'settings' %} aria-current="page"{% endif %}>Configuración</a>{% endif %}
   </nav>

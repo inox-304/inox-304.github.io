@@ -32,6 +32,11 @@ jobs:
           version: latest
           python-version: '3.13'
       - run: npm ci
+      - name: Prepare and verify self-hosted receipt OCR
+        run: |
+          npm run finance:assets
+          npm run finance:assets:check
+          node --test scripts/test-receipt-parser.mjs
       - run: npm run build:server
       - name: Frontend integration and media budgets
         run: |

@@ -1,0 +1,58 @@
+{% extends "admin/finance/base.html" %}
+{% load static %}
+{% block finance_breadcrumb %} / Leer comprobante{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'inox/receipt-ocr.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script type="module" src="{% static 'inox/receipt-ocr.js' %}"></script>{% endblock %}
+{% block finance_content %}
+<div data-receipt-reader data-parser-url="{% static 'inox/receipt-parser.js' %}" data-library-url="{% static 'inox/ocr-vendor/v7/tesseract.min.js' %}" data-worker-url="{% static 'inox/ocr-vendor/v7/worker.min.js' %}" data-core-url="{% static 'inox/ocr-vendor/v7/core/tesseract-core-lstm.wasm.js' %}" data-language-url="{% static 'inox/ocr-vendor/v7/lang/spa.traineddata.gz' %}">
+  <header class="fin-heading"><div><span class="fin-eyebrow">DEL COMPROBANTE AL REGISTRO</span><h1>Una foto. Todo en orden.</h1><p>El lector propone los datos. Tú los revisas antes de guardar.</p></div><a class="fin-button" href="{% url 'finance:create' %}?company={{ company.pk }}">Registro manual →</a></header>
+  <ol class="receipt-steps" aria-label="Proceso de registro"><li><span>01</span> Elige la empresa</li><li><span>02</span> Añade tu foto</li><li><span>03</span> Revisa y guarda</li></ol>
+  <section class="receipt-company fin-panel">
+    <form method="get" data-receipt-company-form><label for="receipt-company">¿A qué empresa pertenece?</label><div><select id="receipt-company" name="company" data-receipt-company>{% for record_company in record_companies %}<option value="{{ record_company.pk }}"{% if record_company.pk == company.pk %} selected{% endif %}>{{ record_company.name }}</option>{% endfor %}</select><noscript><button class="fin-button" type="submit">Elegir empresa</button></noscript></div></form>
+    <p><span class="receipt-private-dot" aria-hidden="true"></span> Lectura gratuita en tu dispositivo.<br><small>La foto se envía al panel privado cuando guardas el borrador.</small></p>
+  </section>
+  {% if not has_accounts %}<section class="fin-banner"><h2>Primero prepara una cuenta o caja.</h2><p>Esta empresa necesita una cuenta activa para registrar dónde entra o sale el dinero.</p>{% if owner %}<a class="fin-button" href="{% url 'finance:settings' %}?tab=accounts">Configurar cuentas →</a>{% else %}<p>Pide al propietario que prepare las cuentas de esta empresa.</p>{% endif %}</section>{% endif %}
+  {% if form.errors %}<div class="fin-error" role="alert"><strong>Revisa los campos señalados.</strong><p>Conservamos los datos que escribiste. Vuelve a seleccionar la foto antes de guardar; el navegador no conserva archivos después de un envío.</p>{{ form.non_field_errors }}</div>{% endif %}
+  <form method="post" enctype="multipart/form-data" data-receipt-form>
+    {% csrf_token %}{{ form.version }}{{ form.idempotency_key }}
+    <div class="receipt-workspace">
+      <section class="fin-panel receipt-document" aria-labelledby="receipt-photo-title">
+        <div class="fin-panel-heading"><div><span class="fin-eyebrow">COMPROBANTE ORIGINAL</span><h2 id="receipt-photo-title">Tu foto, a la vista</h2></div><span class="fin-count">JPG · PNG</span></div>
+        <div class="receipt-drop" data-receipt-drop>
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M15 3H5v18h14V7zM14 3v5h5M8 14l4-4 4 4M12 10v8"/></svg>
+          <label for="{{ form.document.id_for_label }}">Elige una foto o arrástrala aquí</label>
+          <p>Un comprobante por registro · Hasta 10 MB</p>
+          {{ form.document }}
+        </div>
+        {% for error in form.document.errors %}<p class="fin-field-error" role="alert">{{ error }}</p>{% endfor %}
+        <div class="receipt-preview" data-receipt-preview hidden><img data-receipt-image alt="Comprobante seleccionado para revisión"><div class="receipt-photo-actions"><button type="button" class="fin-button fin-button-small" data-receipt-rotate>Girar 90° ↻</button><button type="button" class="fin-button fin-button-small" data-receipt-zoom>Ampliar ↗</button><button type="button" class="fin-button fin-button-small" data-receipt-clear>Quitar foto</button></div><p class="fin-note" data-receipt-filename></p></div>
+        <div class="receipt-reader-actions"><button class="fin-button fin-button-primary" type="button" data-receipt-read disabled>Leer foto</button><button class="fin-button" type="button" data-receipt-cancel hidden>Cancelar lectura</button><a class="fin-button" href="#receipt-review-title">Revisar datos ↓</a></div>
+        <div class="receipt-status" role="status" aria-live="polite" aria-atomic="true" data-receipt-status>Selecciona una foto nítida, completa y de frente. También puedes completar los campos a mano.</div>
+        <progress data-receipt-progress max="100" value="0" aria-label="Progreso de lectura" hidden></progress>
+        <noscript><p class="fin-risk">Activa JavaScript para leer la foto automáticamente. Puedes adjuntarla y completar todos los campos manualmente.</p></noscript>
+        <ul class="receipt-warnings" data-receipt-warnings hidden></ul>
+        <details class="receipt-text" data-receipt-text-section hidden><summary>Ver texto reconocido</summary><p class="fin-note">Solo se muestra aquí como ayuda. No se guarda con el movimiento.</p><pre data-receipt-text></pre></details>
+        <p class="fin-note receipt-format-note">PDF o HEIC: usa una foto JPG/PNG para la lectura. Puedes adjuntar un PDF desde la ficha de un movimiento manual.</p>
+      </section>
+      <section class="fin-panel receipt-review" aria-labelledby="receipt-review-title">
+        <div class="fin-panel-heading"><div><span class="fin-eyebrow">REVISIÓN PERSONAL</span><h2 id="receipt-review-title">Los datos del movimiento</h2></div><span class="fin-badge" data-state="draft">Borrador</span></div>
+        <p class="receipt-review-note">Una factura no siempre es un pago. Registra el dinero que realmente se recibió o pagó; comprueba su fecha y si fue un abono parcial.</p>
+        <div class="fin-form-grid">
+          {% include 'admin/finance/_field.html' with field=form.kind %}
+          {% include 'admin/finance/_field.html' with field=form.occurred_on %}
+          {% include 'admin/finance/_field.html' with field=form.account %}
+          <div data-receipt-destination>{% include 'admin/finance/_field.html' with field=form.destination_account %}</div>
+          {% include 'admin/finance/_field.html' with field=form.amount %}
+          {% include 'admin/finance/_field.html' with field=form.currency %}
+          {% include 'admin/finance/_field.html' with field=form.category %}
+          {% include 'admin/finance/_field.html' with field=form.reference %}
+          <div class="fin-wide">{% include 'admin/finance/_field.html' with field=form.description %}</div>
+        </div>
+        <div class="receipt-review-check">{% include 'admin/finance/_field.html' with field=form.reviewed %}</div>
+        <div class="receipt-save"><button class="fin-button fin-button-primary" type="submit" data-receipt-save{% if not has_accounts %} disabled{% endif %}>Guardar para revisión →</button><p>No suma a los resultados todavía. Después podrás revisar el borrador y confirmar el movimiento.</p></div>
+      </section>
+    </div>
+  </form>
+  <dialog class="receipt-zoom" data-receipt-dialog aria-label="Comprobante ampliado"><button class="fin-button" type="button" data-receipt-close>Cerrar ×</button><img data-receipt-large-image alt="Vista ampliada del comprobante"></dialog>
+</div>
+{% endblock %}

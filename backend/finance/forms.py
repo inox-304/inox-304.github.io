@@ -81,6 +81,37 @@ class MovementForm(forms.Form):
             self.fields["version"].required = True
 
 
+class ReceiptReviewForm(MovementForm):
+    """OCR is advisory; every submitted amount remains an explicitly reviewed draft."""
+    document = forms.FileField(
+        label="Foto del comprobante",
+        widget=forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png", "data-receipt-file": ""}),
+        help_text="JPG o PNG, hasta 10 MB. El original se guarda de forma privada al crear el borrador.",
+    )
+    reviewed = forms.BooleanField(
+        label="Revisé la empresa, la fecha, la cuenta y el importe, y confirmé que hubo un cobro o pago real.",
+        error_messages={"required": "Revisa los datos y confirma que el dinero se cobró o pagó antes de guardar el borrador."},
+    )
+
+    def __init__(self, *args, company, **kwargs):
+        super().__init__(*args, company=company, **kwargs)
+        self.fields["kind"].choices = [("", "Selecciona ingreso, egreso o traslado"), *Movement.Kind.choices]
+        self.fields["currency"].choices = [("", "Confirma la moneda"), *CURRENCIES]
+        self.initial.pop("currency", None)
+        self.fields["occurred_on"].initial = None
+        self.initial.pop("occurred_on", None)
+        self.fields["occurred_on"].help_text = "Confirma la fecha del movimiento de dinero; puede diferir de la fecha de la factura."
+        self.fields["amount"].help_text = "Revisa cuánto se pagó o cobró realmente. El total de una factura puede incluir importes pendientes."
+
+    def clean_document(self):
+        document = self.cleaned_data["document"]
+        # Validation of the actual image bytes is repeated by the write service.
+        from pathlib import Path
+        if Path(document.name).suffix.lower() not in (".jpg", ".jpeg", ".png") or not 0 < document.size <= 10 * 1024 * 1024:
+            raise forms.ValidationError("Selecciona una foto JPG o PNG de hasta 10 MB.")
+        return document
+
+
 class LineForm(forms.Form):
     item = forms.ModelChoiceField(label="Ítem guardado (opcional)", queryset=Item.objects.none(), required=False)
     item_code = forms.CharField(label="Código del ítem", max_length=40, required=False)

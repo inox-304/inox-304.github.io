@@ -6,7 +6,7 @@ from django.http import HttpResponse
 
 MAX_REQUEST_BYTES = 11 * 1024 * 1024
 MAX_FILE_BYTES = 10 * 1024 * 1024
-UPLOAD_PATH = re.compile(r"^/admin/finanzas/[0-9]+/comprobante/$")
+UPLOAD_PATH = re.compile(r"^/admin/finanzas/(?:[0-9]+/comprobante|comprobante/nuevo)/$")
 
 
 def limit_response(status):

@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from catalog.storage import open_private_file
-from .forms import AccountForm, AttachmentForm, CategoryForm, CompanyForm, ItemForm, LineFormSet, MemberForm, MovementForm, PeriodForm
+from .forms import AccountForm, AttachmentForm, CategoryForm, CompanyForm, ItemForm, LineFormSet, MemberForm, MovementForm, PeriodForm, ReceiptReviewForm
 from .metrics import movement_metrics
 from .models import Account, Attachment, Audit, Category, ClosedPeriod, Company, CompanyAccess, CURRENCIES, Item, Movement
 from .permissions import accessible_companies, can_access, can_company, is_owner, require_company
@@ -186,6 +186,35 @@ def create(request):
                 messages.success(request, f"{movement.code} guardado para revisión. Todavía no suma en los resultados.")
                 return redirect("finance:detail", pk=movement.pk)
     return movement_form_response(request, company, form, lines)
+
+
+@require_http_methods(["GET", "POST"])
+def receipt_create(request):
+    require_access(request)
+    record_companies = [company for company in accessible_companies(request.user).filter(active=True) if can_company(request.user, company, "record")]
+    company = selected_company(request, active=True) if request.GET.get("company") else next(iter(record_companies), None)
+    if company is None:
+        if not is_owner(request.user) and accessible_companies(request.user).exists():
+            raise PermissionDenied("Tu acceso actual permite consultar, pero no crear movimientos.")
+        messages.info(request, "Primero crea una empresa y su cuenta o caja en Configuración.")
+        return redirect("finance:settings" if is_owner(request.user) else "finance:dashboard")
+    require_company(request.user, company, "record")
+    form = ReceiptReviewForm(request.POST if request.method == "POST" else None, request.FILES if request.method == "POST" else None, company=company)
+    if request.method == "POST" and form.is_valid():
+        data = dict(form.cleaned_data)
+        key, document, reviewed = data.pop("idempotency_key"), data.pop("document"), data.pop("reviewed")
+        data.pop("version", None)
+        data["company"] = company
+        try:
+            movement = services.create_receipt_draft(data, document, actor=request.user, idempotency_key=key, reviewed=reviewed)
+        except ValidationError as error:
+            put_errors(form, error)
+        else:
+            messages.success(request, f"{movement.code}: foto y borrador guardados. Revisa la ficha antes de confirmar; todavía no suma en los resultados.")
+            return redirect("finance:detail", pk=movement.pk)
+    return render(request, "admin/finance/receipt_form.html", base_context(request, title="Registrar desde una foto", section="receipt",
+        company=company, form=form, record_companies=record_companies,
+        has_accounts=Account.objects.filter(company=company, active=True).exists()))
 
 
 @require_http_methods(["GET", "POST"])

@@ -148,7 +148,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 WHITENOISE_MAX_AGE = 0 if DEBUG else 3600
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    'staticfiles': {'BACKEND': 'config.static_storage.InoxStaticFilesStorage'
                    if ENVIRONMENT == 'production' else 'django.contrib.staticfiles.storage.StaticFilesStorage'},
 }
 INOX_MEDIA_STORAGE = os.getenv('INOX_MEDIA_STORAGE', 'file')

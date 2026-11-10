@@ -2,6 +2,8 @@ FROM node:24-bookworm-slim AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+COPY scripts/prepare-receipt-ocr.mjs scripts/receipt-ocr-NOTICE.txt ./scripts/
+RUN npm run finance:assets
 COPY astro.config.mjs tsconfig.json ./
 COPY src ./src
 COPY public ./public
@@ -14,6 +16,7 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONDONTWRITEBYTECODE=1 PYTHONUNBU
 COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./backend/
 RUN uv sync --project backend --locked --no-dev
 COPY backend ./backend
+COPY --from=frontend /app/backend/static/inox/ocr-vendor ./backend/static/inox/ocr-vendor
 COPY deploy/start-web.py ./deploy/start-web.py
 COPY --from=frontend /app/dist-server ./dist-server
 COPY public/cms/plantillas ./public/cms/plantillas

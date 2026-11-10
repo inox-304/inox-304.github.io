@@ -6,6 +6,7 @@ app_name = "finance"
 urlpatterns = [
     path("", admin.site.admin_view(views.dashboard), name="dashboard"),
     path("nuevo/", admin.site.admin_view(views.create), name="create"),
+    path("comprobante/nuevo/", admin.site.admin_view(views.receipt_create), name="receipt_create"),
     path("exportar/", admin.site.admin_view(views.export_csv), name="export_csv"),
     path("respaldo/", admin.site.admin_view(backup_views.download_backup), name="backup"),
     path("configuracion/", admin.site.admin_view(views.settings_view), name="settings"),

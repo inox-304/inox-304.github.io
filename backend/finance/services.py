@@ -297,10 +297,10 @@ def reopen_period(company, year, month, actor, reason):
     return period
 
 
-def attach_document(movement_id, uploaded_file, actor):
-    """Private download-only documents, no OCR or code execution during upload."""
+def _prepare_document(uploaded_file, *, images_only=False):
+    """Bound and verify bytes independently of browser MIME and OCR claims."""
     max_size = 10 * 1024 * 1024
-    if not uploaded_file or uploaded_file.size > max_size:
+    if not uploaded_file or not 0 < uploaded_file.size <= max_size:
         raise ValidationError("Adjunta un PDF, JPG o PNG de hasta 10 MB.")
     raw = bytearray()
     for chunk in uploaded_file.chunks():
@@ -310,7 +310,9 @@ def attach_document(movement_id, uploaded_file, actor):
     raw = bytes(raw)
     name = Path(str(uploaded_file.name).replace("\\", "/")).name[:180]
     ext = Path(name).suffix.lower()
-    if ext == ".pdf" and raw.startswith(b"%PDF-") and b"%%EOF" in raw[-2048:]:
+    if images_only and ext not in (".jpg", ".jpeg", ".png"):
+        raise ValidationError({"document": "Para registrar desde una foto, usa un JPG o PNG de hasta 10 MB."})
+    if not images_only and ext == ".pdf" and raw.startswith(b"%PDF-") and b"%%EOF" in raw[-2048:]:
         mime = "application/pdf"
     elif ext in (".jpg", ".jpeg", ".png"):
         try:
@@ -320,6 +322,8 @@ def attach_document(movement_id, uploaded_file, actor):
                     expected = "PNG" if ext == ".png" else "JPEG"
                     if image.format != expected:
                         raise ValueError("Formato no coincide")
+                    if images_only and image.width * image.height > 24_000_000:
+                        raise ValueError("La imagen supera 24 megapíxeles")
                     image.verify()
             mime = "image/png" if ext == ".png" else "image/jpeg"
         except Exception as error:
@@ -327,6 +331,12 @@ def attach_document(movement_id, uploaded_file, actor):
     else:
         raise ValidationError("Solo se admiten PDF, JPG y PNG válidos; no archivos ejecutables ni enlaces.")
     digest = hashlib.sha256(raw).hexdigest()
+    return name, mime, raw, digest
+
+
+def attach_document(movement_id, uploaded_file, actor):
+    """Private download-only documents, no OCR or code execution during upload."""
+    name, mime, raw, digest = _prepare_document(uploaded_file)
     attachment = None
     try:
         with transaction.atomic():
@@ -349,6 +359,63 @@ def attach_document(movement_id, uploaded_file, actor):
             _audit(movement, actor, "document_added", f"Comprobante adjunto: {name}. Original conservado; SHA-256 {digest}.")
             return attachment
     except Exception:
+        if attachment and attachment.file and attachment.file.name:
+            attachment.file.storage.delete(attachment.file.name)
+        raise
+
+
+def create_receipt_draft(data, uploaded_file, actor, idempotency_key, *, reviewed=False):
+    """One reviewed photo produces at most one draft, with its private original.
+
+    OCR runs on the user's device. This service accepts reviewed fields, never an
+    OCR instruction, and does not confirm movements or update historical items.
+    The photo digest is bound to the submission fingerprint so a retry cannot
+    silently attach a different image to the same financial operation.
+    """
+    if reviewed is not True:
+        raise ValidationError({"reviewed": "Confirma que revisaste los datos y que hubo un cobro o pago real."})
+    values = _values(data)
+    company = values.get("company")
+    if company is None:
+        raise ValidationError({"company": "Selecciona una empresa."})
+    require_company(actor, company, "record")
+    try:
+        key = uuid.UUID(str(idempotency_key))
+    except (ValueError, AttributeError, TypeError):
+        raise ValidationError("Falta una referencia de envío válida; abre un formulario nuevo.")
+    name, mime, raw, digest = _prepare_document(uploaded_file, images_only=True)
+    values["source"] = Movement.Source.MANUAL
+    values["source_reference"] = f"receipt:{digest}"
+    attachment = None
+    try:
+        with transaction.atomic():
+            company = _lock_company(company)
+            require_company(actor, company, "record")
+            values["company"] = company
+            existing = Movement.objects.filter(idempotency_key=key).first()
+            if existing:
+                # create_draft rechecks actor, company and all submitted fields.
+                movement = create_draft(values, actor, idempotency_key=key)
+                if not movement.attachments.filter(sha256=digest).exists():
+                    raise ValidationError("Este envío no tiene su foto completa. Abre un formulario nuevo.")
+                return movement
+            duplicate = Attachment.objects.filter(movement__company=company, sha256=digest).exclude(movement__status=Movement.Status.VOID).select_related("movement").first()
+            if duplicate:
+                raise ValidationError({"document": f"Esta foto ya está en {duplicate.movement.code} de esta empresa. Revisa ese movimiento para no registrar el mismo comprobante dos veces."})
+            movement = create_draft(values, actor, idempotency_key=key)
+            try:
+                attachment = attach_document(movement.pk, ContentFile(raw, name=name), actor)
+            except (PermissionDenied, ValidationError):
+                raise
+            except Exception as error:
+                # Do not display storage endpoints or provider diagnostics on the
+                # form. The nested transaction has already rolled back its work.
+                raise ValidationError({"document": "No se pudo conservar la foto en el almacenamiento privado. El registro no se guardó; vuelve a elegir la foto e inténtalo de nuevo."}) from error
+            _audit(movement, actor, "receipt_reviewed", "Foto y campos revisados por la persona que registra. Borrador pendiente de confirmación; la lectura automática no confirma pagos.")
+            return movement
+    except Exception:
+        # File storage is not transactional. Only remove the file created by this
+        # attempt if the encompassing database transaction failed.
         if attachment and attachment.file and attachment.file.name:
             attachment.file.storage.delete(attachment.file.name)
         raise
