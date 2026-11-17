@@ -64,7 +64,10 @@ def _guard(request):
         if len(body) > MAX_BODY:
             raise RequestDataTooBig()
         data = json.loads(body)
-        if not isinstance(data, dict):
+        # Both public contracts contain only scalar values. Reject containers
+        # before UUID/string validation, independently of the JSON parser's
+        # platform-specific recursion limit.
+        if not isinstance(data, dict) or any(isinstance(value, (dict, list)) for value in data.values()):
             raise ValueError()
     except RequestDataTooBig:
         return None, _response(request, {"ok": False, "error": "Solicitud demasiado extensa."}, 413)

@@ -117,6 +117,19 @@ class PublicCaptureTests(TestCase):
         self.assertFalse(Activity.objects.exists())
         self.assertFalse(WebMetric.objects.exists())
 
+    def test_nested_identifier_and_json_recursion_fail_before_string_conversion(self):
+        for identifier in ([['synthetic']], {'nested': ['synthetic']}):
+            with self.subTest(identifier=identifier):
+                response = self.send(self.payload(submission_id=identifier))
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()['error'], 'Revisa los datos de tu solicitud.')
+        with patch('crm.public_views.json.loads', side_effect=RecursionError):
+            response = self.send(self.payload())
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Opportunity.objects.exists())
+        self.assertFalse(Activity.objects.exists())
+        self.assertFalse(WebMetric.objects.exists())
+
     def test_real_throttle_limits_repeated_intake_without_echoing_contact(self):
         for _ in range(5):
             self.assertEqual(self.send(self.payload()).status_code, 201)
