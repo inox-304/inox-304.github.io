@@ -12,7 +12,7 @@ El módulo está integrado en `/admin/finanzas/` y utiliza el inicio de sesión 
 - Exportación CSV y respaldo privado descargable por el propietario.
 - Recepción técnica de WhatsApp preparada y desactivada hasta completar su configuración y verificar entregas reales.
 
-No hay saldos iniciales inventados, movimientos de ejemplo ni datos financieros cargados automáticamente. El lector de fotos usa PaddleOCR en el navegador, con Tesseract como alternativa, y permite corregir los datos antes de guardar un borrador. No están implementados el procesamiento con OpenAI, el envío de preguntas por WhatsApp, el OCR automático de mensajes entrantes, la conexión bancaria, la validación SUNAT ni la importación masiva del histórico desde 2018. Guardar un comprobante no confirma un movimiento. El alcance del lector está en [FINANZAS-OCR.md](FINANZAS-OCR.md).
+No hay saldos iniciales inventados ni movimientos de ejemplo. La carga manual usa PaddleOCR en el navegador, con Tesseract como alternativa. La recepción automática de fotos WhatsApp usa Tesseract en el servidor y prepara borradores por empresa cuando se configura y habilita expresamente. Ambos permiten corregir antes de confirmar. No están implementados OpenAI, preguntas automáticas, conexión bancaria, validación SUNAT ni importación masiva del histórico desde 2018. Alcances: [lector manual](FINANZAS-OCR.md) y [fotos WhatsApp](FINANZAS-INTEGRACIONES.md).
 
 ## Preparación por el propietario
 
@@ -101,7 +101,7 @@ La persona escribe desde su número. El número técnico del bot recibe mediante
 
 La pestaña **Recepción** muestra el estado real de la conexión. Con la configuración completa, la ruta `/api/finanzas/whatsapp/` verifica la firma del cuerpo, el número técnico, el único remitente autorizado y los tres identificadores de grupo. Guarda primero el mensaje y reconoce la recepción después; el identificador de Meta evita duplicados por reintentos. Los avisos de entrega o lectura no se convierten en operaciones financieras.
 
-Los mensajes recibidos se pueden vincular manualmente a un borrador o descartar con motivo, por el propietario. Vincular un mensaje no confirma dinero ni crea una segunda operación. Los archivos de WhatsApp quedan identificados como pendientes: esta versión no descarga sus contenidos ni los procesa con IA.
+El propietario puede vincular mensajes a borradores o descartarlos con motivo. Con la lectura automática habilitada, las fotos JPEG/PNG nuevas se descargan de Meta a almacenamiento privado y se procesan con Tesseract. Los campos completos y sin conflicto preparan un borrador; los demás se completan desde Recepción y conexiones. Vincular o leer nunca confirma dinero ni crea otro pago. Otros tipos de adjunto conservan gestión manual.
 
 La conexión oficial de grupos, la elegibilidad OBA, el número técnico y la entrega real siguen requiriendo configuración y verificación con Meta. No se accede automáticamente al historial de grupos ordinarios. No se ha habilitado un envío automático de respuestas.
 

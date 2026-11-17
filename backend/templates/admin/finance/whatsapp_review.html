@@ -1,0 +1,21 @@
+{% extends "admin/finance/base.html" %}
+{% block finance_breadcrumb %} / <a href="{% url 'finance:connections' %}">Recepción</a> / {{ receipt.code }}{% endblock %}
+{% block finance_content %}
+<header class="fin-heading"><div><span class="fin-eyebrow">FOTO DE WHATSAPP · {{ receipt.get_method_display }}</span><h1>Revisa antes de registrar.</h1><p>La lectura propone datos. Tú decides la empresa y corriges el movimiento. Todavía no suma a los resultados.</p></div></header>
+<div class="fin-whatsapp-review">
+  <section class="fin-panel"><h2>Comprobante y mensaje original</h2>
+    {% if receipt.original_file %}<a href="{% url 'finance:whatsapp_original' receipt.pk %}?download=1">Descargar original</a><img class="fin-whatsapp-photo" src="{% url 'finance:whatsapp_original' receipt.pk %}" alt="Comprobante recibido por WhatsApp">{% else %}<p>La foto aún no está descargada. Puedes reintentar la lectura desde Recepción.</p>{% endif %}
+    <p>{{ receipt.text|default:'Sin descripción en el mensaje.'|linebreaksbr }}</p>
+    <p class="fin-note">{{ receipt.note }}</p>
+    {% if receipt.ocr_warnings %}<ul>{% for warning in receipt.ocr_warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+    {% if receipt.ocr_text %}<details><summary>Texto detectado por el lector</summary><pre class="fin-whatsapp-text">{{ receipt.ocr_text }}</pre></details>{% endif %}
+  </section>
+  <section class="fin-panel"><h2>Datos para el borrador</h2>
+    <form method="get" class="fin-inline-form"><label class="fin-field">Primero elige la empresa<select name="company" required><option value="">Selecciona una empresa</option>{% for company in review_companies %}<option value="{{ company.pk }}"{% if company.pk == selected_company.pk %} selected{% endif %}>{{ company.code }} · {{ company.name }}</option>{% endfor %}</select></label><button class="fin-button" type="submit">Mostrar sus cuentas</button></form>
+    {% if selected_company %}<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for hidden in form.hidden_fields %}{{ hidden }}{{ hidden.errors }}{% endfor %}
+      {% for field in form.visible_fields %}{% if field.name == 'company' %}<input type="hidden" name="company" value="{{ selected_company.pk }}">{{ field.errors }}<p><strong>{{ selected_company.code }} · {{ selected_company.name }}</strong></p>{% else %}<div class="fin-field">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</div>{% endif %}{% endfor %}
+      <div class="fin-actions"><button class="fin-button fin-button-primary" type="submit">Guardar borrador revisado</button><a href="{% url 'finance:connections' %}">Volver a recepción</a></div>
+    </form>{% else %}<p class="fin-note">No se asigna una empresa por el nombre impreso del proveedor. Elígela expresamente para continuar.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -80,6 +80,25 @@ def build_backup(actor):
                     if size != attachment.size or digest.hexdigest() != attachment.sha256:
                         raise ValidationError("Un comprobante no coincide con su huella guardada. El respaldo no se entregó incompleto.")
                     manifest["files"][name] = {"size": size, "sha256": digest.hexdigest(), "storage_name": storage_name}
+                # Keep unclassified/failed/ignored photos recoverable too. These
+                # originals may not yet have a financial Attachment.
+                for receipt in IntakeMessage.objects.exclude(original_file="").order_by("pk").iterator():
+                    storage_name = safe_storage_name(receipt.original_file.name)
+                    if not storage_name.startswith("finance/whatsapp/"):
+                        raise ValidationError("Una foto recibida tiene una ruta inesperada. Revisa el almacenamiento antes de exportar.")
+                    name = f"whatsapp-documents/{receipt.pk}/" + storage_name.rsplit("/", 1)[-1]
+                    digest, size = hashlib.sha256(), 0
+                    with open_private_file(receipt.original_file.storage, storage_name) as source, archive.open(name, "w") as target:
+                        while chunk := source.read(1024 * 1024):
+                            size += len(chunk)
+                            budget[0] += len(chunk)
+                            if budget[0] > MAX_BYTES:
+                                raise ValidationError("El respaldo supera 256 MB; solicita una copia operativa.")
+                            digest.update(chunk)
+                            target.write(chunk)
+                    if size != receipt.original_size or digest.hexdigest() != receipt.original_sha256:
+                        raise ValidationError("Una foto de WhatsApp no coincide con su huella. El respaldo no se entregó incompleto.")
+                    manifest["files"][name] = {"size": size, "sha256": digest.hexdigest(), "storage_name": storage_name}
                 instructions = (
                     "RESPALDO FINANCIERO PRIVADO - INOX 304\n"
                     "Contiene registros, permisos financieros, historial, mensajes recibidos y comprobantes originales.\n"

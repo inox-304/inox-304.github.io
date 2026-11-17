@@ -1,64 +1,89 @@
 # Recepción financiera por WhatsApp
 
-El módulo de Finanzas está dentro del administrador de INOX. La recepción preparada aquí tiene un operador humano y un número técnico de Cloud API en tres grupos compartidos: **Yapes**, **Efectivo** y **Transacciones**. Las cuatro empresas se identifican en cada registro; no se crean grupos por empresa.
+Un operador humano y un número técnico Cloud API participan en tres grupos: **Yapes**, **Efectivo** y **Transacciones**. Cada mensaje identifica su empresa; no se crean grupos por empresa. Los nombres, empresas y cuentas se administran desde Finanzas → Configuración.
 
-## Estado implementado
+## Flujo implementado
 
-- Callback `GET/POST /api/finanzas/whatsapp/`, desactivado por defecto.
-- Verificación de firma HMAC SHA-256 sobre los bytes originales, verificación inicial del callback y listas permitidas de número técnico, operador y tres grupos.
-- Recepción durable en PostgreSQL antes de responder a Meta. Deduplícación por ID de mensaje; un reintento no genera otra entrada. Un ID repetido con contenido distinto se rechaza.
-- Bandeja privada de mensajes pendientes, referencias de archivos y revisión humana. El propietario puede vincular un mensaje a un borrador o descartarlo con motivo, conservando el original y el historial.
-- No se confirma ningún movimiento a partir de un mensaje. El propietario selecciona empresa/cuenta y revisa el borrador antes de confirmarlo.
+1. Meta verifica `GET /api/finanzas/whatsapp/` con la integración habilitada y el token correcto. Esta etapa funciona aunque aún falten los IDs de los grupos.
+2. El `POST` sigue cerrado hasta completar secreto, número receptor, operador y tres grupos distintos. Verifica HMAC SHA-256 sobre el cuerpo original y las listas autorizadas antes de guardar.
+3. Una foto nueva JPEG/PNG se encola cuando se habilita el procesamiento. El webhook responde después de persistir el mensaje; no espera al OCR.
+4. Un trabajador descarga el medio autenticándose con Meta, verifica tamaño, tipo y SHA-256, conserva el original privado y lo lee con **Tesseract español/inglés en el servidor**. No necesita una API de IA de pago. PaddleOCR sigue disponible para carga manual desde el navegador.
+5. El mensaje identifica explícitamente empresa y tipo. La cuenta debe coincidir con empresa, medio y moneda. Se crea un **borrador** con comprobante solo si los campos necesarios son válidos y no hay ambigüedad, conflicto, baja confianza o duplicado.
+6. Lo incompleto queda en **Recepción y conexiones → Revisar y completar datos**. El propietario compara la foto, elige empresa y corrige campos. Guardar prepara un borrador; confirmar el movimiento es otra acción.
 
-## Pendiente de activación
+Los borradores automáticos también aparecen en **Por revisar**; no suman a gráficos ni totales confirmados. **Corregir la empresa** anula un borrador automático aún sin editar y permite reclasificar la foto conservando el historial. Nunca cambia una empresa confirmada ni recalcula sus precios históricos.
 
-La cuenta OBA, el número Cloud API y los tres grupos oficiales aún deben estar habilitados y verificarse con una entrega real. Este cambio de código no los crea ni concede elegibilidad. La recepción de mensajes queda cerrada mientras falte configuración.
+## Lo que requiere configuración externa
 
-La descarga de adjuntos de Meta, el análisis con OpenAI y las respuestas automáticas aún no se ejecutan. El texto o pie de foto se guarda; para un adjunto solo se conserva su referencia privada. Hay que descargarlo mediante la API autorizada e inspeccionarlo antes de usarlo como comprobante. La interfaz distingue este estado de un archivo ya cargado al movimiento. No hay tokens de OpenAI/Meta en el navegador ni llamadas facturables en este módulo.
+Meta debe habilitar OBA, Cloud API y Groups API. El código no concede elegibilidad ni crea grupos. Los 30 días exigidos para OBA corresponden al registro en **WhatsApp Business Platform**, no a la antigüedad de WhatsApp del teléfono. La aprobación no es automática.
 
-## Configuración del servidor
+No se envían respuestas del bot, no se leen grupos ordinarios ajenos a la integración ni se usa OpenAI. Texto, PDF y otros adjuntos quedan como referencias para gestión manual; esta versión automatiza solo fotos JPEG/PNG. Tampoco importa masivamente el histórico Excel.
 
-Guardar valores únicamente en secretos del alojamiento:
+## Configuración privada del servidor
+
+Guardar valores solo en secretos del alojamiento, nunca en Git, el navegador ni el chat compartido.
 
 | Variable | Uso |
 |---|---|
-| `FINANCE_WHATSAPP_ENABLED=1` | Activa la recepción solo cuando el resto está completo. |
-| `FINANCE_WHATSAPP_APP_SECRET` | Secreto de la aplicación Meta para verificar la firma. |
-| `FINANCE_WHATSAPP_VERIFY_TOKEN` | Valor aleatorio privado para comprobar el callback. |
-| `FINANCE_WHATSAPP_PHONE_NUMBER_ID` | Identificador del número técnico, no su número visible. |
+| `FINANCE_WHATSAPP_ENABLED=1` | Habilita la verificación inicial; recibir exige configuración completa. |
+| `FINANCE_WHATSAPP_VERIFY_TOKEN` | Valor aleatorio privado igual al registrado al verificar el callback. |
+| `FINANCE_WHATSAPP_APP_SECRET` | Secreto de la app Meta; valida la firma del POST. |
+| `FINANCE_WHATSAPP_PHONE_NUMBER_ID` | ID numérico del bot, no su teléfono visible. |
 | `FINANCE_WHATSAPP_OPERATOR_ID` | Identificador del único operador permitido. |
-| `FINANCE_WHATSAPP_OPERATOR_ID_KIND=bsuid` | Usa `from_user_id`, preferido por Meta. `phone` solo para una configuración explícita que use `from`. No existe fallback automático. |
+| `FINANCE_WHATSAPP_OPERATOR_ID_KIND=bsuid` | Usa `from_user_id`; `phone` solo si se configura expresamente `from`. Sin fallback. |
 | `FINANCE_WHATSAPP_GROUP_YAPE` | ID del grupo Yapes. |
 | `FINANCE_WHATSAPP_GROUP_CASH` | ID del grupo Efectivo. |
 | `FINANCE_WHATSAPP_GROUP_TRANSFER` | ID del grupo Transacciones. |
+| `FINANCE_WHATSAPP_ACCESS_TOKEN` | Token privado con acceso a medios del número autorizado. |
+| `FINANCE_WHATSAPP_GRAPH_API_VERSION` | Versión explícita Meta; predeterminado `v27.0`. |
+| `FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=1` | Encola fotos nuevas y arranca trabajador. Predeterminado `0`. |
+| `FINANCE_WHATSAPP_TESSERACT_COMMAND` | Ejecutable local; predeterminado `tesseract`, incluido en Docker con español/inglés. |
 
-Los tres IDs de grupo deben ser distintos. La bandeja no muestra secretos ni la configuración completa. El panel compartido entre empresas no da a un gerente acceso automático a mensajes aún sin empresa: esa bandeja queda reservada al propietario configurado.
+Solo el propietario ve la bandeja sin clasificar y sus originales. Los gerentes conservan sus permisos por empresa. El panel muestra preparación de la configuración, no garantiza una entrega real de Meta.
 
-## Límites y decisiones de seguridad
+## Cómo escribir cada registro
 
-- Máximo 3 MiB por callback y 1000 mensajes por lote; solo JSON. Se rechazan firmas inválidas antes de interpretar el contenido.
-- Los estados de envío/lectura son notificaciones, no ingresos ni egresos.
-- Se conserva un máximo de 16 000 caracteres de texto; si se recorta, se marca para revisión. Los metadatos de adjuntos se limitan a ID, MIME, huella y nombre; no se sigue ninguna URL recibida.
-- La recepción no decide empresa por el grupo, no toma el importe de la descripción como dinero confirmado y no usa precios de catálogo para completar importes históricos.
-- Un fallo de base de datos no recibe una respuesta de éxito; Meta puede reintentar. El alojamiento que se suspende o una caída prolongada puede agotar el plazo del proveedor: activar monitorización, revisar pendientes y probar recuperación antes del uso cotidiano.
-- El cierre financiero, los snapshots, los permisos por empresa y la confirmación corresponden al módulo `finance`, no al webhook.
-- Un CSV, factura, imagen o mensaje puede contener instrucciones maliciosas. Un futuro extractor debe tratarlo como datos, producir un esquema estricto y carecer de herramientas de envío, SQL y confirmación.
-- La futura IA debe pedir solo lo faltante, con presupuesto de consumo y auditoría. No se debe activar envío automático sin reglas de destinatarios, correlación de respuestas y prevención de duplicados.
+Pie de foto recomendado, usando el código real de Configuración:
 
-## Activación y comprobación
+```text
+INOX304 | EGRESO | S/ 118.00 | Fecha: 2026-11-17 | Detalle: materiales
+```
 
-1. Verificar acceso OBA y Groups API del número técnico. Configurar los tres grupos oficiales con el único operador humano.
-2. Añadir secretos en el servidor y el callback HTTPS en la aplicación Meta. Suscribir el campo `messages`.
-3. Enviar una referencia sintética por cada grupo, sin documentos personales. Verificar una recepción por mensaje y ningún movimiento confirmado automáticamente.
-4. Repetir una notificación sintética y verificar la deduplicación. Probar firma incorrecta y grupos/remitentes ajenos; no deben almacenarse.
-5. Revisar un borrador, vincularlo al mensaje, confirmar sus importes y comprobar el resumen. Probar restauración de una copia de seguridad.
-6. Activar por separado el procesador IA y la descarga de medios cuando estén configurados, probados y autorizados. Este documento no afirma que ya estén funcionando.
+También admite etiquetas `Empresa: INOX304`, `Tipo: ingreso`, `Importe: S/ 118.00`, `Fecha: 2026-11-17` y `Cuenta: CAJA`. Si hay varias cuentas del mismo medio y moneda, indicar código o elegirla después. La empresa no se deduce del proveedor impreso.
 
-## Documentación oficial consultada
+**Transacciones** es el medio bancario; no implica traslado entre cuentas propias. Un traslado necesita origen y destino revisados manualmente. La fecha e importe corresponden al dinero realmente cobrado o pagado; adjuntar una factura no demuestra un segundo pago.
 
-- [Creación y validación del callback de Meta](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint/): verificación GET, firma HMAC, lotes y reintentos.
-- [Mensajes de grupos](https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/groups-messaging/): `group_id`, `from_user_id`, número técnico y estados de salida.
-- [Webhooks de WhatsApp](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/overview/): tamaño, entrega, tipos de evento y recuperación.
-- [Groups API](https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/): requisitos y capacidades del servicio.
+## Despliegue y activación
 
-Consulta: 9 de noviembre de 2026. Las condiciones del proveedor pueden cambiar; verificar antes de activar.
+1. Con respaldo del destino confirmado, aplicar expresamente `finance_intake.0002_receipt_processing`. Es aditiva: conserva mensajes anteriores como manuales y no crea usuarios, empresas, saldos ni movimientos. El contenedor no migra al arrancar.
+2. Publicar el commit probado en Render. Para revertir código, conservar columnas nuevas; no revertir la migración borrando evidencia.
+3. Guardar ENABLED y VERIFY_TOKEN y verificar el callback HTTPS en Meta. Resuelve el bloqueo de necesitar grupos antes de verificar.
+4. Crear grupos con la API oficial habilitada, obtener IDs e invitaciones por endpoints de grupos y añadir al operador. No usar IDs ficticios. Suscribir la app a la WABA, `messages` y eventos de grupos indicados por Meta.
+5. Completar APP_SECRET, PHONE_NUMBER_ID, OPERATOR_ID/KIND y los tres GROUP; el POST solo funciona con todos.
+6. Completar ACCESS_TOKEN, activar AUTO_PROCESS y reiniciar/desplegar para arrancar trabajador.
+7. Enviar una foto **sintética** por grupo con empresa, importe, fecha y tipo. Verificar original privado y borrador correcto; no confirmar pruebas como dinero real.
+8. Probar datos incompletos, reintentos y duplicados. Verificar restauración de respaldo antes de uso intensivo.
+
+El supervisor alterna fotos y SketchUp en un único trabajador: no ejecuta ambos procesos pesados a la vez. `MODEL_IMPORT_WORKER=0` deshabilita conversiones sin impedir OCR. Los reinicios recuperan trabajos mediante leases de 10 minutos e identificadores de ejecución; hay hasta tres intentos automáticos y reintento explícito del propietario. Instalar no procesa el histórico.
+
+## Límites y seguridad
+
+- Callback: JSON hasta 3 MiB/1000 mensajes, ID único. Reintentos idénticos no duplican; ID repetido con contenido distinto se rechaza.
+- Medios: JPEG/PNG estáticos, hasta 10 MiB/24 megapíxeles. Consulta a Meta por ID; HTTPS y destino restringido, sin redirects ni proxies heredados. No sigue URLs aportadas en mensajes. Verifica hash contra metadatos.
+- OCR: una imagen por vez, hasta 2200 px tras validación, 45 segundos, un hilo y salida acotada. El subproceso no recibe secretos. No envía fotos a otro proveedor de IA.
+- Confianza del OCR **no equivale a exactitud contable**. No hay garantía de 100 % ni 99,99 %. Borrosidad, manuscritos, reflejos, recortes, formatos nuevos y ambigüedad requieren corrección.
+- Revalida propietario, origen, empresa, cuenta y periodo abierto antes de crear borrador. Revocar configuración detiene trabajos pendientes. Ningún extractor confirma dinero o envía mensajes.
+- Originales privados detrás del acceso del propietario, sin URL pública y con `no-store`. Respaldo financiero incluye fotos pendientes, fallidas o descartadas y verifica hashes.
+- El ZIP del panel tiene límite de 256 MB y puede incluir tanto el original recibido como su adjunto financiero. Para volúmenes de decenas de fotos diarias, preparar respaldo operativo de base y objetos privados; el ZIP manual no sustituye ese respaldo.
+- Un fallo entre escritura de objeto y transacción puede dejar un objeto privado huérfano. Se intenta limpiar; almacenamiento requiere supervisión y política de retención.
+- Render Free puede suspenderse y retrasar recepción/lectura; no garantiza ejecución continua ni capacidad ilimitada. Tesseract es gratuito; Meta, alojamiento y almacenamiento pueden tener costos.
+
+## Referencias oficiales
+
+- [Verificación y firma](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint/)
+- [Groups API](https://developers.facebook.com/documentation/business-messaging/whatsapp/groups/)
+- [Cuentas oficiales y antigüedad](https://developers.facebook.com/documentation/business-messaging/whatsapp/official-business-accounts)
+- [Medios de WhatsApp](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/media)
+- [Tesseract](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html)
+
+Consulta: 17 de noviembre de 2026. Verificar condiciones antes de activar.

@@ -82,6 +82,19 @@ class ContainerRuntimeTests(SimpleTestCase):
         self.assertEqual(cwd.name, "backend")
         self.assertNotIn("migrate", web + worker + run.call_args.args[0])
 
+    def test_photos_use_one_serial_worker_even_with_model_imports_disabled(self):
+        for imports in ("0", "1"):
+            with self.subTest(imports=imports), patch.dict(os.environ, {
+                "DJANGO_ENV": "production", "MODEL_IMPORT_WORKER": imports,
+                "FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED": "1",
+            }, clear=True), patch.object(self.module.subprocess, "run") as run, \
+                 patch.object(self.module.os, "chdir"), patch.object(self.module.os, "execv") as execute, \
+                 patch.object(self.module, "supervise", return_value=0) as supervise:
+                self.assertEqual(self.module.main(), 0)
+                self.assertEqual(supervise.call_args.args[1][-1], "process_background_jobs")
+                self.assertEqual(run.call_count, 1)
+                execute.assert_not_called()
+
     def test_worker_crash_restarts_with_backoff_and_web_exit_stops_everything(self):
         clock = {"now": 0.0}
         starts = []

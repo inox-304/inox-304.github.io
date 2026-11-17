@@ -141,6 +141,10 @@ def main():
         workers = integer_option("WEB_CONCURRENCY", 1, 32)
         timeout = integer_option("GUNICORN_TIMEOUT", 60, 300)
         imports_enabled = worker_enabled()
+        photo_option = os.environ.get("FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED", "0")
+        if photo_option not in ("0", "1"):
+            raise ValueError("FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED must be 0 or 1.")
+        photos_enabled = photo_option == "1"
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 2
@@ -164,8 +168,9 @@ def main():
         "--forwarded-allow-ips", "",
         "--access-logfile", "-", "--error-logfile", "-",
     ]
-    if imports_enabled:
-        worker_arguments = [sys.executable, str(backend / "manage.py"), "process_model_imports"]
+    if imports_enabled or photos_enabled:
+        command = "process_background_jobs" if photos_enabled else "process_model_imports"
+        worker_arguments = [sys.executable, str(backend / "manage.py"), command]
         return supervise(arguments, worker_arguments, backend)
     os.execv(str(gunicorn), arguments)
 

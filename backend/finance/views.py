@@ -520,9 +520,10 @@ def connections(request):
     receipt_status = request.GET.get("received_status", "pending")
     if receipt_status not in ("pending", "linked", "ignored", "all"):
         receipt_status = "pending"
-    query = IntakeMessage.objects.select_related("movement") if owner else IntakeMessage.objects.none()
+    query = IntakeMessage.objects.select_related("movement", "proposed_company") if owner else IntakeMessage.objects.none()
     if receipt_status == "pending":
-        query = query.filter(status__in=("pending", "needs_review"))
+        query = query.filter(Q(status__in=("pending", "needs_review")) |
+                             Q(status="linked", movement__status="draft", reviewed_at__isnull=True))
     elif receipt_status != "all":
         query = query.filter(status=receipt_status)
     receipt_page = Paginator(query, 25).get_page(request.GET.get("page"))
@@ -536,6 +537,7 @@ def receipt_action(request, pk):
     require_owner(request)
     from finance_intake.models import IntakeMessage
     from finance_intake.services import ignore_receipt, link_receipt
+    from finance_intake.processing import request_processing, reject_automatic_draft
     get_object_or_404(IntakeMessage, pk=pk)
     try:
         if request.POST.get("action") == "link":
@@ -544,6 +546,15 @@ def receipt_action(request, pk):
                 raise ValidationError("Selecciona un borrador para vincular el mensaje.")
             movement = scoped_movement(request, int(value), "record")
             link_receipt(pk, movement, actor=request.user)
+        elif request.POST.get("action") in ("retry", "reclassify"):
+            value = request.POST.get("expected_version", "")
+            if not value.isascii() or not value.isdecimal() or len(value) > 12:
+                raise ValidationError("Actualiza la bandeja antes de continuar.")
+            if request.POST["action"] == "retry":
+                request_processing(pk, actor=request.user, expected_version=int(value))
+            else:
+                reject_automatic_draft(pk, actor=request.user, expected_version=int(value), reason=request.POST.get("reason", ""))
+                return redirect("finance:whatsapp_review", pk=pk)
         elif request.POST.get("action") == "ignore":
             ignore_receipt(pk, request.POST.get("reason", ""), actor=request.user)
         else:

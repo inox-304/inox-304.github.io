@@ -1,0 +1,13 @@
+<div class="fin-whatsapp-status">
+<p><span class="fin-badge">{{ receipt.get_processing_state_display }}</span>{% if receipt.proposed_company %} · {{ receipt.proposed_company.name }}{% endif %}</p>
+{% if receipt.original_file %}<p><a href="{% url 'finance:whatsapp_original' receipt.pk %}?download=1">Ver comprobante original →</a></p>{% endif %}
+{% if receipt.ocr_warnings %}<ul class="fin-note">{% for warning in receipt.ocr_warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+{% if not receipt.movement_id and receipt.status != 'ignored' %}
+  {% if receipt.original_file %}<a class="fin-button fin-button-primary" href="{% url 'finance:whatsapp_review' receipt.pk %}">Revisar y completar datos →</a>{% endif %}
+  {% if receipt.message_type == 'image' and receipt.processing_state != 'processing' and receipt.processing_state != 'queued' and receipt.processing_state != 'retry' %}<form method="post" action="{% url 'finance:receipt_action' receipt.pk %}" class="fin-inline-form">{% csrf_token %}<input type="hidden" name="action" value="retry"><input type="hidden" name="expected_version" value="{{ receipt.processing_version }}"><button type="submit" class="fin-button fin-button-small">Reintentar lectura de la foto</button></form>{% endif %}
+{% endif %}
+{% if receipt.movement_id and receipt.movement.status == 'draft' and not receipt.reviewed_at and receipt.processing_state == 'drafted' and receipt.movement.version == 1 %}
+<p class="fin-note">Preparado automáticamente: revisa sus datos antes de confirmar. Todavía no suma a los resultados.</p>
+<details><summary>Corregir la empresa</summary><p>Se anulará este borrador y conservará su historial. Podrás elegir la empresa correcta para preparar otro con el mismo comprobante.</p><form method="post" action="{% url 'finance:receipt_action' receipt.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reclassify"><input type="hidden" name="expected_version" value="{{ receipt.processing_version }}"><label class="fin-field">Motivo<textarea name="reason" minlength="8" maxlength="800" required></textarea></label><button type="submit" class="fin-button">Corregir empresa y conservar historial</button></form></details>
+{% endif %}
+</div>

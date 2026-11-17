@@ -64,6 +64,23 @@ class FinanceBackupTests(TransactionTestCase):
         with self.assertRaises(PermissionDenied):
             build_backup(self.other)
 
+    def test_unclassified_whatsapp_original_is_exported_and_hash_checked(self):
+        from django.core.files.base import ContentFile
+        from finance_intake.models import IntakeMessage
+        payload = b"synthetic original bytes"
+        receipt = IntakeMessage.objects.create(provider_message_id="synthetic", fingerprint="a" * 64,
+            group_id="cash", method="cash", sender_id="operator", sender_id_kind="bsuid", message_type="image",
+            original_size=len(payload), original_sha256=hashlib.sha256(payload).hexdigest())
+        receipt.original_file.save("test.png", ContentFile(payload))
+        with build_backup(self.owner) as result, zipfile.ZipFile(result) as archive:
+            photos = [name for name in archive.namelist() if name.startswith("whatsapp-documents/")]
+            self.assertEqual(len(photos), 1)
+            self.assertEqual(archive.read(photos[0]), payload)
+        receipt.original_sha256 = "0" * 64
+        receipt.save(update_fields=["original_sha256"])
+        with self.assertRaises(ValidationError):
+            build_backup(self.owner)
+
     def test_limits_fail_without_returning_partial_backup(self):
         self.movement()
         with patch("finance.backups.MAX_RECORDS", 1), self.assertRaises(ValidationError):

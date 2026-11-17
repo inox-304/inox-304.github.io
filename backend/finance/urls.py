@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from . import views, backup_views
+from . import views, backup_views, whatsapp_views
 
 app_name = "finance"
 urlpatterns = [
@@ -18,6 +18,8 @@ urlpatterns = [
     path("configuracion/<slug:kind>/<int:pk>/", admin.site.admin_view(views.setup_edit), name="setup_edit"),
     path("recepcion/", admin.site.admin_view(views.connections), name="connections"),
     path("recepcion/<int:pk>/revisar/", admin.site.admin_view(views.receipt_action), name="receipt_action"),
+    path("recepcion/<int:pk>/foto/", admin.site.admin_view(whatsapp_views.review), name="whatsapp_review"),
+    path("recepcion/<int:pk>/original/", admin.site.admin_view(whatsapp_views.original), name="whatsapp_original"),
     path("documento/<int:pk>/", admin.site.admin_view(views.download), name="download"),
     path("<int:pk>/", admin.site.admin_view(views.detail), name="detail"),
     path("<int:pk>/editar/", admin.site.admin_view(views.edit), name="edit"),

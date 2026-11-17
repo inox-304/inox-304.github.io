@@ -68,6 +68,42 @@ class ReceiptWebhookTests(TestCase):
         data["hub.verify_token"] = ""
         self.assertEqual(self.client.get(url, data).status_code, 403)
 
+    def test_callback_can_be_verified_before_operator_and_groups_are_provisioned(self):
+        values = {"FINANCE_WHATSAPP_APP_SECRET": "", "FINANCE_WHATSAPP_PHONE_NUMBER_ID": "",
+                  "FINANCE_WHATSAPP_OPERATOR_ID": "", "FINANCE_WHATSAPP_GROUP_YAPE": "",
+                  "FINANCE_WHATSAPP_GROUP_CASH": "", "FINANCE_WHATSAPP_GROUP_TRANSFER": ""}
+        with override_settings(**values):
+            url = reverse("finance_intake:webhook")
+            response = self.client.get(url, {"hub.mode": "subscribe", "hub.verify_token": CONFIG["FINANCE_WHATSAPP_VERIFY_TOKEN"],
+                                             "hub.challenge": "synthetic-challenge"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content, b"synthetic-challenge")
+            self.assertIn("no-store", response["Cache-Control"])
+            self.assertTrue(connection_status()["verification_ready"])
+            self.assertFalse(connection_status()["configured"])
+            self.assertEqual(self.send(payload(message())).status_code, 503)
+            self.assertFalse(IntakeMessage.objects.exists())
+
+    def test_bootstrap_remains_disabled_without_explicit_flag_or_valid_token(self):
+        url = reverse("finance_intake:webhook")
+        for values in ({"FINANCE_WHATSAPP_ENABLED": False}, {"FINANCE_WHATSAPP_VERIFY_TOKEN": ""},
+                       {"FINANCE_WHATSAPP_VERIFY_TOKEN": " "}, {"FINANCE_WHATSAPP_VERIFY_TOKEN": "x" * 513},
+                       {"FINANCE_WHATSAPP_VERIFY_TOKEN": "value\r\nother"}):
+            with self.subTest(values=values), override_settings(**values):
+                response = self.client.get(url, {"hub.mode": "subscribe", "hub.verify_token": "synthetic-verify-token", "hub.challenge": "123"})
+                self.assertEqual(response.status_code, 503)
+                self.assertFalse(connection_status()["verification_ready"])
+        self.assertFalse(IntakeMessage.objects.exists())
+
+    def test_bootstrap_rejects_wrong_mode_token_and_unbounded_challenge(self):
+        url = reverse("finance_intake:webhook")
+        base = {"hub.mode": "subscribe", "hub.verify_token": CONFIG["FINANCE_WHATSAPP_VERIFY_TOKEN"], "hub.challenge": "123"}
+        with override_settings(FINANCE_WHATSAPP_OPERATOR_ID=""):
+            for changes in ({"hub.mode": "unknown"}, {"hub.verify_token": "wrong"}, {"hub.challenge": ""}, {"hub.challenge": "a" * 257}):
+                with self.subTest(changes=changes):
+                    self.assertEqual(self.client.get(url, {**base, **changes}).status_code, 403)
+        self.assertFalse(IntakeMessage.objects.exists())
+
     def test_signature_is_mandatory_and_verified_on_exact_bytes(self):
         for signature in ("", "sha256=" + "0" * 64, "sha1=" + "0" * 64):
             self.assertEqual(self.send(payload(message()), signature=signature).status_code, 403)
@@ -136,6 +172,65 @@ class ReceiptWebhookTests(TestCase):
         self.assertNotIn("url", row.media)
         self.assertEqual(row.text, "Empresa por confirmar")
 
+    def test_image_capture_is_queued_only_when_automatic_processing_is_enabled(self):
+        value = message(type="image", image={"id": "987654", "mime_type": "image/png", "sha256": "a" * 64})
+        with override_settings(FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=False):
+            self.assertEqual(self.send(payload(value)).status_code, 200)
+        row = IntakeMessage.objects.get()
+        self.assertEqual(row.receiver_phone_number_id, CONFIG["FINANCE_WHATSAPP_PHONE_NUMBER_ID"])
+        self.assertEqual(row.processing_state, "manual")
+        self.assertIsNone(row.processing_available_at)
+        with override_settings(FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=True):
+            self.assertEqual(self.send(payload(value)).json()["queued"], 0)
+            row.refresh_from_db()
+            self.assertEqual(row.processing_state, "manual")
+            value["id"] = "wamid.new-image"
+            self.assertEqual(self.send(payload(value)).status_code, 200)
+        fresh = IntakeMessage.objects.get(provider_message_id="wamid.new-image")
+        self.assertEqual(fresh.processing_state, "queued")
+        self.assertIsNotNone(fresh.processing_available_at)
+        self.assertIsNone(fresh.movement_id)
+
+    @override_settings(FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=True)
+    def test_text_documents_and_rejected_senders_never_enter_automatic_image_processing(self):
+        values = [message(), message(id="wamid.document", type="document", document={"id": "987654", "mime_type": "application/pdf"})]
+        self.assertEqual(self.send(payload(*values)).status_code, 200)
+        self.assertFalse(IntakeMessage.objects.exclude(processing_state="manual").exists())
+        image = message(id="wamid.unauthorized", from_user_id="US.other", type="image", image={"id": "987654", "mime_type": "image/png"})
+        self.assertEqual(self.send(payload(image)).status_code, 403)
+        self.assertFalse(IntakeMessage.objects.filter(provider_message_id="wamid.unauthorized").exists())
+
+    @override_settings(FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=True)
+    def test_delivery_retries_never_requeue_already_reviewed_image(self):
+        image = message(type="image", image={"id": "987654", "mime_type": "image/png"})
+        self.assertEqual(self.send(payload(image)).json()["queued"], 1)
+        row = IntakeMessage.objects.get()
+        IntakeMessage.objects.filter(pk=row.pk).update(processing_state="drafted", note="Revisión humana conservada")
+        self.assertEqual(self.send(payload(image)).json()["queued"], 0)
+        row.refresh_from_db()
+        self.assertEqual(row.processing_state, "drafted")
+        self.assertEqual(row.note, "Revisión humana conservada")
+
+    @override_settings(FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=True)
+    def test_truncated_caption_cannot_automatically_generate_a_financial_draft(self):
+        image = message(type="image", image={"id": "987654", "mime_type": "image/png",
+                        "caption": "A" * 16000 + " NO ES EGRESO: devolver a otra empresa"})
+        self.assertEqual(self.send(payload(image)).status_code, 200)
+        row = IntakeMessage.objects.get()
+        self.assertEqual(len(row.text), 16000)
+        self.assertTrue(row.media["caption_truncated"])
+        self.assertEqual(row.processing_state, "review")
+        self.assertEqual(row.processing_error_code, "caption_too_long")
+        self.assertTrue(row.ocr_warnings)
+        self.assertIsNone(row.processing_available_at)
+        self.assertIsNone(row.movement_id)
+        self.assertEqual(self.send(payload(image)).json()["queued"], 0)
+
+    def test_signed_json_with_oversized_integer_is_rejected_without_server_error(self):
+        raw = b'{"object":"whatsapp_business_account","ignored":' + b"1" * 5000 + b"}"
+        self.assertEqual(self.send(None, raw=raw).status_code, 400)
+        self.assertFalse(IntakeMessage.objects.exists())
+
     def test_oversize_invalid_shapes_types_and_timestamps_fail_without_writes(self):
         self.assertEqual(self.send(None, raw=b" " * (3 * 1024 * 1024 + 1)).status_code, 413)
         for value in ([], {"object": "wrong"}, payload(message(timestamp="oops")), payload(message(text=[])),
@@ -166,6 +261,29 @@ class ReceiptWebhookTests(TestCase):
         for key in ("FINANCE_WHATSAPP_APP_SECRET", "FINANCE_WHATSAPP_VERIFY_TOKEN", "FINANCE_WHATSAPP_OPERATOR_ID"):
             self.assertNotIn(CONFIG[key], serialized)
         self.assertFalse(connection_status()["ai_enabled"])
+
+    def test_processing_readiness_requires_receiving_allowlists_and_private_media_configuration(self):
+        with override_settings(FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED=True, FINANCE_WHATSAPP_ACCESS_TOKEN="synthetic-access-token",
+                               FINANCE_WHATSAPP_GRAPH_API_VERSION="v27.0"):
+            status = connection_status()
+            self.assertTrue(status["verification_ready"])
+            self.assertTrue(status["ready"])
+            self.assertTrue(status["processing_ready"])
+            self.assertFalse(status["processing_missing"])
+            self.assertNotIn("synthetic-access-token", json.dumps(status))
+            for values in ({"FINANCE_WHATSAPP_OPERATOR_ID": ""}, {"FINANCE_WHATSAPP_GROUP_CASH": ""},
+                           {"FINANCE_WHATSAPP_ACCESS_TOKEN": ""}, {"FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED": False}):
+                with self.subTest(values=values), override_settings(**values):
+                    self.assertFalse(connection_status()["processing_ready"])
+                    self.assertTrue(connection_status()["processing_missing"])
+
+    def test_configured_identifiers_fit_private_storage_bounds(self):
+        for values in ({"FINANCE_WHATSAPP_PHONE_NUMBER_ID": "1" * 65},
+                       {"FINANCE_WHATSAPP_PHONE_NUMBER_ID": "not-a-number"},
+                       {"FINANCE_WHATSAPP_OPERATOR_ID": "x" * 257}):
+            with self.subTest(values=values), override_settings(**values):
+                self.assertIsNone(get_configuration())
+                self.assertEqual(self.send(payload(message())).status_code, 503)
 
 
 @override_settings(**CONFIG)

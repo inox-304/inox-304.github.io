@@ -8,12 +8,15 @@ import json
 from datetime import datetime, timezone as dt_timezone
 
 from django.core.exceptions import RequestDataTooBig
+from django.conf import settings
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .configuration import get_configuration
+from .configuration import get_configuration, get_verification_token
 from .models import IntakeMessage
 
 MAX_BODY_BYTES = 3 * 1024 * 1024
@@ -85,6 +88,11 @@ def _receipt(message, configuration):
             raise InvalidPayload
         text = caption[:MAX_TEXT]
         status, note = IntakeMessage.Status.NEEDS_REVIEW, "Archivo pendiente de descargar y revisar. No se ha procesado con IA."
+        if len(caption) > MAX_TEXT:
+            # This flag is generated here, never accepted from a provider field.
+            # Missing trailing context must not silently become a financial draft.
+            media["caption_truncated"] = True
+            note = "El pie de foto supera el límite y fue recortado. Revisa el mensaje completo antes de preparar un borrador."
     else:
         status, note = IntakeMessage.Status.NEEDS_REVIEW, "Tipo de mensaje pendiente de revisión manual."
     timestamp = message.get("timestamp")
@@ -98,7 +106,8 @@ def _receipt(message, configuration):
     return {"provider_message_id": message_id, "fingerprint": fingerprint, "group_id": group,
             "method": configuration.groups[group], "sender_id": sender, "sender_id_kind": configuration.operator_id_kind,
             "message_type": message_type, "text": text, "media": media,
-            "provider_timestamp": timestamp, "status": status, "note": note}
+            "provider_timestamp": timestamp, "status": status, "note": note,
+            "receiver_phone_number_id": configuration.phone_number_id}
 
 
 def extract_receipts(payload, configuration):
@@ -133,6 +142,16 @@ def capture_receipts(receipts):
     for data in receipts:
         data = dict(data)
         message_id = data.pop("provider_message_id")
+        if data["message_type"] == "image" and data["media"].get("caption_truncated"):
+            data["processing_state"] = "review"
+            data["processing_error_code"] = "caption_too_long"
+            data["ocr_warnings"] = ["El pie de foto está recortado; verifica el mensaje completo y corrige los datos antes de crear el borrador."]
+        elif (data["message_type"] == "image"
+                and getattr(settings, "FINANCE_WHATSAPP_AUTO_PROCESS_ENABLED", False) is True):
+            # Defaults apply only to a newly captured message. Repeated Meta
+            # deliveries must never restart processing or overwrite a review.
+            data["processing_state"] = "queued"
+            data["processing_available_at"] = timezone.now()
         row, created = IntakeMessage.objects.get_or_create(provider_message_id=message_id, defaults=data)
         if not created and row.fingerprint != data["fingerprint"]:
             raise MessageConflict
@@ -141,18 +160,22 @@ def capture_receipts(receipts):
 
 
 @csrf_exempt  # Meta signs the exact raw body; it cannot supply a browser CSRF token.
+@never_cache
 @require_http_methods(["GET", "POST"])
 def whatsapp_webhook(request):
-    configuration = get_configuration()
-    if configuration is None:
-        return HttpResponse("Recepción no habilitada.", status=503, content_type="text/plain")
     if request.method == "GET":
+        verify_token = get_verification_token()
+        if verify_token is None:
+            return HttpResponse("Verificación no habilitada.", status=503, content_type="text/plain")
         challenge = request.GET.get("hub.challenge", "")
         if (request.GET.get("hub.mode") != "subscribe"
-                or not _same(request.GET.get("hub.verify_token"), configuration.verify_token)
+                or not _same(request.GET.get("hub.verify_token"), verify_token)
                 or not challenge or len(challenge) > 256):
             return HttpResponse(status=403)
         return HttpResponse(challenge, content_type="text/plain")
+    configuration = get_configuration()
+    if configuration is None:
+        return HttpResponse("Recepción no habilitada.", status=503, content_type="text/plain")
     if request.content_type != "application/json":
         return HttpResponse(status=415)
     signature = request.headers.get("X-Hub-Signature-256", "")
@@ -176,9 +199,10 @@ def whatsapp_webhook(request):
         created_count = capture_receipts(receipts)
     except DisallowedPayload:
         return HttpResponse(status=403)
-    except (InvalidPayload, UnicodeError, json.JSONDecodeError, RecursionError):
-        return HttpResponse(status=400)
     except MessageConflict:
         return HttpResponse(status=409)
+    except (ValueError, RecursionError):
+        # Includes invalid JSON/UTF-8 and Python's bounded integer parser.
+        return HttpResponse(status=400)
     # Database failure deliberately returns a server error so Meta retries.
     return JsonResponse({"received": len(receipts), "queued": created_count})

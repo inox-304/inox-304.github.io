@@ -73,7 +73,8 @@ class MovementForm(forms.Form):
         self.fields["category"].queryset = Category.objects.filter(company=company, active=True)
         self.fields["category"].label_from_instance = lambda category: f"{category.name} · {category.get_direction_display()}"
         self.initial.setdefault("idempotency_key", uuid.uuid4())
-        self.initial.setdefault("currency", company.default_currency)
+        if company is not None:
+            self.initial.setdefault("currency", company.default_currency)
         if instance:
             self.initial.update({key: getattr(instance, key) for key in ("kind", "occurred_on", "amount", "currency", "description", "reference", "version", "idempotency_key")})
             for key in ("account", "category", "destination_account"):
@@ -110,6 +111,27 @@ class ReceiptReviewForm(MovementForm):
         if Path(document.name).suffix.lower() not in (".jpg", ".jpeg", ".png") or not 0 < document.size <= 10 * 1024 * 1024:
             raise forms.ValidationError("Selecciona una foto JPG o PNG de hasta 10 MB.")
         return document
+
+
+class WhatsAppReviewForm(MovementForm):
+    company = forms.ModelChoiceField(label="Empresa de este movimiento", queryset=Company.objects.none())
+    expected_version = forms.IntegerField(min_value=1, widget=forms.HiddenInput)
+    reviewed = forms.BooleanField(label="Revisé el comprobante y los datos. Guardar solo preparará un borrador.")
+
+    def __init__(self, *args, company, method, **kwargs):
+        super().__init__(*args, company=company, **kwargs)
+        self.fields.pop("version")
+        self.fields.pop("idempotency_key")
+        self.fields["company"].queryset = Company.objects.filter(active=True)
+        self.fields["account"].queryset = self.fields["account"].queryset.filter(method=method)
+        self.fields["kind"].choices = [("", "Confirma ingreso, egreso o traslado"), *Movement.Kind.choices]
+        self.fields["currency"].choices = [("", "Confirma la moneda"), *CURRENCIES]
+        self.fields["occurred_on"].initial = None
+        self.initial.pop("idempotency_key", None)
+        self.initial.pop("currency", None)
+        if company:
+            self.initial["company"] = company.pk
+        self.order_fields(["company", "kind", "occurred_on", "account", "destination_account", "category", "amount", "currency", "description", "reference", "reviewed"])
 
 
 class LineForm(forms.Form):

@@ -12,6 +12,7 @@ COPY scripts/build-server.mjs ./scripts/build-server.mjs
 RUN npm run build:server
 
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS application
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./backend/

@@ -262,3 +262,6 @@ del lector. Fuentes originales:
 - [Tesseract.js](https://github.com/naptha/tesseract.js)
 - [Tesseract.js-core](https://github.com/naptha/tesseract.js-core)
 - [Datos de entrenamiento](https://github.com/naptha/tessdata)
+# Fotos recibidas por WhatsApp
+
+La lectura manual descrita en este documento sigue en el navegador. La nueva cola de fotos WhatsApp utiliza Tesseract nativo en el servidor, sin API de IA de pago, y conserva la revisión y confirmación separadas. Su configuración, privacidad y límites están en [FINANZAS-INTEGRACIONES.md](FINANZAS-INTEGRACIONES.md).

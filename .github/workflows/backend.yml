@@ -51,6 +51,8 @@ jobs:
           node scripts/test-passkeys.mjs
           node scripts/test-catalog-controls.mjs
       - run: uv sync --project backend --locked
+      - name: Install free native receipt OCR for integration tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng fonts-dejavu-core
       - run: uv run --project backend python backend/manage.py makemigrations --check --dry-run
       - run: npm run server:test
       - name: Production security configuration
