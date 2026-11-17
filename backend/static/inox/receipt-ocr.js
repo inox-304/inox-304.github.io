@@ -1,5 +1,6 @@
 /* Private receipt reader: photos stay in memory until the ordinary form POST. */
-export {};
+import { checkReceiptImage } from './receipt-image.js';
+import { createReceiptTesseract } from './receipt-tesseract.js';
 const root = document.querySelector('[data-receipt-reader]');
 
 if (root) {
@@ -37,7 +38,6 @@ if (root) {
   let angle = 0;
   let ready = false;
   let worker = null;
-  let libraryPromise = null;
   const failedImports = new Map();
   let engineController = null;
   let lastEngine = 'paddle';
@@ -124,18 +124,6 @@ if (root) {
     readButton.disabled = true;
     readButton.textContent = 'Leer foto';
   }
-  function loadLibrary() {
-    if (!libraryPromise) libraryPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = assetUrl(root.dataset.libraryUrl);
-      script.async = true;
-      const failed = () => { script.remove(); reject(new Error('Reader load failed')); };
-      script.onload = () => globalThis.Tesseract?.createWorker ? resolve(globalThis.Tesseract) : failed();
-      script.onerror = failed;
-      document.head.append(script);
-    }).catch((error) => { libraryPromise = null; throw error; });
-    return libraryPromise;
-  }
   async function getWorker(token, engine, signal) {
       const generation = engineGeneration;
       if (engine === 'paddle') {
@@ -153,27 +141,21 @@ if (root) {
         worker = created;
         return created;
       }
-      const library = await loadLibrary();
       if (token !== job || signal.aborted) return null;
-      const created = await library.createWorker(['spa', 'eng'], 1, {
-        workerPath: assetUrl(root.dataset.workerUrl),
-        corePath: new URL('./', assetUrl(root.dataset.coreUrl)).href,
-        langPath: new URL('./', assetUrl(root.dataset.languageUrl)).href.replace(/\/$/, ''),
-        workerBlobURL: false,
-        cacheMethod: 'none',
-        gzip: true,
-        logger(message) {
+      const created = await createReceiptTesseract({
+        signal,
+        workerUrl: assetUrl(root.dataset.workerUrl),
+        coreUrl: new URL('./', assetUrl(root.dataset.coreUrl)).href,
+        languageUrl: new URL('./', assetUrl(root.dataset.languageUrl)).href.replace(/\/$/, ''),
+        onProgress(message) {
           if (!busy || generation !== engineGeneration) return;
           const recognition = message.status === 'recognizing text';
           progress.value = recognition ? 35 + Math.round((message.progress || 0) * 60) : Math.min(30, progress.value + 2);
           announce(recognition ? 'Leyendo tu comprobante… puedes cancelar en cualquier momento.' : 'Preparando el lector. La primera vez puede tardar; la foto permanece en tu dispositivo.');
         },
-        errorHandler() { /* A bounded timeout/recognize rejection restores the manual form. */ },
       });
       if (token !== job || signal.aborted) { await created.terminate(); return null; }
       worker = created;
-      await created.setParameters({ tessedit_pageseg_mode: '3', preserve_interword_spaces: '1' });
-      if (token !== job || signal.aborted) { await created.terminate(); return null; }
       return created;
   }
   function canvasForPhoto() {
@@ -255,9 +237,7 @@ if (root) {
         const reader = await getWorker(token, engine, controller.signal);
         if (!reader || token !== job || controller.signal.aborted) throw new Error('Reading cancelled');
         const canvas = canvasForPhoto();
-        if (engine === 'paddle') return reader.recognize(canvas);
-        const { data } = await reader.recognize(canvas, {}, { text: true });
-        return data;
+        return reader.recognize(canvas);
       })(), aborted]);
     } finally {
       // A cancelled/old job must never destroy the replacement photo's worker.
@@ -332,10 +312,12 @@ if (root) {
       return;
     }
     const token = job;
-    imageUrl = URL.createObjectURL(file);
-    const selected = new Image();
-    selected.src = imageUrl;
     try {
+      await checkReceiptImage(file);
+      if (token !== job) return;
+      imageUrl = URL.createObjectURL(file);
+      const selected = new Image();
+      selected.src = imageUrl;
       await selected.decode();
       if (token !== job) return;
       if (selected.naturalWidth * selected.naturalHeight > 24000000) throw new Error('Photo too large');

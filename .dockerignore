@@ -22,6 +22,8 @@ VERIFICACION
 ADJUNTOS_USUARIO
 AGENTS.md
 outputs
+output
+FINANZAS_PRIVADAS
 deploy/.env
 deploy/.env.*
 **/__pycache__

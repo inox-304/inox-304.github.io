@@ -68,7 +68,7 @@ def _guard(request):
             raise ValueError()
     except RequestDataTooBig:
         return None, _response(request, {"ok": False, "error": "Solicitud demasiado extensa."}, 413)
-    except (ValueError, UnicodeDecodeError):
+    except (ValueError, UnicodeDecodeError, RecursionError):
         return None, _response(request, {"ok": False, "error": "Revisa los datos de tu solicitud."}, 400)
     return data, None
 

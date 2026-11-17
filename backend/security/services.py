@@ -69,9 +69,19 @@ def reserve_attempt(scope, identity, limit, window_seconds=900):
 def allow_attempt(request, stage, identity):
     ip_limit = 30 if stage == "password" else 25
     user_limit = 8 if stage == "password" else 5
-    ip_allowed = reserve_attempt(f"{stage}:ip", client_ip(request) or "unknown", ip_limit)
-    user_allowed = reserve_attempt(f"{stage}:account", identity, user_limit)
-    return ip_allowed and user_allowed
+    # A blocked source must not create unlimited account rows or exhaust other
+    # accounts' quotas by varying the submitted username after its own limit.
+    if not reserve_attempt(f"{stage}:ip", client_ip(request) or "unknown", ip_limit):
+        return False
+    return reserve_attempt(f"{stage}:account", identity, user_limit)
+
+
+def audit_rate_limit(request, user=None):
+    # Keep the first denial per source/window, without letting requests already
+    # rejected by the limiter fill the security log indefinitely. This uses the
+    # same shared database lock as login quotas, including concurrent workers.
+    if reserve_attempt("audit:rate_limited", client_ip(request) or "unknown", 1):
+        audit("rate_limited", request, user, "Further denials from this source are suppressed for 15 minutes.")
 
 
 def start_pending(request, user, mode):

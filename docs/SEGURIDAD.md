@@ -28,7 +28,23 @@ Los permisos financieros son independientes de los permisos del catálogo y se c
 
 Los importes confirmados y sus precios históricos se conservan. Vincular un mensaje a un borrador exige que su grupo de origen coincida con el medio de pago de la cuenta; editar o confirmar ese borrador vuelve a comprobarlo. Las operaciones relacionadas bloquean empresa, movimiento y mensaje en un orden consistente para evitar conflictos concurrentes.
 
-## Alojamiento
+El lector comprueba tamaño y dimensiones de JPG/PNG antes de decodificar la foto y conserva el control del worker desde su creación para terminarlo también durante la carga de idiomas. Los recursos siguen en el mismo origen; la lectura no confirma movimientos automáticamente. Los campos deben revisarse y corregirse antes de guardar.
+
+## Contención de solicitudes y dependencias
+
+Los formularios multipart del panel tienen límites antes de CSRF y del guardado temporal. Las pantallas sin carga de archivos rechazan cualquier archivo, incluso si llega con un campo inesperado. Catálogo admite hasta 8 MiB por archivo y 64 MiB acumulados por solicitud; para galerías grandes se puede guardar por lotes. SketchUp conserva su límite configurado y comprobantes su límite propio. Superar el presupuesto rechaza la solicitud completa antes de persistir una parte. Estos controles no sustituyen autenticación, MFA ni CSRF.
+
+Una IP bloqueada no puede seguir creando cuotas para correos nuevos ni consumir la cuota de otras cuentas. El primer bloqueo se registra por IP y ventana de 15 minutos; los rechazos repetidos se suprimen para acotar el crecimiento del registro. El cierre de sesión autenticado sigue auditado; una petición de cierre anónima no crea eventos.
+
+Las versiones se fijan en lockfiles. La auditoría de npm falla ante avisos conocidos de cualquier gravedad y la de Python verifica los requisitos fijados. Actualizar dependencias requiere pruebas funcionales y revisión del resultado: un informe sin avisos conocidos no demuestra ausencia de fallos. Los directorios privados de finanzas y las salidas locales quedan fuera del contexto de Docker.
+
+## Límites de la revisión
+
+La revisión de código y las pruebas aisladas no certifican las ACL reales del almacenamiento, la restauración de copias externas ni la seguridad de las cuentas del proveedor. Las pruebas de concurrencia deben ejecutarse también sobre PostgreSQL. Los límites por petición y por IP no son protección completa frente a un ataque distribuido; esa capa requiere controles en la infraestructura.
+
+La conversión de SketchUp limita recursos y reduce el entorno del proceso, pero no constituye un aislamiento completo de sistema operativo y red. Se deben aceptar modelos solo de personal autorizado y evaluar un trabajador aislado antes de abrir cargas a terceros. Ningún lenguaje ni motor OCR garantiza seguridad o exactitud del 100 %.
+
+## Configuración del alojamiento
 
 `DEBUG` debe estar desactivado en producción. El dominio, cookies seguras, CSRF y RP de passkeys deben corresponder a la dirección pública definitiva. `TRUST_REVERSE_PROXY` solo se habilita detrás de un proxy controlado que reemplace el encabezado de IP configurado; una plataforma distinta de Caddy requiere verificar sus encabezados antes de reutilizar esa opción.
 

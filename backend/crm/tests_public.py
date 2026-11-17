@@ -105,6 +105,18 @@ class PublicCaptureTests(TestCase):
         self.assertEqual(self.client.get("/inquiries/", HTTP_ORIGIN=ORIGIN).status_code, 405)
         self.assertFalse(Opportunity.objects.exists())
 
+    def test_deeply_nested_json_is_rejected_without_creating_records(self):
+        payload = '{"name":' + '[' * 6000 + '0' + ']' * 6000 + '}'
+        self.assertLess(len(payload), public_views.MAX_BODY)
+        for endpoint in ("/inquiries/", "/events/"):
+            with self.subTest(endpoint=endpoint):
+                response = self.client.post(endpoint, payload, content_type="application/json", HTTP_ORIGIN=ORIGIN)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"ok": False, "error": "Revisa los datos de tu solicitud."})
+        self.assertFalse(Opportunity.objects.exists())
+        self.assertFalse(Activity.objects.exists())
+        self.assertFalse(WebMetric.objects.exists())
+
     def test_real_throttle_limits_repeated_intake_without_echoing_contact(self):
         for _ in range(5):
             self.assertEqual(self.send(self.payload()).status_code, 201)

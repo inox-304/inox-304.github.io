@@ -40,7 +40,7 @@ jobs:
         run: |
           npm run finance:assets
           npm run finance:assets:check
-          node --test scripts/test-receipt-parser.mjs scripts/test-receipt-paddle.mjs scripts/paddle-browser.test.mjs
+          node --test scripts/test-receipt-parser.mjs scripts/test-receipt-paddle.mjs scripts/paddle-browser.test.mjs scripts/test-receipt-security.mjs
       - run: npm run build:server
       - name: Frontend integration and media budgets
         run: |

@@ -20,14 +20,14 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from .forms import EmailCodeForm, LoginForm, OTPForm, TOTPForm
 from .models import EmailDevice, EnrollmentPermission, RecoveryCode, SecurityState
-from .services import (PENDING_KEY, VERSION, allow_attempt, audit, complete_login,
+from .services import (PENDING_KEY, VERSION, allow_attempt, audit, audit_rate_limit, complete_login,
                        enrollment_allowed, generate_recovery_codes,
                        is_admin_authenticated, pending_user, revoke_sessions,
                        seconds, start_pending, state_for, verify_device)
 
 
 def limited(request, user=None):
-    audit("rate_limited", request, user)
+    audit_rate_limit(request, user)
     response = render(request, "security/message.html", {"title": "Espera unos minutos", "message": "Se alcanzó el límite de intentos. Vuelve a intentarlo en 15 minutos."}, status=429)
     response["Retry-After"] = "900"
     return response
@@ -265,6 +265,7 @@ def regenerate_codes(request):
 @require_POST
 def logout_view(request):
     user = request.user if request.user.is_authenticated else None
-    audit("logout", request, user)
+    if user is not None:
+        audit("logout", request, user)
     logout(request)
     return redirect("security:login")

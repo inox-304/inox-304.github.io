@@ -31,7 +31,7 @@ jobs:
           version: latest
           python-version: '3.13'
       - run: npm ci
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=low
       - name: Audit locked Python dependencies
         run: |
           uv export --project backend --locked --no-dev --no-emit-project --format requirements-txt --output-file /tmp/inox-security-requirements.txt

@@ -136,6 +136,7 @@ class SecurityFlowTests(TestCase):
         clone.cookies[settings.SESSION_COOKIE_NAME] = authenticated_key
         self.assertEqual(self.client.get(reverse("security:logout")).status_code, 405)
         self.client.post(reverse("security:logout"))
+        self.assertEqual(SecurityEvent.objects.filter(event="logout", user=self.user).count(), 1)
         self.assertFalse(Session.objects.filter(session_key=authenticated_key).exists())
         self.assertEqual(clone.get("/admin/").status_code, 302)
 
