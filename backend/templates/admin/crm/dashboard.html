@@ -8,10 +8,15 @@
   <a href="{% url 'crm:dashboard' %}?{{ querystring }}&amp;tab=today"{% if tab == 'today' %} aria-current="page"{% endif %}><span aria-hidden="true">◷</span> Hoy</a>
   <a href="{% url 'crm:dashboard' %}?{{ querystring }}&amp;tab=pipeline"{% if tab == 'pipeline' %} aria-current="page"{% endif %}><span aria-hidden="true">▥</span> Oportunidades</a>
   <a href="{% url 'crm:dashboard' %}?{{ querystring }}&amp;tab=metrics"{% if tab == 'metrics' %} aria-current="page"{% endif %}><span aria-hidden="true">↗</span> Resultados</a>
+  <a href="{% url 'crm:channels' %}"><span aria-hidden="true">◎</span> Canales</a>
 </nav>
 {% if tab == 'metrics' %}
   {% include "admin/crm/_metrics.html" %}
 {% else %}
+<section class="crm-incoming-banner" aria-label="Recepción de consultas">
+  <div><strong>Web y redes, en una sola bandeja.</strong><span>Recibe solicitudes con su origen y organiza el siguiente contacto.</span></div>
+  <div><a href="{% url 'crm:dashboard' %}?stage=new" class="crm-button crm-button-quiet">Consultas nuevas →</a><a href="{% url 'crm:channels' %}" class="crm-button crm-button-primary">Preparar enlaces ↗</a></div>
+</section>
 <section class="crm-stats" aria-label="Pendientes del equipo">
   <a href="{% url 'crm:dashboard' %}?tab=today&amp;focus=all" class="crm-stat{% if filters.focus == 'all' %} is-selected{% endif %}"><span>Oportunidades abiertas</span><strong>{{ counts.open }}</strong><small>En proceso de venta <span aria-hidden="true">↗</span></small></a>
   <a href="{% url 'crm:dashboard' %}?tab=today&amp;focus=overdue" class="crm-stat crm-stat-alert{% if filters.focus == 'overdue' %} is-selected{% endif %}"><span>Seguimientos vencidos</span><strong>{{ counts.overdue }}</strong><small>Para retomar primero <span aria-hidden="true">↗</span></small></a>
@@ -38,7 +43,7 @@
     <div class="crm-panel-heading"><div><span class="crm-eyebrow">SIGUIENTE PASO</span><h2>{% if filters.focus == 'overdue' %}Retoma estas conversaciones{% elif filters.focus == 'today' %}Contactos para hoy{% elif filters.focus == 'unassigned' %}Consultas por asignar{% else %}Tu agenda comercial{% endif %}</h2></div><span class="crm-count">{{ page_obj.paginator.count }} consulta{{ page_obj.paginator.count|pluralize:'s' }}</span></div>
     {% if page_obj %}<div class="crm-agenda-head" aria-hidden="true"><span>Cliente / equipo</span><span>Responsable</span><span>Próximo contacto</span><span>Etapa</span><span>Acciones</span></div>
     <div class="crm-agenda-list">{% for lead in page_obj %}<article class="crm-agenda-row">
-      <div class="crm-agenda-client"><a href="{% url 'crm:detail' lead.pk %}">{{ lead.name }}</a><span>{{ lead.interest|truncatechars:90 }}</span><small>{{ lead.code }}{% if lead.company %} · {{ lead.company }}{% endif %}</small></div>
+      <div class="crm-agenda-client"><a href="{% url 'crm:detail' lead.pk %}">{{ lead.name }}</a><span>{{ lead.interest|truncatechars:90 }}</span><small>{{ lead.code }} · {{ lead.get_source_display }}{% if lead.company %} · {{ lead.company }}{% endif %}</small></div>
       <div class="crm-agenda-owner"><span class="crm-mobile-label">Responsable</span>{% if lead.assignee %}{{ lead.assignee.get_short_name|default:lead.assignee.email|default:lead.assignee.username }}{% else %}<span class="crm-badge crm-badge-warn">Por asignar</span>{% endif %}</div>
       <div class="crm-agenda-date{% if lead.is_overdue %} is-overdue{% endif %}"><span class="crm-mobile-label">Próximo contacto</span>{% if lead.next_followup %}<strong>{{ lead.next_followup|date:'d M' }}</strong><span>{{ lead.next_followup|date:'H:i' }}{% if lead.is_overdue %} · Vencido{% endif %}</span>{% else %}<span class="crm-muted">Por programar</span>{% endif %}</div>
       <div class="crm-agenda-stage"><span class="crm-badge" data-stage="{{ lead.stage }}">{{ lead.get_stage_display }}</span></div>

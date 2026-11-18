@@ -21,7 +21,7 @@ import { renderVariantOptions } from '../src/scripts/variant-options-ui.ts';
 
 const rules = JSON.parse(readFileSync(new URL('./fixtures/cooktop.json', import.meta.url), 'utf8'));
 const script = path => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '').replace('import.meta.env?.PUBLIC_CMS_MODE', 'undefined');
-const browserSource = ts.transpileModule(`${script('../src/lib/cooktop-sync.ts')}\n${script('../src/lib/catalog-sync.ts')}\n${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const browserSource = ts.transpileModule(`${script('../src/lib/cooktop-sync.ts')}\n${script('../src/lib/catalog-sync.ts')}\n${script('../src/scripts/cooktop-ui.ts')}\n${script('../src/scripts/cms.ts')}\nwindow.cooktopTestApi = { pickCooktopAnchor, readCooktop, createCard };`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function catalog() {
   const base = { id: 'COOK-A', slug: 'cocina-a', name: 'Cocina de prueba A', category: 'linea-caliente',
@@ -79,7 +79,7 @@ function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl, ap
   const selectors = ['[data-product-unavailable]', '.product-detail-grid', '[data-product-family]', '[data-product-family-select]',
     '[data-product-family-heading]', '[data-product-family-label]', '[data-product-family-selection]', '[data-product-name]',
     '[data-product-summary]', '[data-product-origin]', '[data-product-category]', '[data-product-id-label]', '[data-product-caption]',
-    '.product-detail-photo', '.equipment-image', '[data-product-features]', '[data-product-category-link]', '[data-product-quote]',
+    '.product-detail-photo', '.equipment-image', '[data-product-features]', '[data-product-category-link]', '[data-product-quote]', '[data-product-whatsapp]',
     '[data-product-quote-note]', '[data-product-price]', '[data-product-unit]', '[data-product-availability]', '[data-product-variant]',
     '[data-product-variant-label]', '[data-product-commerce]', '[data-product-technical-sheet]', '[data-product-media]', '[data-cooktop-root]', '[data-cooktop-connection]'];
   const nodes = Object.fromEntries(selectors.map(selector => [selector, new Element()]));
@@ -120,8 +120,9 @@ function fixture({ data = catalog(), preview = false, remoteRules, fetchImpl, ap
   const selection = () => window.cooktopTestApi.readCooktop(root, detail.dataset.productDetail)?.selection;
   const variant = value => { nodes['[data-product-variant]'].value = value; nodes['[data-product-variant]'].onchange(); };
   const product = id => { location.href = `https://example.test${routes[id]}`; window.events.popstate(); };
-  const quote = () => new URL(nodes['[data-product-quote]'].href).searchParams.get('text');
+  const quote = () => new URL(nodes['[data-product-whatsapp]'].href).searchParams.get('text');
   return { data, root, nodes, detail, document, events, requests, select, selectCell, chooseModule, armModule, moduleButton, pick3d, selection, variant, product, quote, status, statusText, retry, storageCalls,
+    createCard: (product, listing) => window.cooktopTestApi.createCard(product, 0, data, listing),
     refresh: () => document.dispatchEvent(new CustomEvent('inox:catalog-refresh')),
     connection: nodes['[data-cooktop-connection]'],
     fireTimers: delay => { for (const [id, timer] of [...timers]) if (timer.delay === delay) { timers.delete(id); timer.callback(); } },
@@ -140,10 +141,37 @@ test('eligible kitchen renders six base positions and quotes the selected left p
   assert.match(f.quote(), /código COOK-A/);
   assert.match(f.quote(), /Plancha: posiciones 1, 4/); assert.match(f.quote(), /Wok: posiciones 3/);
   assert.match(f.quote(), /3 hornillas comunes/); assert.match(f.quote(), /Visualización ilustrativa/);
+  const inquiry = new URL(f.nodes['[data-product-quote]'].href, 'https://example.test');
+  assert.equal(inquiry.pathname, '/contacto/');
+  assert.equal(inquiry.searchParams.get('product_code'), 'COOK-A');
+  assert.match(inquiry.searchParams.get('configuration'), /Plancha: posiciones 1, 4/);
+  assert.match(inquiry.searchParams.get('configuration'), /Wok: posiciones 3/);
+  assert.match(inquiry.searchParams.get('configuration'), /3 hornillas comunes/);
   assert.doesNotMatch(f.quote(), /3D mostrado corresponde al equipo base/);
   const event = f.events.filter(event => event.type === 'inox:cooktop-updated').at(-1);
   assert.equal(event.detail.productId, 'COOK-A'); assert.equal(event.detail.interactive, true);
   assert.equal(event.detail.state.selection.placements.length, 2);
+});
+
+test('quotation remains available without a WhatsApp contact and a variant card goes to its CRM selection', () => {
+  const data = catalog(); data.contacts = [];
+  const f = fixture({ data });
+  assert.equal(f.nodes['[data-product-quote]'].hidden, false);
+  assert.equal(f.nodes['[data-product-whatsapp]'].hidden, true);
+  assert.match(f.nodes['[data-product-quote-note]'].textContent, /Configuración a cotizar/);
+  assert.doesNotMatch(f.nodes['[data-product-quote-note]'].textContent, /no hay un contacto/);
+  assert.equal(new URL(f.nodes['[data-product-quote]'].href, 'https://example.test').pathname, '/contacto/');
+  f.variant('independent');
+  assert.equal(f.nodes['[data-product-quote-note]'].textContent, cms.productQuoteNote(data.products[0]));
+  const product = data.products[0];
+  const listing = listings.expandedCatalogListings([product]).find(item => item.variant);
+  const card = f.createCard(product, listing);
+  const link = card.querySelector('[data-card-quote]');
+  const inquiry = new URL(link.href, 'https://example.test');
+  assert.equal(inquiry.pathname, '/contacto/');
+  assert.equal(inquiry.searchParams.get('product_code'), 'COOK-A');
+  assert.match(inquiry.searchParams.get('configuration'), /Versión independiente/);
+  assert.equal(link.target, undefined);
 });
 
 test('energy and layout changes reset optional modules with an announcement and retain focus on the chosen control', () => {

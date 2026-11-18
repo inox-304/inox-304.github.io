@@ -1,5 +1,6 @@
 """Private sales workspace. Every route also passes the existing MFA admin gate."""
 import csv
+import re
 from datetime import timedelta
 from urllib.parse import urlencode
 
@@ -20,6 +21,21 @@ from .services import add_note, create_opportunity, mark_contacted, update_oppor
 
 
 CLOSED = ("won", "delivered", "lost")
+CHANNELS = (
+    ("facebook", "Facebook", "social"),
+    ("instagram", "Instagram", "social"),
+    ("tiktok", "TikTok", "social"),
+    ("google", "Google", "link"),
+    ("whatsapp", "WhatsApp", "message"),
+    ("website", "Web INOX 304", "website"),
+)
+
+
+def campaign_label(value):
+    """Discard URL/contact-like syntax and keep only bounded campaign labels."""
+    if re.search(r"[\x00-\x1f\x7f<>@?=]|://", value):
+        return ""
+    return " ".join(value.split())[:120]
 
 
 def require_access(request, action="view"):
@@ -104,6 +120,25 @@ def dashboard(request):
         source_choices=Opportunity.Source.choices, assignees=OpportunityForm(user=request.user).fields["assignee"].queryset))
 
 
+@require_GET
+def channels(request):
+    require_access(request)
+    campaign = campaign_label(request.GET.get("campaign", ""))
+    channel_links = []
+    for source, label, medium in CHANNELS:
+        attribution = {"utm_source": source, "utm_medium": medium}
+        if campaign:
+            attribution["utm_campaign"] = campaign
+        channel_links.append({
+            "source": source,
+            "label": label,
+            "url": "https://inox-304.github.io/contacto/?" + urlencode(attribution),
+            "manual_url": reverse("crm:create") + "?" + urlencode({"source": source}),
+        })
+    return render(request, "admin/crm/channels.html", context(request,
+        title="Canales de venta", campaign=campaign, channel_links=channel_links))
+
+
 def form_data(form):
     data = dict(form.cleaned_data)
     data.pop("version", None)
@@ -124,7 +159,10 @@ def form_error(form, error):
 @require_http_methods(["GET", "POST"])
 def create(request):
     require_access(request, "add")
-    form = OpportunityForm(request.POST if request.method == "POST" else None, user=request.user)
+    initial = {}
+    if request.method == "GET" and request.GET.get("source") in Opportunity.Source.values:
+        initial["source"] = request.GET["source"]
+    form = OpportunityForm(request.POST if request.method == "POST" else None, user=request.user, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
             lead = create_opportunity(form_data(form), actor=request.user)

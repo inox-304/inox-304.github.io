@@ -9,14 +9,27 @@ El CRM está en `/admin/crm/`. Usa las mismas cuentas, verificación en dos paso
 3. **Ficha:** después de atender al cliente, pulsa **Registrar contacto**, anota lo acordado y programa el siguiente paso. Abrir WhatsApp no registra automáticamente una conversación.
 4. **Oportunidades:** organiza el avance en Nuevo, En evaluación, Cotizado, En seguimiento, Venta confirmada, Entregado o No concretado. Una consulta perdida necesita motivo. Cambiar una oportunidad cerrada requiere una explicación.
 5. **Resultados:** revisa los canales y campañas que generan consultas y ventas, el tiempo hasta el primer contacto y los motivos por los que no se concretaron.
+6. **Canales:** prepara enlaces para la web, Facebook, Instagram, TikTok, Google y WhatsApp. Desde **Consultas nuevas** revisa lo recibido y asigna un responsable. El origen también aparece en la agenda.
 
 El cierre quita el seguimiento pendiente. El historial conserva autor y fecha. Si dos personas editan una misma ficha, se rechaza la versión antigua: revisa la ficha actual antes de volver a guardar.
 
 ## Consultas de la web
 
-**Enviar solicitud con esta configuración**, en la ficha del equipo, lleva al formulario con el producto, capacidad y distribución seleccionados. El envío explícito crea una consulta y devuelve un código CRM. Los reintentos del mismo envío no crean duplicados.
+**Cotizar**, en las tarjetas y fichas del catálogo, lleva al formulario con el producto, capacidad y distribución seleccionados. El envío explícito crea una consulta y devuelve un código CRM. Los reintentos del mismo envío no crean duplicados. Después del registro, el cliente puede continuar por WhatsApp con ese código en el mensaje; editar los datos inicia una solicitud distinta, sin reutilizar la referencia anterior.
 
 WhatsApp sigue disponible como vía independiente. El CRM no lee conversaciones ni envía mensajes, correos masivos o recordatorios automáticos. Las consultas recibidas por teléfono, tienda o WhatsApp se registran manualmente. La agenda muestra cuándo contactar; no es un sistema de notificaciones externas.
+
+## Centralizar solicitudes desde las redes
+
+En **Ventas y seguimiento → Canales** (`/admin/crm/canales/`) hay un enlace por origen, listo para copiar al perfil, publicación, anuncio o respuesta a un interesado. Opcionalmente añade una campaña general, como «cocinas noviembre». Son enlaces públicos: no incluyas datos personales ni secretos en la campaña.
+
+El cliente llega al formulario de INOX y, al enviarlo, su consulta entra como **Nuevo**, con el origen y campaña indicados y sin responsable asignado. El equipo puede filtrar por origen, abrir la ficha, programar el siguiente contacto y seguir la cotización hasta la entrega. Las etiquetas de origen son información de atribución aportada por el navegador, no identidad verificada por una red social.
+
+Si un interesado escribe directamente al dueño por WhatsApp personal o por un mensaje privado de una red social, se le puede enviar el enlace correspondiente o usar **Registrar conversación**. Este acceso prepara el origen, y el vendedor completa solo los datos comerciales. No se importan contactos, historiales personales ni conversaciones completas. El teléfono de cada ficha siempre pertenece al **cliente**.
+
+El botón **Abrir WhatsApp** de una ficha abre el número del cliente. La cuenta remitente la determina WhatsApp en ese dispositivo: no queda forzada por el CRM al número del dueño. La conexión automática con WhatsApp, Facebook o Instagram requeriría sus APIs, permisos y una configuración posterior; preparar un enlace no activa esas conexiones. Abrir un enlace, hacer clic en WhatsApp o registrar una cotización no crea un cobro ni altera Finanzas o inventario.
+
+Esta ampliación reutiliza el esquema de CRM existente y no requiere una migración nueva. Los permisos de lectura del CRM protegen Canales; el registro manual exige además permiso de creación. No habilita nuevos accesos a usuarios existentes.
 
 ## Cómo interpretar Resultados
 

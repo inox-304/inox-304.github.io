@@ -5,7 +5,6 @@ import Icon from './Icon.astro';
 import type { Product } from '../data/products';
 import { categories } from '../data/products';
 import { formatProductPrice } from '../lib/cms';
-import { whatsappUrl } from '../data/site';
 import { catalogSearchText } from '../lib/catalog-controls';
 import { getProductFamily } from '../lib/product-families';
 import { getProductStage } from '../lib/product-stage';
@@ -25,7 +24,7 @@ const search = listing ? catalogListingSearchText(listing, category?.name || '')
 const price = formatProductPrice(listing ? { ...product, price: listing.price } : product);
 const optionLabel = listing?.label || (family ? family.cardSummary || `${family.members.length} ${family.members.length === 1 ? 'modelo disponible' : 'modelos disponibles'}` : '');
 const fullName = listing?.variant ? `${title} · ${listing.label}` : product.name;
-const quoteUrl = whatsappUrl(`Hola INOX 304, me interesa ${fullName}. Me gustaría recibir una cotización.`, product.contactId);
+const quoteUrl = withBase('/contacto/') + '?' + new URLSearchParams({ product_code: product.id, configuration: fullName.slice(0, 4000) });
 ---
 <article class="product-card product-photo-white" data-product-id={product.id} data-listing-key={listing?.key} data-variant-id={listing?.variant?.id} data-product-type={getCatalogType(product)?.id || ''} data-category={product.category} data-title={listing ? `${title} ${listing.label}` : title} data-catalog-order={index} data-name={search}>
   <a class="product-card-main" href={href}>
@@ -34,6 +33,6 @@ const quoteUrl = whatsappUrl(`Hola INOX 304, me interesa ${fullName}. Me gustar�
   </a>
   <div class="product-card-commerce">
     <p class="product-card-price" data-card-price hidden={!price}>{price}</p>
-    <a class="button button-chrome button-quote product-card-quote" data-card-quote href={quoteUrl} target="_blank" rel="noopener noreferrer" aria-label={`Cotizar ${fullName}`} hidden={!!price}>Cotizar <Icon name="whatsapp" size={16}/></a>
+    <a class="button button-chrome button-quote product-card-quote" data-card-quote href={quoteUrl} aria-label={`Cotizar ${fullName}`} hidden={!!price}>Cotizar <Icon name="arrow" size={16}/></a>
   </div>
 </article>

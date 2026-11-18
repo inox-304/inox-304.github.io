@@ -5,6 +5,7 @@ from . import views
 app_name = "crm"
 urlpatterns = [
     path("", admin.site.admin_view(views.dashboard), name="dashboard"),
+    path("canales/", admin.site.admin_view(views.channels), name="channels"),
     path("nueva/", admin.site.admin_view(views.create), name="create"),
     path("exportar/", admin.site.admin_view(views.export_csv), name="export_csv"),
     path("<int:pk>/", admin.site.admin_view(views.detail), name="detail"),

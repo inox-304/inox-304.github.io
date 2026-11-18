@@ -1,6 +1,26 @@
 (() => {
   "use strict";
   let editedForm = null;
+  let copyStatusTimeout;
+
+  document.querySelectorAll("[data-copy-channel]").forEach((button) => {
+    button.hidden = false;
+    button.addEventListener("click", async () => {
+      const input = document.getElementById(button.dataset.copyChannel);
+      const status = document.querySelector("[data-copy-status]");
+      if (!input || !status) return;
+      try {
+        await navigator.clipboard.writeText(input.value);
+        status.textContent = "Enlace copiado. Puedes pegarlo en tu perfil, anuncio o mensaje.";
+      } catch {
+        input.focus();
+        input.select();
+        status.textContent = "Seleccionamos el enlace. Cópialo con el menú de tu dispositivo o con Ctrl+C.";
+      }
+      window.clearTimeout(copyStatusTimeout);
+      copyStatusTimeout = window.setTimeout(() => { status.textContent = ""; }, 6000);
+    });
+  });
 
   // Inputs and POST actions keep their native behavior if this file fails to load.
   document.querySelectorAll("[data-crm-form]").forEach((form) => {

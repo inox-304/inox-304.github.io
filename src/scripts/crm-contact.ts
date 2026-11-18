@@ -5,12 +5,15 @@ if (form) {
   const status = form.querySelector<HTMLElement>('#form-status')!;
   const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
   const fallback = form.querySelector<HTMLAnchorElement>('#quote-fallback')!;
+  const fallbackIntro = form.querySelector<HTMLElement>('.contact-alternative > span');
+  const fallbackPrompt = fallbackIntro?.textContent || '¿Prefieres conversar ahora?';
   const phone = form.querySelector<HTMLInputElement>('[name="phone"]')!;
   button.disabled = false;
   let submissionId = '';
   let fingerprint = '';
   let sending = false;
   let delivered = false;
+  let reference = '';
   const text = (data: FormData, name: string) => String(data.get(name) || '').trim();
   const params = new URLSearchParams(location.search);
   const selectedProduct = (params.get('product_code') || '').replace(/[\x00-\x1f]/g, '').trim().slice(0, 64);
@@ -27,29 +30,37 @@ if (form) {
   function updateWhatsApp() {
     if (!form) return;
     const number = (form.dataset.whatsapp || '').replace(/\D/g, '');
+    if (fallbackIntro) fallbackIntro.textContent = reference
+      ? 'Tu solicitud ya está registrada. Si quieres, continúa esta misma consulta por WhatsApp.'
+      : fallbackPrompt;
     if (!/^\d{8,15}$/.test(number)) { fallback.hidden = true; fallback.removeAttribute('href'); return; }
     const data = new FormData(form);
     const name = text(data, 'name');
     const company = text(data, 'business');
     const message = text(data, 'message');
     const intro = form.dataset.contactMessage || `Hola ${form.dataset.company || 'INOX 304'}.`;
-    const body = `${intro}${name ? `\nSoy ${name}.` : ''}${company ? `\nMi negocio: ${company}.` : ''}\nNecesito: ${text(data, 'need')}.${selectedProduct ? `\nEquipo: ${selectedProduct}` : ''}${selectedConfiguration ? `\nConfiguración:\n${selectedConfiguration}` : ''}${message ? `\n\n${message}` : ''}`;
+    const body = `${intro}${reference ? `\nMi consulta registrada es ${reference}. Quiero continuar con esta solicitud.` : ''}${name ? `\nSoy ${name}.` : ''}${company ? `\nMi negocio: ${company}.` : ''}\nNecesito: ${text(data, 'need')}.${selectedProduct ? `\nEquipo: ${selectedProduct}` : ''}${selectedConfiguration ? `\nConfiguración:\n${selectedConfiguration}` : ''}${message ? `\n\n${message}` : ''}`;
     fallback.href = `https://wa.me/${number}?text=${encodeURIComponent(body)}`;
     fallback.hidden = false;
   }
 
   form.addEventListener('inox:contact-updated', updateWhatsApp);
-  form.addEventListener('input', () => {
+  function detailsChanged() {
     phone.setCustomValidity('');
-    updateWhatsApp();
     if (delivered && !sending) {
       delivered = false;
+      reference = '';
+      submissionId = '';
+      fingerprint = '';
       button.disabled = false;
       button.textContent = 'Enviar nueva solicitud';
       status.textContent = '';
       delete status.dataset.state;
     }
-  });
+    updateWhatsApp();
+  }
+  form.addEventListener('input', detailsChanged);
+  form.addEventListener('change', detailsChanged);
   updateWhatsApp();
 
   form.addEventListener('submit', async event => {
@@ -101,6 +112,7 @@ if (form) {
       const result: unknown = await response.json();
       if (!result || typeof result !== 'object' || !('ok' in result) || result.ok !== true || !('reference' in result) || typeof result.reference !== 'string' || !/^CRM-\d{6,}$/.test(result.reference)) throw new Error('unavailable');
       delivered = true;
+      reference = result.reference;
       status.dataset.state = 'success';
       status.textContent = `Solicitud recibida · ${result.reference}. Nuestro equipo la revisará y te contactará por el teléfono o correo que indicaste.`;
       button.textContent = 'Solicitud recibida';
@@ -118,6 +130,7 @@ if (form) {
       sending = false;
       editableFields.forEach(field => { field.readOnly = false; });
       selectors.forEach(field => { field.disabled = false; });
+      updateWhatsApp();
       button.disabled = delivered;
       form.removeAttribute('aria-busy');
     }

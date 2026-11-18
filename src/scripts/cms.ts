@@ -96,7 +96,7 @@ function createCard(product: CmsProduct, index: number, data: CmsData, listing?:
     const main = document.createElement('a'); main.className = 'product-card-main'; main.append(photo, copy);
     const commerce = document.createElement('div'); commerce.className = 'product-card-commerce';
     const price = document.createElement('p'); price.className = 'product-card-price'; price.dataset.cardPrice = '';
-    const quote = document.createElement('a'); quote.className = 'button button-chrome button-quote product-card-quote'; quote.dataset.cardQuote = ''; quote.textContent = 'Cotizar ↗'; quote.target = '_blank'; quote.rel = 'noopener noreferrer';
+    const quote = document.createElement('a'); quote.className = 'button button-chrome button-quote product-card-quote'; quote.dataset.cardQuote = ''; quote.textContent = 'Cotizar ↗';
     commerce.append(price, quote); card.append(main, commerce);
   }
   card.hidden = false;
@@ -139,12 +139,12 @@ function createCard(product: CmsProduct, index: number, data: CmsData, listing?:
   const priceNode = card.querySelector<HTMLElement>('[data-card-price]'); if (priceNode) { priceNode.textContent = price; priceNode.hidden = !price; }
   const quote = card.querySelector<HTMLAnchorElement>('[data-card-quote]');
   if (quote) {
-    const contact = resolveContact(data, product.contactId);
     quote.hidden = !!price;
     const selectedName = [product.name, label].filter(Boolean).join(' · ');
     quote.setAttribute('aria-label', `Cotizar ${selectedName}`);
-    quote.href = contact ? contactUrl(contact, `${contact.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${selectedName}. Me gustaría recibir una cotización. ${new URL(target, location.origin).href}`) : withBase('/contacto/');
-    if (contact) quote.target = '_blank'; else quote.removeAttribute('target');
+    quote.href = withBase('/contacto/') + '?' + new URLSearchParams({ product_code: product.id, configuration: selectedName.slice(0, 4000) });
+    quote.removeAttribute('target');
+    quote.removeAttribute('rel');
   }
   return card;
 }
@@ -197,7 +197,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     if (unavailable) unavailable.hidden = false;
     if (grid) grid.hidden = true;
     if (related) related.hidden = true;
-    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote],[data-product-inquiry]').forEach(anchor => { anchor.removeAttribute('href'); anchor.hidden = true; });
+    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote],[data-product-whatsapp]').forEach(anchor => { anchor.removeAttribute('href'); anchor.hidden = true; });
     document.title = `Equipo no disponible | ${data.settings.empresa}`;
     detail.querySelector('[data-product-media]')?.setAttribute('data-current-product', 'null');
     document.dispatchEvent(new CustomEvent('inox:product-updated', { detail: { product: null } }));
@@ -324,12 +324,14 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     const variant = product.variants?.find(item => item.id === variants?.value);
     const configuration = family?.selectorLabel ? family.members.find(member => member.product.id === product.id)?.label : '';
     const message = `${contact?.message || `Hola ${data.settings.empresa}.`}\nMe interesa ${product.name} (código ${product.id})${variant ? `, variación ${variant.name}` : ''}.${configuration ? ` ${family!.selectorLabel}: ${configuration}.` : ''} Me gustaría recibir una cotización.${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}\n${new URL(catalogListingHref({ variant }, route(product)), location.origin).href}`;
-    detail.querySelectorAll<HTMLAnchorElement>('[data-product-inquiry]').forEach(anchor => {
+    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
       const selected = `${product.name}${variant ? ` · ${variant.name}` : ''}${configuration ? ` · ${configuration}` : ''}${additionalsQuoteSummary(product, additionalSelection)}${configuredSurface}${configuredCart}`;
       anchor.href = withBase('/contacto/') + '?' + new URLSearchParams({ product_code: product.id, configuration: selected.slice(0, 4000) });
+      anchor.removeAttribute('target');
+      anchor.removeAttribute('rel');
       anchor.hidden = false;
     });
-    detail.querySelectorAll<HTMLAnchorElement>('[data-product-quote]').forEach(anchor => {
+    detail.querySelectorAll<HTMLAnchorElement>('[data-product-whatsapp]').forEach(anchor => {
       anchor.hidden = !contact;
       if (contact) { anchor.href = contactUrl(contact, message); anchor.dataset.contact = contact.id; }
       else anchor.removeAttribute('href');
@@ -348,7 +350,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     updateCartConnection();
     syncCustomization(detail, product.id, product.supplyType);
   };
-  const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = contact ? productQuoteNote(product) : 'Por el momento no hay un contacto de cotización disponible.';
+  const quoteNote = detail.querySelector<HTMLElement>('[data-product-quote-note]'); if (quoteNote) quoteNote.textContent = productQuoteNote(product);
   const price = formatProductPrice(product);
   const styleQuote = (amount: string) => detail.querySelectorAll<HTMLElement>('[data-product-quote]').forEach(anchor => {
     anchor.classList.toggle('button-chrome', !amount);
@@ -375,7 +377,7 @@ function updateDetail(data: CmsData, selectedProductId?: string) {
     const amount = variant ? formatProductPrice({ price: variant.price, currency: product.currency, showPrice: product.showPrice }) : price;
     if (priceNode) { priceNode.textContent = configured ? 'A cotizar' : amount; priceNode.hidden = !configured && !amount; }
     if (unit) unit.hidden = configured || !amount || !unit.textContent;
-    if (quoteNote) quoteNote.textContent = !contact ? 'Por el momento no hay un contacto de cotización disponible.' : configured ? 'Configuración a cotizar. Confirmaremos el precio y las medidas de las opciones elegidas.' : productQuoteNote(product);
+    if (quoteNote) quoteNote.textContent = configured ? 'Configuración a cotizar. Confirmaremos el precio y las medidas de las opciones elegidas.' : productQuoteNote(product);
     styleQuote(configured ? '' : amount);
     syncCommerce();
   };
@@ -516,7 +518,7 @@ function updateContacts(data: CmsData) {
     else element.removeAttribute('href');
   });
   document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me/"],a[data-cms-whatsapp],a[data-contact-setting]').forEach(anchor => {
-    if (anchor.hasAttribute('data-product-quote') || anchor.hasAttribute('data-card-quote') || anchor.id === 'quote-fallback') return;
+    if (anchor.hasAttribute('data-product-quote') || anchor.hasAttribute('data-product-whatsapp') || anchor.hasAttribute('data-card-quote') || anchor.id === 'quote-fallback') return;
     anchor.dataset.cmsWhatsapp = 'true';
     const role = anchor.dataset.contactSetting;
     const requested = role ? data.settings[role] : anchor.dataset.contact === 'instalaciones' ? data.settings.contacto_instalaciones : anchor.dataset.contact;

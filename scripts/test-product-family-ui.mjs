@@ -43,7 +43,7 @@ function fixture(productIds = ['P25', 'P26'], variants = [], cooktopConfigs, que
   const selectors = ['[data-product-unavailable]', '.product-detail-grid', '[data-product-family]', '[data-product-family-select]',
     '[data-product-family-heading]', '[data-product-family-label]', '[data-product-family-selection]', '[data-product-name]',
     '[data-product-summary]', '[data-product-origin]', '[data-product-category]', '[data-product-id-label]', '[data-product-caption]',
-    '.product-detail-photo', '.equipment-image', '[data-product-features]', '[data-product-category-link]', '[data-product-quote]',
+    '.product-detail-photo', '.equipment-image', '[data-product-features]', '[data-product-category-link]', '[data-product-quote]', '[data-product-whatsapp]',
     '[data-product-quote-note]', '[data-product-price]', '[data-product-unit]', '[data-product-availability]', '[data-product-variant]',
     '[data-product-variant-label]', '[data-product-commerce]', '[data-product-technical-sheet]', '[data-product-media]'];
   const nodes = Object.fromEntries(selectors.map(selector => [selector, element()]));
@@ -91,7 +91,7 @@ test('a capacity variant changes its own photograph and restores the main photo 
   initialLoad();
   assert.equal(image.attributes.style, currentStyle);
   assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant.model3d, variant.model3d);
-  assert.match(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /Capacidad confirmada/);
+  assert.match(new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text'), /Capacidad confirmada/);
   select.value = ''; select.onchange();
   assert.equal(image.src, withBase(f.data.products[0].image));
   assert.equal(image.alt, f.data.products[0].name);
@@ -105,9 +105,15 @@ test('a catalog variant deep link selects its exact photo, GLB, technical sheet 
   assert.equal(f.nodes['[data-product-technical-sheet]'].href, variant.technicalSheet);
   assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant.model3d, variant.model3d);
   assert.match(f.nodes['[data-product-price]'].textContent, /1[,.]700/);
-  const quote = new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text');
+  const quote = new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text');
   assert.match(quote, /25 L confirmados/);
   assert.match(quote, /\?variant=large/);
+  const inquiry = new URL(f.nodes['[data-product-quote]'].href, f.location);
+  assert.equal(inquiry.pathname, '/contacto/');
+  assert.equal(inquiry.origin, f.location.origin);
+  assert.equal(inquiry.searchParams.get('product_code'), 'P30');
+  assert.match(inquiry.searchParams.get('configuration'), /25 L confirmados/);
+  assert.equal(f.nodes['[data-product-quote]'].attributes.target, undefined);
 });
 
 test('manual variant changes update the shareable URL and selecting the principal configuration removes the query', () => {
@@ -119,7 +125,7 @@ test('manual variant changes update the shareable URL and selecting the principa
   select.value = ''; select.onchange();
   assert.equal(f.location.searchParams.has('variant'), false);
   assert.equal(f.detail.dataset.variantRequest, '');
-  assert.doesNotMatch(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /variant=large|variación Mayor capacidad/);
+  assert.doesNotMatch(new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text'), /variant=large|variación Mayor capacidad/);
 });
 
 test('back and forward within one product restore the requested variant instead of preserving a stale selection', () => {
@@ -133,7 +139,7 @@ test('back and forward within one product restore the requested variant instead 
     assert.equal(f.nodes['[data-product-variant]'].value, variant.id);
     assert.equal(f.nodes['.equipment-image'].src, variant.image);
     assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant.model3d, variant.model3d);
-    assert.ok(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text').includes(`variación ${variant.name}`));
+    assert.ok(new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text').includes(`variación ${variant.name}`));
   }
   f.location.href = `https://example.test${f.routes.P30}`; f.window.events.popstate();
   assert.equal(f.nodes['[data-product-variant]'].value, '');
@@ -153,7 +159,7 @@ test('unknown or other-SKU variant IDs fall back to the current base and cannot 
   assert.equal(f.nodes['.equipment-image'].src, withBase(f.data.products[1].image));
   assert.equal(f.events.filter(event => event.type === 'inox:configuration-updated').at(-1).detail.variant, undefined);
   assert.equal(f.events.filter(event => event.type === 'inox:product-updated').at(-1).detail.product.model3d, f.data.products[1].model3d);
-  assert.doesNotMatch(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /Mayor capacidad|variant=large|código P30/);
+  assert.doesNotMatch(new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text'), /Mayor capacidad|variant=large|código P30/);
 });
 
 test('escurridor selection switches the complete SKU, photograph, PDF, quote and media event without combining prices', () => {
@@ -170,11 +176,16 @@ test('escurridor selection switches the complete SKU, photograph, PDF, quote and
   assert.equal(f.nodes['[data-product-price]'].hidden, true);
   assert.equal(f.nodes['[data-product-price]'].textContent, '');
   assert.equal(f.nodes['[data-product-availability]'].textContent, 'A pedido');
-  const quote = new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text');
+  const quote = new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text');
   assert.ok(quote.includes(product.name));
   assert.match(quote, /código P26/);
   assert.match(quote, /Adicional de escurridor: Sin escurridor/);
   assert.ok(!quote.includes('código P25'));
+  const inquiry = new URL(f.nodes['[data-product-quote]'].href, f.location);
+  assert.equal(inquiry.pathname, '/contacto/');
+  assert.equal(inquiry.searchParams.get('product_code'), 'P26');
+  assert.match(inquiry.searchParams.get('configuration'), /Sin escurridor/);
+  assert.doesNotMatch(inquiry.searchParams.get('configuration'), /Con escurridor/);
   assert.equal(f.location.pathname, f.routes.P26);
   const media = f.events.filter(event => event.type === 'inox:product-updated').at(-1).detail.product;
   assert.equal(media.id, 'P26');
@@ -190,7 +201,7 @@ test('back and forward restore the selected sink configuration, including its pu
   assert.equal(f.nodes['[data-product-price]'].hidden, false);
   assert.match(f.nodes['[data-product-price]'].textContent, /1[,.]250/);
   assert.match(f.nodes['[data-product-family-selection]'].textContent, /Con escurridor.*Código P25/);
-  assert.match(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /Adicional de escurridor: Con escurridor/);
+  assert.match(new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text'), /Adicional de escurridor: Con escurridor/);
   f.location.href = `https://example.test${f.routes.P26}`; f.window.events.popstate();
   assert.equal(f.nodes['[data-product-family-select]'].value, 'P26');
   assert.equal(f.nodes['[data-product-price]'].hidden, true);
@@ -211,7 +222,7 @@ test('blender variation changes the full SKU, image, GLB, features, quote and ro
   assert.equal(f.nodes['[data-product-availability]'].textContent, 'A pedido');
   assert.deepEqual(Array.from(f.nodes['[data-product-features]'].children, item => item.textContent), product.features);
   assert.equal(f.location.pathname, f.routes.P31);
-  const quote = new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text');
+  const quote = new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text');
   assert.match(quote, /código P31/);
   assert.match(quote, /Variación: Modelo con base/);
   assert.ok(!quote.includes('código P30'));
@@ -242,7 +253,7 @@ test('central-kitchen version switches its image, GLB, route and separately vali
   assert.deepEqual(plain(media.cooktopConfig), second);
   assert.deepEqual(plain(f.cooktopCalls.at(-1)), plain({ productId: 'P05', config: parseCooktopConfig(second) }));
   assert.equal(f.cooktopCalls.at(-1).config.modules.length, 1, 'P04 options must not be inherited');
-  assert.match(new URL(f.nodes['[data-product-quote]'].href).searchParams.get('text'), /código P05.*Versión: CÓD-CHI-04/);
+  assert.match(new URL(f.nodes['[data-product-whatsapp]'].href).searchParams.get('text'), /código P05.*Versión: CÓD-CHI-04/);
   f.location.href = `https://example.test${f.routes.P04}`; f.window.events.popstate();
   assert.equal(f.nodes['[data-product-family-select]'].value, 'P04');
   assert.deepEqual(plain(f.cooktopCalls.at(-1)), plain({ productId: 'P04', config: parseCooktopConfig(first) }));

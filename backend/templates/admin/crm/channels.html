@@ -1,0 +1,48 @@
+{% extends "admin/crm/base.html" %}
+{% block crm_breadcrumb %} / Canales{% endblock %}
+{% block crm_content %}
+<header class="crm-heading">
+  <div><span class="crm-eyebrow">WEB · REDES · WHATSAPP</span><h1>Un solo lugar para tus ventas</h1><p>Comparte el enlace de cada canal. Las solicitudes enviadas llegan a este CRM con su origen.</p></div>
+  <a class="crm-button crm-button-primary" href="{% url 'crm:dashboard' %}?stage=new">Ver consultas nuevas <span aria-hidden="true">↗</span></a>
+</header>
+<nav class="crm-tabs" aria-label="Vistas de ventas">
+  <a href="{% url 'crm:dashboard' %}">Hoy</a>
+  <a href="{% url 'crm:dashboard' %}?tab=pipeline">Oportunidades</a>
+  <a href="{% url 'crm:dashboard' %}?tab=metrics">Resultados</a>
+  <a href="{% url 'crm:channels' %}" aria-current="page">Canales</a>
+</nav>
+<section class="crm-channel-flow" aria-label="Cómo llegan las solicitudes">
+  <div><span class="crm-eyebrow">DEL PRIMER INTERÉS AL SIGUIENTE PASO</span><h2>Que ninguna consulta se quede sin atender.</h2><p>Centraliza los datos comerciales y continúa la conversación desde el WhatsApp del dueño de INOX.</p></div>
+  <ol>
+    <li><span>01</span><div><strong>Comparte</strong><p>Coloca el enlace en tu perfil, anuncio o mensaje.</p></div></li>
+    <li><span>02</span><div><strong>Recibe</strong><p>El cliente envía su consulta y obtiene un código CRM.</p></div></li>
+    <li><span>03</span><div><strong>Da seguimiento</strong><p>Asigna un responsable, cotiza y programa el próximo contacto.</p></div></li>
+  </ol>
+</section>
+<section class="crm-panel crm-channel-campaign">
+  <div><span class="crm-eyebrow">ENLACES LISTOS PARA COMPARTIR</span><h2>Identifica de dónde llegan tus clientes</h2><p>El nombre de campaña es opcional. Usa una etiqueta general, como «cocinas noviembre».</p></div>
+  <form method="get" action="{% url 'crm:channels' %}">
+    <label for="crm-campaign">Campaña <span class="crm-muted">(opcional)</span></label>
+    <div><input id="crm-campaign" name="campaign" value="{{ campaign }}" maxlength="120" placeholder="Cocinas noviembre" autocomplete="off"><button class="crm-button crm-button-primary" type="submit">Preparar enlaces</button></div>
+    <small>El enlace es público: evita nombres de clientes, teléfonos y datos privados.</small>
+  </form>
+</section>
+<div class="crm-channel-grid">
+  {% for channel in channel_links %}
+  <article class="crm-panel crm-channel-card" data-channel="{{ channel.source }}">
+    <header><span class="crm-channel-symbol" aria-hidden="true">{% if channel.source == 'facebook' %}f{% elif channel.source == 'instagram' %}◎{% elif channel.source == 'tiktok' %}♪{% elif channel.source == 'google' %}G{% elif channel.source == 'whatsapp' %}◉{% else %}↗{% endif %}</span><div><span class="crm-eyebrow">ORIGEN DE LA CONSULTA</span><h2>{{ channel.label }}</h2></div></header>
+    <p>{% if channel.source == 'facebook' %}Para tu página, publicaciones y anuncios.{% elif channel.source == 'instagram' %}Para la biografía, historias y respuestas a interesados.{% elif channel.source == 'tiktok' %}Para tu perfil y las campañas de productos.{% elif channel.source == 'google' %}Para el perfil de tu negocio y los anuncios.{% elif channel.source == 'whatsapp' %}El dueño puede enviarlo a quien solicite una cotización.{% else %}Para compartir el formulario comercial de INOX.{% endif %}</p>
+    <label class="crm-channel-url" for="channel-{{ channel.source }}">Enlace de solicitudes<input id="channel-{{ channel.source }}" readonly value="{{ channel.url }}" spellcheck="false"></label>
+    <div class="crm-channel-actions"><button type="button" class="crm-button crm-button-primary" data-copy-channel="channel-{{ channel.source }}" hidden>Copiar enlace</button><a class="crm-button crm-button-quiet" href="{{ channel.url }}" target="_blank" rel="noopener noreferrer">Ver formulario <span aria-hidden="true">↗</span></a></div>
+    <footer><a href="{% url 'crm:dashboard' %}?source={{ channel.source }}">Ver consultas de {{ channel.label }} →</a>{% if can_add %}<a href="{{ channel.manual_url }}">Registrar conversación →</a>{% endif %}</footer>
+  </article>
+  {% endfor %}
+</div>
+<p class="crm-copy-status" data-copy-status role="status" aria-live="polite"></p>
+<section class="crm-panel crm-channel-scope">
+  <div><span class="crm-eyebrow">QUÉ SE REGISTRA</span><h2>Consultas de venta, con un siguiente paso claro.</h2></div>
+  <div><h3>Desde estos enlaces</h3><p>Se registra la solicitud cuando el cliente envía el formulario: contacto, necesidad, producto, origen y campaña. Visitar el enlace o pulsar WhatsApp no crea una consulta.</p></div>
+  <div><h3>Desde mensajes directos</h3><p>WhatsApp personal, Instagram y Facebook no están conectados para leer conversaciones. Registra solo la información comercial que necesites o envía al cliente su enlace de solicitud.</p></div>
+  <div><h3>Al responder por WhatsApp</h3><p>Abre la ficha del cliente y usa «Abrir WhatsApp». El envío depende de la cuenta abierta en tu dispositivo; comprueba que sea la del dueño de INOX. Una cotización no registra un cobro en Finanzas.</p></div>
+</section>
+{% endblock %}
