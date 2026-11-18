@@ -93,8 +93,15 @@ await output('licenses/js-yaml-MIT.txt', await readFile(join(root, 'node_modules
 for (const name of ['ort-wasm-simd-threaded.jsep.mjs', 'ort-wasm-simd-threaded.jsep.wasm']) {
   await output(`runtime/${name}`, await readFile(join(root, 'node_modules/onnxruntime-web/dist', name)));
 }
+// Preserve the pinned upstream notices locally: npm omits them and the original
+// release-tag URLs can disappear. Provenance is metadata, never a fetch fallback.
+for (const entry of pinned.bundled) {
+  const data = await readFile(join(root, entry.source));
+  verify(data, entry);
+  await output(entry.path, data);
+}
 for (const entry of pinned.downloads) await output(entry.path, await download(entry));
-const manifest = Buffer.from(`${JSON.stringify({ packages: pinned.packages, embedded: { opencv: '4.10.0', onnxruntime: '1.24.3', 'js-yaml': '4.1.1', 'clipper-lib': '6.4.2' }, downloads: pinned.downloads, files }, null, 2)}\n`);
+const manifest = Buffer.from(`${JSON.stringify({ packages: pinned.packages, embedded: { opencv: '4.10.0', onnxruntime: '1.24.3', 'js-yaml': '4.1.1', 'clipper-lib': '6.4.2' }, bundled: pinned.bundled, downloads: pinned.downloads, files }, null, 2)}\n`);
 await output('manifest.json', manifest, false);
 const rawBytes = files.filter(file => !file.path.endsWith('.gz')).reduce((sum, file) => sum + file.bytes, 0);
 const gzipBytes = files.filter(file => file.path.endsWith('.gz')).reduce((sum, file) => sum + file.bytes, 0);

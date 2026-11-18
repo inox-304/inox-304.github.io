@@ -38,6 +38,12 @@ Una IP bloqueada no puede seguir creando cuotas para correos nuevos ni consumir 
 
 Las versiones se fijan en lockfiles. La auditoría de npm falla ante avisos conocidos de cualquier gravedad y la de Python verifica los requisitos fijados. Actualizar dependencias requiere pruebas funcionales y revisión del resultado: un informe sin avisos conocidos no demuestra ausencia de fallos. Los directorios privados de finanzas y las salidas locales quedan fuera del contexto de Docker.
 
+### Aviso pendiente en las herramientas de construcción — 18/11/2026
+
+La auditoría señala [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), una denegación de servicio por expresiones regulares en `picomatch` hasta 4.0.7. En esta revisión, el aviso no publica versiones corregidas y npm ofrece 4.0.7 como última versión. Los doce paquetes señalados por npm son dependencias afectadas por este mismo aviso; no representan doce vulnerabilidades independientes. Se mantiene el fallo de la auditoría, sin excepciones ni reducción de su umbral.
+
+El Dockerfile usa Node y estas dependencias en la etapa de construcción. La imagen final ejecuta Python/Gunicorn y copia los archivos estáticos, sin Node ni `node_modules`. No se identificó uso de `picomatch` en las rutas de la aplicación que atienden solicitudes. Esta separación reduce el alcance observado; no elimina el riesgo en desarrollo o construcción, donde no deben aceptarse patrones de búsqueda de fuentes no confiables. Revisar una versión corregida y probar su compatibilidad antes de actualizar; no aplicar el descenso de versión mayor de Astro sugerido por `npm audit fix --force`.
+
 ## Límites de la revisión
 
 La revisión de código y las pruebas aisladas no certifican las ACL reales del almacenamiento, la restauración de copias externas ni la seguridad de las cuentas del proveedor. Las pruebas de concurrencia deben ejecutarse también sobre PostgreSQL. Los límites por petición y por IP no son protección completa frente a un ataque distribuido; esa capa requiere controles en la infraestructura.

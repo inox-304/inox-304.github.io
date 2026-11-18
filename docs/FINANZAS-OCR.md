@@ -85,6 +85,13 @@ durante la preparación desde las URLs de `scripts/paddle-assets.json`, con
 tamaño y SHA-256 obligatorios; se reutiliza la caché local verificada de la
 compilación. No se descargan del proveedor durante la lectura de una foto.
 
+La licencia MIT y los avisos de terceros de ONNX Runtime 1.24.3 se conservan en
+`scripts/licenses/onnxruntime-1.24.3/`, con los mismos bytes y SHA-256 fijados
+anteriormente. El manifiesto conserva la URL original como procedencia; el build
+lee estas copias locales porque las URLs de la etiqueta dejaron de responder.
+Docker las copia antes de preparar los recursos. No se omite ninguna licencia
+ni se permite sustituir archivos que fallen la comprobación de integridad.
+
 `--check` trabaja sin red: compara los recursos generados con los paquetes,
 fuentes, huellas fijadas y manifiestos. Los modelos detector/reconocedor ocupan
 9.891.840 y 21.319.680 bytes sin compresión; los runtimes y scripts añaden su

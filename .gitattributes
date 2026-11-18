@@ -1,1 +1,2 @@
 * text=auto eol=lf
+scripts/licenses/onnxruntime-1.24.3/* -text

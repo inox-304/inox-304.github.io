@@ -11,6 +11,9 @@ The SDK's original, integrity-checked standalone worker bundles OpenCV.js 4.10.0
 (Boost-1.0, with Tom Wu's JSBN attribution). Its original license comments are
 preserved. Runtime WASM must match the embedded ONNX Runtime version; use 1.24.3.
 Additional license texts and ONNX third-party notices are in licenses/.
+The ONNX notices are bundled from scripts/licenses/onnxruntime-1.24.3/ with
+the original pinned bytes and SHA-256 hashes. Their original upstream URLs
+remain provenance metadata; preparing these notices requires no network.
 Clipper copyright: Angus Johnson 2010-2017; JavaScript port by Timo (2017).
 JSBN copyright: Tom Wu 2003-2005. Its complete notice is retained separately.
 
